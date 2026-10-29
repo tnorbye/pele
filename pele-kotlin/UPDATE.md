@@ -144,8 +144,13 @@ node scripts/generate_goldens.mjs --sha256-only    # the checked-in goldens hold
 node --test scripts/compare_fuzz.test.mjs
 ```
 
-To publish a jar, set `version` in `build.gradle.kts` to the new upstream version and push a
-`kotlin-v<version>` tag; `.github/workflows/kotlin.yml` tests, builds, attests and releases it.
+To publish a jar, set `version` in `build.gradle.kts` and push a `kotlin-v<version>` tag;
+`.github/workflows/kotlin.yml` tests, builds, attests and releases it. The version is the upstream
+version the port is based on, plus a fourth number counting releases of the port in between:
+`1.12.0` was the first release for upstream 1.12.0, then `1.12.0.1`, `1.12.0.2`, and so on. After
+moving to a new upstream version, release it as that version alone (`1.13.0`). Maven and Gradle
+sort the extra number after the upstream version and before the next one. Don't use a `-suffix`:
+SemVer and Gradle treat it as a pre-release, older than the plain version.
 
 Commit with the new commit hash in the message, for example
 `Kotlin: Update port to <short NEW> (1.13.0)`.
