@@ -2,6 +2,10 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.radar
 
+import java.lang.StrictMath.cos
+import java.lang.StrictMath.sin
+import kotlin.math.PI
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -18,10 +22,6 @@ import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.PI
-import kotlin.math.ceil
-import java.lang.StrictMath.cos
-import java.lang.StrictMath.sin
 
 private const val SWATCH = 12
 private const val ROW = 26.0
@@ -29,7 +29,13 @@ private const val GAP = 24.0
 
 class Point(val x: Double, val y: Double)
 
-private fun option(config: Config, key: String, fallback: Double, min: Double, max: Double): Double {
+private fun option(
+  config: Config,
+  key: String,
+  fallback: Double,
+  min: Double,
+  max: Double,
+): Double {
   val value = (config["radar"] as? Map<*, *>)?.get(key)
   return if (value is Double && value >= min) minOf(value, max) else fallback
 }
@@ -52,7 +58,7 @@ fun closedRoundCurve(points: List<Point>, tension: Double): String {
     val p3 = points[(i + 2) % n]
     d.append(
       " C${num(p1.x + (p2.x - p0.x) * tension)},${num(p1.y + (p2.y - p0.y) * tension)}" +
-        " ${num(p2.x - (p3.x - p1.x) * tension)},${num(p2.y - (p3.y - p1.y) * tension)} ${num(p2.x)},${num(p2.y)}",
+        " ${num(p2.x - (p3.x - p1.x) * tension)},${num(p2.y - (p3.y - p1.y) * tension)} ${num(p2.x)},${num(p2.y)}"
     )
   }
   return d.toString() + " Z"
@@ -67,12 +73,26 @@ private fun polygon(points: List<Point>): String {
 fun renderRadar(model: RadarModel, config: Config, options: RenderOptions): Rendered {
   val natural = option(config, "width", 320.0, 1.0, 4000.0)
   return fitWidth(options, natural, 160.0) { width, tight ->
-    draw(model, config, options, width, (option(config, "height", 320.0, 1.0, 4000.0) * width) / natural, tight)
+    draw(
+      model,
+      config,
+      options,
+      width,
+      (option(config, "height", 320.0, 1.0, 4000.0) * width) / natural,
+      tight,
+    )
   }
 }
 
 // `tight` is set when the chart does not fit the width it has with its legend beside it.
-private fun draw(model: RadarModel, config: Config, options: RenderOptions, width: Double, height: Double, tight: Boolean): Rendered {
+private fun draw(
+  model: RadarModel,
+  config: Config,
+  options: RenderOptions,
+  width: Double,
+  height: Double,
+  tight: Boolean,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val small = jsRound(size * 0.875)
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
@@ -124,9 +144,13 @@ private fun draw(model: RadarModel, config: Config, options: RenderOptions, widt
     val label = layoutLabel(axes[index].label, false, measurer, small, 4000.0)
     val at = radius * labelFactor + 6
     // Each label hangs off its axis on the side away from the center.
-    val cx = u.x * at + (if (u.x > 0.01) label.width / 2 else if (u.x < -0.01) -label.width / 2 else 0.0)
-    val cy = u.y * at + (if (u.y > 0.01) label.height / 2 else if (u.y < -0.01) -label.height / 2 else 0.0)
-    labels.append("<g class=\"pele-axis-label\" data-id=\"${escText(axes[index].name)}\">${labelSvg(label, cx, cy, "")}</g>")
+    val cx =
+      u.x * at + (if (u.x > 0.01) label.width / 2 else if (u.x < -0.01) -label.width / 2 else 0.0)
+    val cy =
+      u.y * at + (if (u.y > 0.01) label.height / 2 else if (u.y < -0.01) -label.height / 2 else 0.0)
+    labels.append(
+      "<g class=\"pele-axis-label\" data-id=\"${escText(axes[index].name)}\">${labelSvg(label, cx, cy, "")}</g>"
+    )
     x0 = minOf(x0, cx - label.width / 2)
     x1 = maxOf(x1, cx + label.width / 2)
     y0 = minOf(y0, cy - label.height / 2)
@@ -137,27 +161,30 @@ private fun draw(model: RadarModel, config: Config, options: RenderOptions, widt
   curves.forEachIndexed { index, curve ->
     // Mermaid leaves out a curve that does not have a value for every axis.
     if (curve.entries.size != count) return@forEachIndexed
-    val points = curve.entries.mapIndexed { k, value ->
-      val r = relativeRadius(value, min, maxValue, radius)
-      val safe = if (r.isFinite()) r else 0.0
-      Point(unit[k].x * safe, unit[k].y * safe)
-    }
+    val points =
+      curve.entries.mapIndexed { k, value ->
+        val r = relativeRadius(value, min, maxValue, radius)
+        val safe = if (r.isFinite()) r else 0.0
+        Point(unit[k].x * safe, unit[k].y * safe)
+      }
     val color = seriesColor(index)
-    val attrs = " class=\"pele-curve\" data-id=\"${escText(curve.name)}\" fill=\"$color\" stroke=\"$color\""
+    val attrs =
+      " class=\"pele-curve\" data-id=\"${escText(curve.name)}\" fill=\"$color\" stroke=\"$color\""
     shapes.append(
       if (graticule == "circle") {
         "<path$attrs d=\"${closedRoundCurve(points, tension)}\"/>"
       } else {
         "<polygon$attrs points=\"${polygon(points)}\"/>"
-      },
+      }
     )
   }
 
-  val legend: List<Label> = if (model.options.showLegend) {
-    curves.map { curve -> layoutLabel(curve.label, false, measurer, small, 4000.0) }
-  } else {
-    emptyList()
-  }
+  val legend: List<Label> =
+    if (model.options.showLegend) {
+      curves.map { curve -> layoutLabel(curve.label, false, measurer, small, 4000.0) }
+    } else {
+      emptyList()
+    }
   var legendWidth = 0.0
   for (label in legend) legendWidth = maxOf(legendWidth, label.width)
   val legendHeight = legend.size * ROW
@@ -180,7 +207,7 @@ private fun draw(model: RadarModel, config: Config, options: RenderOptions, widt
       "<g class=\"pele-legend-item\" data-id=\"${escText(curves[index].name)}\">" +
         "<rect x=\"${num(legendX)}\" y=\"${num(y - SWATCH / 2.0)}\" width=\"$SWATCH\" height=\"$SWATCH\" rx=\"2\" fill=\"$color\" fill-opacity=\"0.4\" stroke=\"$color\"/>" +
         labelSvg(label, legendX + SWATCH + 8 + label.width / 2, y, "") +
-        "</g>",
+        "</g>"
     )
   }
 
@@ -189,17 +216,32 @@ private fun draw(model: RadarModel, config: Config, options: RenderOptions, widt
   val bodyWidth = maxOf(x1 - x0, title.width)
   val totalWidth = ceil(bodyWidth + 2 * pad)
   val totalHeight = ceil(y1 - y0 + titleHeight + 2 * pad)
-  val origin = "translate(${num(pad + (bodyWidth - (x1 - x0)) / 2 - x0)},${num(pad + titleHeight - y0)})"
+  val origin =
+    "translate(${num(pad + (bodyWidth - (x1 - x0)) / 2 - x0)},${num(pad + titleHeight - y0)})"
 
   val smallText = jsStr(small)
   val content =
-    labelSvg(title, totalWidth / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
+    labelSvg(
+      title,
+      totalWidth / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) +
       "<g transform=\"$origin\">" +
-      (if (grid.isNotEmpty()) "<g class=\"pele-graticule\" fill=\"none\" stroke=\"var(--_a)\">$grid</g>" else "") +
-      (if (spokes.isNotEmpty()) "<path class=\"pele-axes\" d=\"$spokes\" fill=\"none\" stroke=\"var(--_b)\"/>" else "") +
-      (if (shapes.isNotEmpty()) "<g class=\"pele-curves\" fill-opacity=\"0.2\" stroke-width=\"1.5\" stroke-linejoin=\"round\">$shapes</g>" else "") +
-      (if (labels.isNotEmpty()) "<g class=\"pele-axis-labels\" font-size=\"$smallText\">$labels</g>" else "") +
-      (if (legendOut.isNotEmpty()) "<g class=\"pele-legend\" font-size=\"$smallText\">$legendOut</g>" else "") +
+      (if (grid.isNotEmpty())
+        "<g class=\"pele-graticule\" fill=\"none\" stroke=\"var(--_a)\">$grid</g>"
+      else "") +
+      (if (spokes.isNotEmpty())
+        "<path class=\"pele-axes\" d=\"$spokes\" fill=\"none\" stroke=\"var(--_b)\"/>"
+      else "") +
+      (if (shapes.isNotEmpty())
+        "<g class=\"pele-curves\" fill-opacity=\"0.2\" stroke-width=\"1.5\" stroke-linejoin=\"round\">$shapes</g>"
+      else "") +
+      (if (labels.isNotEmpty()) "<g class=\"pele-axis-labels\" font-size=\"$smallText\">$labels</g>"
+      else "") +
+      (if (legendOut.isNotEmpty())
+        "<g class=\"pele-legend\" font-size=\"$smallText\">$legendOut</g>"
+      else "") +
       "</g>"
 
   return Rendered(

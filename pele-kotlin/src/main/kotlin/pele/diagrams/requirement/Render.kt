@@ -2,6 +2,10 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.requirement
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -19,6 +23,7 @@ import pele.layout.cnode
 import pele.layout.compoundLayout
 import pele.layout.direction
 import pele.svg.EdgePath
+import pele.svg.ResolvedStyle
 import pele.svg.classNames
 import pele.svg.edgeLabelSvg
 import pele.svg.esc
@@ -26,7 +31,6 @@ import pele.svg.escText
 import pele.svg.inkFill
 import pele.svg.labelSvg
 import pele.svg.num
-import pele.svg.ResolvedStyle
 import pele.svg.resolveStyle
 import pele.svg.rounded
 import pele.svg.routePath
@@ -43,10 +47,6 @@ import pele.text.hasMath
 import pele.text.labelLine
 import pele.text.layoutLabel
 import pele.text.lineMiddle
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
 
 private const val NODE_SEP = 40.0
 private const val EDGE_SEP = 16.0
@@ -91,18 +91,21 @@ private fun restyle(label: Label, bits: Int, measurer: TextMeasurer): Label {
   if (bits == 0 || label.lines.isEmpty()) return label
   var width = 0.0
   val widths = ArrayList<Double>()
-  val lines = label.lines.map { line ->
-    var total = 0.0
-    val spans = line.map { span ->
-      val style = span.style or bits
-      val w = if (span.icon != null || span.math != null) span.width else measurer.width(span.text, label.size, style)
-      total += w
-      span.copy(style = style, width = w)
+  val lines =
+    label.lines.map { line ->
+      var total = 0.0
+      val spans = line.map { span ->
+        val style = span.style or bits
+        val w =
+          if (span.icon != null || span.math != null) span.width
+          else measurer.width(span.text, label.size, style)
+        total += w
+        span.copy(style = style, width = w)
+      }
+      widths.add(total)
+      if (total > width) width = total
+      spans.toMutableList()
     }
-    widths.add(total)
-    if (total > width) width = total
-    spans.toMutableList()
-  }
   return label.copy(lines = lines, widths = widths, width = width)
 }
 
@@ -122,11 +125,15 @@ private fun startText(label: Label, x: Double, top: Double, attrs: String): Stri
     var first = true
     for (span in line) {
       if (span.icon != null || span.text == "") continue
-      body += "<tspan${if (first) " x=\"${num(x)}\" y=\"${num(y)}\"" else ""}${spanStyle(span.style and shared.inv())}>${esc(span.text)}</tspan>"
+      body +=
+        "<tspan${if (first) " x=\"${num(x)}\" y=\"${num(y)}\"" else ""}${spanStyle(span.style and shared.inv())}>${esc(span.text)}</tspan>"
       first = false
     }
   }
-  return (if (body == "") "" else "<text${textStyle(attrs, shared)} text-anchor=\"start\" xml:space=\"preserve\">$body</text>") + math
+  return (if (body == "") ""
+  else
+    "<text${textStyle(attrs, shared)} text-anchor=\"start\" xml:space=\"preserve\">$body</text>") +
+    math
 }
 
 // The containment mark: a circled plus whose rim touches (x, y), where (dx, dy) points at the node.
@@ -170,8 +177,7 @@ private fun spreadEnds(cnodes: List<CNode>, cedges: List<CEdge>, views: List<Nod
       val next = if (at == 0) 3 else at - 3
       val side: Int
       if (abs(abs(dy) - c.h / 2) < 0.5) side = if (dy < 0) 0 else 2
-      else if (abs(abs(dx) - c.w / 2) < 0.5) side = if (dx < 0) 3 else 1
-      else continue
+      else if (abs(abs(dx) - c.w / 2) < 0.5) side = if (dx < 0) 3 else 1 else continue
       val key = node * 4 + side
       val end = End(route, at, route[if (side % 2 == 0) next else next + 1])
       val list = sides[key]
@@ -199,7 +205,12 @@ fun renderRequirement(model: RequirementModel, _config: Config, options: RenderO
 }
 
 // `turned` draws a diagram that runs across as one that runs down.
-private fun draw(model: RequirementModel, _config: Config, options: RenderOptions, turned: Boolean): Rendered {
+private fun draw(
+  model: RequirementModel,
+  _config: Config,
+  options: RenderOptions,
+  turned: Boolean,
+): Rendered {
   val graph = buildRequirementGraph(model)
   val size = options.fontSize ?: 16.0
   val small = jsRound(size * 0.875)
@@ -216,21 +227,38 @@ private fun draw(model: RequirementModel, _config: Config, options: RenderOption
     val bodySize = style.fontSize ?: small
     val requirement = node.requirement
     val element = node.element
-    val kind = restyle(layoutLabel("«${if (requirement != null) requirement.type else "Element"}»", false, measurer, bodySize, 4000.0), base, measurer)
-    val name = restyle(layoutLabel(node.id, true, measurer, nameSize, NAME_WRAP), base or Style.Bold, measurer)
-    val fields: List<Pair<String, String>> = if (requirement != null) {
-      listOf(
-        "ID" to requirement.requirementId,
-        "Text" to requirement.text,
-        "Risk" to requirement.risk,
-        "Verification" to requirement.verifyMethod,
+    val kind =
+      restyle(
+        layoutLabel(
+          "«${if (requirement != null) requirement.type else "Element"}»",
+          false,
+          measurer,
+          bodySize,
+          4000.0,
+        ),
+        base,
+        measurer,
       )
-    } else {
-      listOf(
-        "Type" to element!!.type,
-        "Doc Ref" to element.docRef,
+    val name =
+      restyle(
+        layoutLabel(node.id, true, measurer, nameSize, NAME_WRAP),
+        base or Style.Bold,
+        measurer,
       )
-    }
+    val fields: List<Pair<String, String>> =
+      if (requirement != null) {
+        listOf(
+          "ID" to requirement.requirementId,
+          "Text" to requirement.text,
+          "Risk" to requirement.risk,
+          "Verification" to requirement.verifyMethod,
+        )
+      } else {
+        listOf(
+          "Type" to element!!.type,
+          "Doc Ref" to element.docRef,
+        )
+      }
     val rows = ArrayList<Row>()
     var keyWidth = 0.0
     var valueWidth = 0.0
@@ -247,18 +275,21 @@ private fun draw(model: RequirementModel, _config: Config, options: RenderOption
     }
     if (rows.size > 0) bodyHeight += 2 * PAD_Y - ROW_GAP
     val headHeight = 2 * PAD_Y + kind.height + name.height
-    val w = max(
+    val w =
       max(
-        MIN_WIDTH,
-        max(kind.width, name.width) + 2 * PAD_X,
-      ),
-      if (rows.size > 0) keyWidth + COLUMN_GAP + valueWidth + 2 * PAD_X else 0.0,
-    )
+        max(
+          MIN_WIDTH,
+          max(kind.width, name.width) + 2 * PAD_X,
+        ),
+        if (rows.size > 0) keyWidth + COLUMN_GAP + valueWidth + 2 * PAD_X else 0.0,
+      )
     // A requirement and an element may share a name; relationships then go to the requirement.
     if (!index.containsKey(node.id)) index[node.id] = views.size
     val c = cnode(w, headHeight + bodyHeight)
     c.seq = views.size.toDouble()
-    views.add(NodeView(node, style, kind, name, rows, keyWidth, headHeight, w, headHeight + bodyHeight))
+    views.add(
+      NodeView(node, style, kind, name, rows, keyWidth, headHeight, w, headHeight + bodyHeight)
+    )
     cnodes.add(c)
   }
 
@@ -289,21 +320,22 @@ private fun draw(model: RequirementModel, _config: Config, options: RenderOption
         route = ArrayList(),
         labelX = 0.0,
         labelY = 0.0,
-      ),
+      )
     )
   }
 
-  val layout = compoundLayout(
-    cnodes,
-    cedges,
-    rootDir,
-    LayeredOptions(
-      nodeSep = NODE_SEP,
-      edgeSep = EDGE_SEP,
-      rankSep = RANK_SEP,
-      portSep = 20.0,
-    ),
-  )
+  val layout =
+    compoundLayout(
+      cnodes,
+      cedges,
+      rootDir,
+      LayeredOptions(
+        nodeSep = NODE_SEP,
+        edgeSep = EDGE_SEP,
+        rankSep = RANK_SEP,
+        portSep = 20.0,
+      ),
+    )
 
   spreadEnds(cnodes, cedges, views)
 
@@ -327,32 +359,39 @@ private fun draw(model: RequirementModel, _config: Config, options: RenderOption
     val top = -h / 2
     var body =
       "<rect x=\"${num(left)}\" y=\"${num(top)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"${rounded(style.shape)}/>" +
-      labelSvg(
-        view.kind,
-        0.0,
-        top + PAD_Y + view.kind.height / 2,
-        " class=\"pele-stereotype\" font-size=\"${jsStr(view.kind.size)}\"$muted${style.text}",
-      ) +
-      labelSvg(
-        view.name,
-        0.0,
-        top + PAD_Y + view.kind.height + view.name.height / 2,
-        " class=\"pele-label\" font-size=\"${jsStr(view.name.size)}\" font-weight=\"var(--_hw)\"$color${style.text}",
-      )
+        labelSvg(
+          view.kind,
+          0.0,
+          top + PAD_Y + view.kind.height / 2,
+          " class=\"pele-stereotype\" font-size=\"${jsStr(view.kind.size)}\"$muted${style.text}",
+        ) +
+        labelSvg(
+          view.name,
+          0.0,
+          top + PAD_Y + view.kind.height + view.name.height / 2,
+          " class=\"pele-label\" font-size=\"${jsStr(view.name.size)}\" font-weight=\"var(--_hw)\"$color${style.text}",
+        )
     if (view.rows.size > 0) {
       val divider = top + view.headHeight
-      body += "<path class=\"pele-divider\" d=\"M${num(left)},${num(divider)}H${num(-left)}\" stroke=\"var(--_b)\"${style.line}/>"
+      body +=
+        "<path class=\"pele-divider\" d=\"M${num(left)},${num(divider)}H${num(-left)}\" stroke=\"var(--_b)\"${style.line}/>"
       var y = divider + PAD_Y
       var rows = ""
       for (row in view.rows) {
         rows +=
           startText(row.key, left + PAD_X, y, " class=\"pele-field\"$muted${style.text}") +
-          startText(row.value, left + PAD_X + view.keyWidth + COLUMN_GAP, y, " class=\"pele-value\"$color${style.text}")
+            startText(
+              row.value,
+              left + PAD_X + view.keyWidth + COLUMN_GAP,
+              y,
+              " class=\"pele-value\"$color${style.text}",
+            )
         y += row.height + ROW_GAP
       }
       body += "<g class=\"pele-fields\" font-size=\"${jsStr(view.rows[0].key.size)}\">$rows</g>"
     }
-    nodesOut += "<g class=\"pele-node ${if (view.node.requirement != null) "pele-requirement" else "pele-element"}${
+    nodesOut +=
+      "<g class=\"pele-node ${if (view.node.requirement != null) "pele-requirement" else "pele-element"}${
       classNames(view.node.cssClasses.jsReplace(RE_DEFAULT, ""))
     }\" data-id=\"${escText(view.node.id)}\" transform=\"translate(${num(cnodes[i].x + ox)},${num(cnodes[i].y + oy)})\">$body</g>"
   }
@@ -379,21 +418,24 @@ private fun draw(model: RequirementModel, _config: Config, options: RenderOption
       val reach = LOOP + k * 8
       // Local frame: `out` points away from the node, `along` runs along its side.
       val at = { out: Double, along: Double ->
-        if (sideways) "${num(cx + along)},${num(cy + view.h / 2 + out)}" else "${num(cx + view.w / 2 + out)},${num(cy + along)}"
+        if (sideways) "${num(cx + along)},${num(cy + view.h / 2 + out)}"
+        else "${num(cx + view.w / 2 + out)},${num(cy + along)}"
       }
       // A cubic whose control points are this far out peaks at `reach`.
       val pull = reach / 0.75
-      path = EdgePath(
-        d = "M${at(startTrim, -spread)}C${at(pull, -spread)} ${at(pull, spread)} ${at(0.0, spread)}",
-        sx = if (sideways) cx - spread else cx + view.w / 2,
-        sy = if (sideways) cy + view.h / 2 else cy - spread,
-        sdx = if (sideways) 0.0 else -1.0,
-        sdy = if (sideways) -1.0 else 0.0,
-        ex = if (sideways) cx + spread else cx + view.w / 2,
-        ey = if (sideways) cy + view.h / 2 else cy + spread,
-        edx = if (sideways) 0.0 else -1.0,
-        edy = if (sideways) -1.0 else 0.0,
-      )
+      path =
+        EdgePath(
+          d =
+            "M${at(startTrim, -spread)}C${at(pull, -spread)} ${at(pull, spread)} ${at(0.0, spread)}",
+          sx = if (sideways) cx - spread else cx + view.w / 2,
+          sy = if (sideways) cy + view.h / 2 else cy - spread,
+          sdx = if (sideways) 0.0 else -1.0,
+          sdy = if (sideways) -1.0 else 0.0,
+          ex = if (sideways) cx + spread else cx + view.w / 2,
+          ey = if (sideways) cy + view.h / 2 else cy + spread,
+          edx = if (sideways) 0.0 else -1.0,
+          edy = if (sideways) -1.0 else 0.0,
+        )
       if (sideways) {
         labelX = cx
         labelY = cy + view.h / 2 + reach + 4 + ce.labelH / 2
@@ -413,24 +455,35 @@ private fun draw(model: RequirementModel, _config: Config, options: RenderOption
     }
     edgesOut +=
       "<g class=\"pele-edge pele-relationship-${if (edge.contains) "contains" else "arrow"}\" data-id=\"${escText(edge.id)}\">" +
-      "<path d=\"${path.d}\"${if (edge.contains) "" else " stroke-dasharray=\"5 4\""}/>" +
-      (if (edge.contains) containsMarker(path.sx, path.sy, path.sdx, path.sdy) else arrowMarker(path.ex, path.ey, path.edx, path.edy)) +
-      "</g>"
+        "<path d=\"${path.d}\"${if (edge.contains) "" else " stroke-dasharray=\"5 4\""}/>" +
+        (if (edge.contains) containsMarker(path.sx, path.sy, path.sdx, path.sdy)
+        else arrowMarker(path.ex, path.ey, path.edx, path.edy)) +
+        "</g>"
     labelsOut += edgeLabelSvg(edge.id, label, labelX, labelY, "")
   }
 
-  val svg = svgDocument(
-    "requirement",
-    width,
-    height,
-    size,
-    options,
-    model,
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (edgesOut != "") "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>" else "") +
-      (if (labelsOut != "") "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\">$labelsOut</g>" else "") +
-      "<g class=\"pele-nodes\">$nodesOut</g>",
-  )
+  val svg =
+    svgDocument(
+      "requirement",
+      width,
+      height,
+      size,
+      options,
+      model,
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        (if (edgesOut != "")
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>"
+        else "") +
+        (if (labelsOut != "")
+          "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\">$labelsOut</g>"
+        else "") +
+        "<g class=\"pele-nodes\">$nodesOut</g>",
+    )
 
   return Rendered(svg, width, height, ArrayList())
 }

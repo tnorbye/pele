@@ -32,7 +32,8 @@ sealed class RailroadNode : Parent {
   }
 
   // max is Infinity when the count has no upper bound.
-  class Repetition(override val element: RailroadNode, val min: Double, val max: Double) : RailroadNode() {
+  class Repetition(override val element: RailroadNode, val min: Double, val max: Double) :
+    RailroadNode() {
     override val type = "repetition"
   }
 }

@@ -2,6 +2,8 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.cynefin
 
+import kotlin.math.abs
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -21,28 +23,28 @@ import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.abs
-import kotlin.math.ceil
 
 private class Quadrant(val name: String, val col: Int, val row: Int, val color: Int)
 
 // [domain, column, row, series color]
-private val QUADRANTS = listOf(
-  Quadrant("complex", 0, 0, 0),
-  Quadrant("complicated", 1, 0, 1),
-  Quadrant("chaotic", 0, 1, 3),
-  Quadrant("clear", 1, 1, 2),
-)
+private val QUADRANTS =
+  listOf(
+    Quadrant("complex", 0, 0, 0),
+    Quadrant("complicated", 1, 0, 1),
+    Quadrant("chaotic", 0, 1, 3),
+    Quadrant("clear", 1, 1, 2),
+  )
 private const val CONFUSION_COLOR = 4
 
 // [name, decision model, kind of practice]
-private val META = mapOf(
-  "complex" to listOf("Complex", "Probe → Sense → Respond", "Emergent Practices"),
-  "complicated" to listOf("Complicated", "Sense → Analyse → Respond", "Good Practices"),
-  "clear" to listOf("Clear", "Sense → Categorise → Respond", "Best Practices"),
-  "chaotic" to listOf("Chaotic", "Act → Sense → Respond", "Novel Practices"),
-  "confusion" to listOf("Confusion", "", "Disorder"),
-)
+private val META =
+  mapOf(
+    "complex" to listOf("Complex", "Probe → Sense → Respond", "Emergent Practices"),
+    "complicated" to listOf("Complicated", "Sense → Analyse → Respond", "Good Practices"),
+    "clear" to listOf("Clear", "Sense → Categorise → Respond", "Best Practices"),
+    "chaotic" to listOf("Chaotic", "Act → Sense → Respond", "Novel Practices"),
+    "confusion" to listOf("Confusion", "", "Disorder"),
+  )
 
 private const val MAX_CONFUSION_ITEMS = 3
 private const val ITEM_MAX_WIDTH = 200.0
@@ -72,7 +74,13 @@ private class Block(
   var cy: Double,
 )
 
-private fun setting(config: Config, key: String, fallback: Double, min: Double, max: Double): Double {
+private fun setting(
+  config: Config,
+  key: String,
+  fallback: Double,
+  min: Double,
+  max: Double,
+): Double {
   val value = (config["cynefin"] as? Map<*, *>)?.get(key)
   return if (value is Double && value >= min && value <= max) value else fallback
 }
@@ -91,7 +99,13 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
 
   val badge = { text: String, overflow: Boolean ->
     val label = layoutLabel(text, false, measurer, itemSize, ITEM_MAX_WIDTH)
-    Badge(text, label, label.width + 2 * ITEM_PAD_X, maxOf(label.height, itemLine) + 2 * ITEM_PAD_Y, overflow)
+    Badge(
+      text,
+      label,
+      label.width + 2 * ITEM_PAD_X,
+      maxOf(label.height, itemLine) + 2 * ITEM_PAD_Y,
+      overflow,
+    )
   }
 
   val block = { name: String ->
@@ -99,10 +113,13 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
     val title = layoutLabel(meta[0], false, measurer, size, 4000.0, Style.Bold)
     val subtitles = ArrayList<Label>()
     if (showDescriptions) {
-      for (text in listOf(meta[1], meta[2])) if (text != "") subtitles.add(layoutLabel(text, false, measurer, small, 4000.0, Style.Italic))
+      for (text in listOf(meta[1], meta[2])) if (text != "")
+        subtitles.add(layoutLabel(text, false, measurer, small, 4000.0, Style.Italic))
     }
     val items = model.domains[name]?.items ?: emptyList()
-    val shown = if (name == "confusion" && items.size > MAX_CONFUSION_ITEMS) MAX_CONFUSION_ITEMS else items.size
+    val shown =
+      if (name == "confusion" && items.size > MAX_CONFUSION_ITEMS) MAX_CONFUSION_ITEMS
+      else items.size
     val badges = ArrayList<Badge>()
     for (i in 0 until shown) badges.add(badge(items[i].label, false))
     if (shown < items.size) badges.add(badge("+${items.size - shown} more", true))
@@ -135,10 +152,14 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
   for (b in quadrants) {
     val dx = (quadW - b.w) / 2
     val dy = (quadH - b.h) / 2
-    if (StrictMath.pow(dx / (rx + CLEARANCE), 2.0) + StrictMath.pow(dy / (ry + CLEARANCE), 2.0) >= 1) continue
+    if (
+      StrictMath.pow(dx / (rx + CLEARANCE), 2.0) + StrictMath.pow(dy / (ry + CLEARANCE), 2.0) >= 1
+    )
+      continue
     val wider = b.w + 2 * (rx + CLEARANCE)
     val taller = b.h + 2 * (ry + CLEARANCE)
-    if (wider * quadH <= quadW * taller) quadW = maxOf(quadW, wider) else quadH = maxOf(quadH, taller)
+    if (wider * quadH <= quadW * taller) quadW = maxOf(quadW, wider)
+    else quadH = maxOf(quadH, taller)
   }
 
   val title = layoutLabel(model.title, false, measurer, size, 4000.0, Style.Bold)
@@ -157,19 +178,24 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
   val east = wave(cx, right, cy, seed + 200, amplitude, HORIZON.copy(segments = 4, pinStart = true))
   val drop = cliff(cx, cy, bottom, width * 0.03)
   val at = { curve: List<Double>, end: Boolean ->
-    if (end) "${num(curve[curve.size - 2])},${num(curve[curve.size - 1])}" else "${num(curve[0])},${num(curve[1])}"
+    if (end) "${num(curve[curve.size - 2])},${num(curve[curve.size - 1])}"
+    else "${num(curve[0])},${num(curve[1])}"
   }
 
-  val regions = mapOf(
-    "complex" to "M${num(x0)},${num(y0)}L${at(fold, false)}${forward(fold)}${backward(west)}Z",
-    "complicated" to "M${at(fold, false)}L${num(right)},${num(y0)}L${at(east, true)}${backward(east)}${backward(fold)}Z",
-    "chaotic" to "M${at(west, false)}${forward(west)}${forward(drop)}L${num(x0)},${num(bottom)}Z",
-    "clear" to "M${at(east, false)}${forward(east)}L${num(right)},${num(bottom)}L${at(drop, true)}${backward(drop)}Z",
-  )
+  val regions =
+    mapOf(
+      "complex" to "M${num(x0)},${num(y0)}L${at(fold, false)}${forward(fold)}${backward(west)}Z",
+      "complicated" to
+        "M${at(fold, false)}L${num(right)},${num(y0)}L${at(east, true)}${backward(east)}${backward(fold)}Z",
+      "chaotic" to "M${at(west, false)}${forward(west)}${forward(drop)}L${num(x0)},${num(bottom)}Z",
+      "clear" to
+        "M${at(east, false)}${forward(east)}L${num(right)},${num(bottom)}L${at(drop, true)}${backward(drop)}Z",
+    )
 
   var fills = ""
   for (q in QUADRANTS) {
-    fills += "<path class=\"pele-cynefin-region\" data-id=\"${q.name}\" d=\"${regions[q.name]!!}\" fill=\"${seriesColor(q.color)}\" fill-opacity=\"0.14\"/>"
+    fills +=
+      "<path class=\"pele-cynefin-region\" data-id=\"${q.name}\" d=\"${regions[q.name]!!}\" fill=\"${seriesColor(q.color)}\" fill-opacity=\"0.14\"/>"
   }
   val boundaries =
     "<g class=\"pele-cynefin-boundaries\" fill=\"none\" stroke=\"var(--_b)\" stroke-dasharray=\"6 3\">" +
@@ -179,15 +205,27 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
   val ellipse =
     "<path d=\"$oval\" fill=\"var(--_bg)\"/>" +
       "<path class=\"pele-cynefin-region\" data-id=\"confusion\" d=\"$oval\" fill=\"${seriesColor(
-        CONFUSION_COLOR,
+        CONFUSION_COLOR
       )}\" fill-opacity=\"0.18\" stroke=\"var(--_b)\" stroke-dasharray=\"4 2\"/>"
 
   val drawBlock = { b: Block ->
     var y = b.cy - b.h / 2
-    var out = labelSvg(b.title, b.cx, y + b.title.height / 2, " class=\"pele-label\" font-weight=\"var(--_hw)\"")
+    var out =
+      labelSvg(
+        b.title,
+        b.cx,
+        y + b.title.height / 2,
+        " class=\"pele-label\" font-weight=\"var(--_hw)\"",
+      )
     y += b.title.height
     for (s in b.subtitles) {
-      out += labelSvg(s, b.cx, y + s.height / 2, " class=\"pele-cynefin-subtitle\" font-size=\"${jsStr(small)}\" font-style=\"italic\" fill=\"var(--_m)\"")
+      out +=
+        labelSvg(
+          s,
+          b.cx,
+          y + s.height / 2,
+          " class=\"pele-cynefin-subtitle\" font-size=\"${jsStr(small)}\" font-style=\"italic\" fill=\"var(--_m)\"",
+        )
       y += s.height
     }
     y += HEAD_GAP - ITEM_GAP
@@ -195,11 +233,17 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
       y += ITEM_GAP
       out +=
         "<g class=\"pele-node${if (item.overflow) " pele-cynefin-overflow" else ""}\"${if (item.overflow) "" else " data-id=\"${escText(item.text)}\""}>" +
-        "<rect x=\"${num(b.cx - item.w / 2)}\" y=\"${num(y)}\" width=\"${num(item.w)}\" height=\"${num(
-          item.h,
+          "<rect x=\"${num(b.cx - item.w / 2)}\" y=\"${num(y)}\" width=\"${num(item.w)}\" height=\"${num(
+          item.h
         )}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"${if (item.overflow) " stroke-dasharray=\"3 2\"" else ""}$ROUNDED/>" +
-        labelSvg(item.label, b.cx, y + item.h / 2, " class=\"pele-label\" font-size=\"${jsStr(itemSize)}\"${if (item.overflow) " fill=\"var(--_m)\"" else ""}", icons) +
-        "</g>"
+          labelSvg(
+            item.label,
+            b.cx,
+            y + item.h / 2,
+            " class=\"pele-label\" font-size=\"${jsStr(itemSize)}\"${if (item.overflow) " fill=\"var(--_m)\"" else ""}",
+            icons,
+          ) +
+          "</g>"
       y += item.h
     }
     "<g class=\"pele-cynefin-domain\" data-id=\"${b.name}\">$out</g>"
@@ -233,7 +277,9 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
     val from = blocks[transition.from]
     val to = blocks[transition.to]
     if (from == null || to == null || from === to) continue
-    val key = if (transition.from < transition.to) "${transition.from} ${transition.to}" else "${transition.to} ${transition.from}"
+    val key =
+      if (transition.from < transition.to) "${transition.from} ${transition.to}"
+      else "${transition.to} ${transition.from}"
     val repeat = seen[key] ?: 0
     seen[key] = repeat + 1
 
@@ -253,7 +299,10 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
     val py = my + ny * bow
     val point = { t: Double ->
       val u = 1 - t
-      Pair(u * u * from.cx + 2 * u * t * px + t * t * to.cx, u * u * from.cy + 2 * u * t * py + t * t * to.cy)
+      Pair(
+        u * u * from.cx + 2 * u * t * px + t * t * to.cx,
+        u * u * from.cy + 2 * u * t * py + t * t * to.cy,
+      )
     }
     val crossing = { b: Block, loIn: Double, hiIn: Double, leaving: Boolean ->
       var lo = loIn
@@ -271,11 +320,14 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
     if (i > STEPS) continue
     val t0 = crossing(from, (i - 1).toDouble() / STEPS, i.toDouble() / STEPS, true)
     while (i <= STEPS && !point(i.toDouble() / STEPS).let { inside(to, it.first, it.second) }) i++
-    val t1 = if (i > STEPS) 1.0 else crossing(to, (i - 1).toDouble() / STEPS, i.toDouble() / STEPS, false)
+    val t1 =
+      if (i > STEPS) 1.0 else crossing(to, (i - 1).toDouble() / STEPS, i.toDouble() / STEPS, false)
 
     val (sx, sy) = point(t0)
     var (ex, ey) = point(t1)
-    val blossom = { a: Double, b: Double, c: Double -> (1 - t0) * (1 - t1) * a + ((1 - t0) * t1 + t0 * (1 - t1)) * b + t0 * t1 * c }
+    val blossom = { a: Double, b: Double, c: Double ->
+      (1 - t0) * (1 - t1) * a + ((1 - t0) * t1 + t0 * (1 - t1)) * b + t0 * t1 * c
+    }
     val qx = blossom(from.cx, px, to.cx)
     val qy = blossom(from.cy, py, to.cy)
     val el = jsHypot(ex - qx, ey - qy).jsOr { 1.0 }
@@ -292,20 +344,32 @@ fun renderCynefin(model: CynefinModel, config: Config, options: RenderOptions): 
       val away = (abs(nx) * label.width) / 2 + (abs(ny) * label.height) / 2 + 6
       val half = label.width / 2 + 4
       val tx = minOf(maxOf(lx + nx * away, x0 + half), maxOf(right - half, x0 + half))
-      text = labelSvg(label, tx, ly + ny * away, " class=\"pele-edge-label\" font-size=\"${jsStr(small)}\"", icons)
+      text =
+        labelSvg(
+          label,
+          tx,
+          ly + ny * away,
+          " class=\"pele-edge-label\" font-size=\"${jsStr(small)}\"",
+          icons,
+        )
     }
     edges +=
       "<g class=\"pele-edge\" data-id=\"${transition.from}-${transition.to}\">" +
-      "<path d=\"M${num(sx)},${num(sy)}Q${num(qx)},${num(qy)} ${num(ex)},${num(ey)}\" fill=\"none\" stroke=\"var(--_l)\"/>" +
-      head +
-      text +
-      "</g>"
+        "<path d=\"M${num(sx)},${num(sy)}Q${num(qx)},${num(qy)} ${num(ex)},${num(ey)}\" fill=\"none\" stroke=\"var(--_l)\"/>" +
+        head +
+        text +
+        "</g>"
   }
 
   val totalWidth = ceil(maxOf(width, title.width) + 2 * pad)
   val totalHeight = ceil(height + titleHeight + 2 * pad)
   val content =
-    labelSvg(title, x0 + width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
+    labelSvg(
+      title,
+      x0 + width / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) +
       "<g class=\"pele-cynefin-regions\">$fills</g>" +
       boundaries +
       ellipse +

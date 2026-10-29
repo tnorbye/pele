@@ -10,17 +10,33 @@ private fun isC0OrSpace(c: Char) = c.code <= 0x20
 
 private fun inC0(cp: Int) = cp < 0x20 || cp > 0x7E
 
-private fun inFragment(cp: Int) = inC0(cp) || cp == 0x20 || cp == '"'.code || cp == '<'.code || cp == '>'.code || cp == '`'.code
+private fun inFragment(cp: Int) =
+  inC0(cp) || cp == 0x20 || cp == '"'.code || cp == '<'.code || cp == '>'.code || cp == '`'.code
 
-private fun inQuery(cp: Int) = inC0(cp) || cp == 0x20 || cp == '"'.code || cp == '#'.code || cp == '<'.code || cp == '>'.code
+private fun inQuery(cp: Int) =
+  inC0(cp) || cp == 0x20 || cp == '"'.code || cp == '#'.code || cp == '<'.code || cp == '>'.code
 
 private fun inSpecialQuery(cp: Int) = inQuery(cp) || cp == '\''.code
 
-private fun inPath(cp: Int) = inQuery(cp) || cp == '?'.code || cp == '^'.code || cp == '`'.code || cp == '{'.code || cp == '}'.code
+private fun inPath(cp: Int) =
+  inQuery(cp) ||
+    cp == '?'.code ||
+    cp == '^'.code ||
+    cp == '`'.code ||
+    cp == '{'.code ||
+    cp == '}'.code
 
 private fun inUserinfo(cp: Int) =
-  inPath(cp) || cp == '/'.code || cp == ':'.code || cp == ';'.code || cp == '='.code || cp == '@'.code ||
-    cp == '['.code || cp == '\\'.code || cp == ']'.code || cp == '|'.code
+  inPath(cp) ||
+    cp == '/'.code ||
+    cp == ':'.code ||
+    cp == ';'.code ||
+    cp == '='.code ||
+    cp == '@'.code ||
+    cp == '['.code ||
+    cp == '\\'.code ||
+    cp == ']'.code ||
+    cp == '|'.code
 
 private fun percentEncode(s: String, set: (Int) -> Boolean): String {
   val sb = StringBuilder(s.length)
@@ -33,7 +49,10 @@ private fun percentEncode(s: String, set: (Int) -> Boolean): String {
       sb.appendCodePoint(cp)
     } else {
       for (b in String(Character.toChars(cp)).toByteArray(Charsets.UTF_8)) {
-        sb.append('%').append("0123456789ABCDEF"[(b.toInt() shr 4) and 0xF]).append("0123456789ABCDEF"[b.toInt() and 0xF])
+        sb
+          .append('%')
+          .append("0123456789ABCDEF"[(b.toInt() shr 4) and 0xF])
+          .append("0123456789ABCDEF"[b.toInt() and 0xF])
       }
     }
     i += len
@@ -64,7 +83,8 @@ private fun percentDecodeBytes(s: String): ByteArray {
 
 private const val FORBIDDEN_HOST = "\u0000\t\n\r #/:<>?@[\\]^|"
 
-private fun isForbiddenDomain(c: Char) = FORBIDDEN_HOST.indexOf(c) >= 0 || c.code <= 0x1F || c == '%' || c.code == 0x7F
+private fun isForbiddenDomain(c: Char) =
+  FORBIDDEN_HOST.indexOf(c) >= 0 || c.code <= 0x1F || c == '%' || c.code == 0x7F
 
 private fun punycode(label: String): String {
   val input = label.codePoints().toArray()
@@ -118,19 +138,33 @@ private fun punycode(label: String): String {
 
 // Code points UTS #46 maps to nothing.
 private fun isIgnored(cp: Int): Boolean =
-  cp == 0xAD || cp == 0x34F || cp == 0x200B || cp == 0x2060 || cp == 0xFEFF || cp in 0x180B..0x180F ||
-    cp in 0xFE00..0xFE0F || cp in 0x1BCA0..0x1BCA3 || cp in 0xE0100..0xE01EF
+  cp == 0xAD ||
+    cp == 0x34F ||
+    cp == 0x200B ||
+    cp == 0x2060 ||
+    cp == 0xFEFF ||
+    cp in 0x180B..0x180F ||
+    cp in 0xFE00..0xFE0F ||
+    cp in 0x1BCA0..0x1BCA3 ||
+    cp in 0xE0100..0xE01EF
 
 private fun isDisallowed(cp: Int): Boolean =
   when (Character.getType(cp).toByte()) {
-    Character.CONTROL, Character.LINE_SEPARATOR, Character.PARAGRAPH_SEPARATOR, Character.UNASSIGNED,
-    Character.PRIVATE_USE, Character.SURROGATE, Character.FORMAT -> true
+    Character.CONTROL,
+    Character.LINE_SEPARATOR,
+    Character.PARAGRAPH_SEPARATOR,
+    Character.UNASSIGNED,
+    Character.PRIVATE_USE,
+    Character.SURROGATE,
+    Character.FORMAT -> true
     else -> false
   }
 
 private fun isMark(cp: Int): Boolean =
   when (Character.getType(cp).toByte()) {
-    Character.NON_SPACING_MARK, Character.ENCLOSING_MARK, Character.COMBINING_SPACING_MARK -> true
+    Character.NON_SPACING_MARK,
+    Character.ENCLOSING_MARK,
+    Character.COMBINING_SPACING_MARK -> true
     else -> false
   }
 
@@ -158,12 +192,13 @@ private fun punycodeDecode(input: String): String? {
     while (true) {
       if (pos >= input.length) return null
       val c = input[pos++]
-      val digit = when (c) {
-        in 'a'..'z' -> c - 'a'
-        in 'A'..'Z' -> c - 'A'
-        in '0'..'9' -> c - '0' + 26
-        else -> return null
-      }
+      val digit =
+        when (c) {
+          in 'a'..'z' -> c - 'a'
+          in 'A'..'Z' -> c - 'A'
+          in '0'..'9' -> c - '0' + 26
+          else -> return null
+        }
       i += digit * w
       if (i > Int.MAX_VALUE) return null
       val t = if (k <= bias) 1 else if (k >= bias + 26) 26 else k - bias
@@ -216,8 +251,13 @@ private fun domainToAscii(domain: String): String? {
       if (label.any { it.code >= 0x80 }) return null
       val decoded = punycodeDecode(label.substring(4)) ?: return null
       if (decoded.isEmpty() || decoded.all { it.code < 0x80 }) return null
-      if (isMark(decoded.codePointAt(0)) || decoded.codePoints().anyMatch { isDisallowed(it) }) return null
-      if (decoded != Normalizer.normalize(decoded, Normalizer.Form.NFC) || decoded != decoded.lowercase()) return null
+      if (isMark(decoded.codePointAt(0)) || decoded.codePoints().anyMatch { isDisallowed(it) })
+        return null
+      if (
+        decoded != Normalizer.normalize(decoded, Normalizer.Form.NFC) ||
+          decoded != decoded.lowercase()
+      )
+        return null
     }
     if (label.all { it.code < 0x80 }) label else "xn--" + punycode(label)
   }
@@ -400,7 +440,10 @@ private fun parseHost(input: String): String? {
 private fun isSingleDot(s: String) = s == "." || s.equals("%2e", ignoreCase = true)
 
 private fun isDoubleDot(s: String) =
-  s == ".." || s.equals(".%2e", ignoreCase = true) || s.equals("%2e.", ignoreCase = true) || s.equals("%2e%2e", ignoreCase = true)
+  s == ".." ||
+    s.equals(".%2e", ignoreCase = true) ||
+    s.equals("%2e.", ignoreCase = true) ||
+    s.equals("%2e%2e", ignoreCase = true)
 
 /** `new URL(input).href`, or null where the constructor throws. Handles http and https only. */
 fun whatwgHref(raw: String): String? {
@@ -414,7 +457,8 @@ fun whatwgHref(raw: String): String? {
   val scheme = input.substring(0, colon)
   if (!scheme[0].isLetter() || scheme[0].code >= 128) return null
   for (ch in scheme) {
-    if (!(ch.code < 128 && (ch.isLetterOrDigit() || ch == '+' || ch == '-' || ch == '.'))) return null
+    if (!(ch.code < 128 && (ch.isLetterOrDigit() || ch == '+' || ch == '-' || ch == '.')))
+      return null
   }
   val lower = scheme.lowercase()
   if (lower != "http" && lower != "https") return null
@@ -429,9 +473,11 @@ fun whatwgHref(raw: String): String? {
     val credentials = authority.substring(0, at)
     authority = authority.substring(at + 1)
     val sep = credentials.indexOf(':')
-    val user = percentEncode(if (sep == -1) credentials else credentials.substring(0, sep), ::inUserinfo)
+    val user =
+      percentEncode(if (sep == -1) credentials else credentials.substring(0, sep), ::inUserinfo)
     val pass = if (sep == -1) "" else percentEncode(credentials.substring(sep + 1), ::inUserinfo)
-    if (user.isNotEmpty() || pass.isNotEmpty()) userinfo = user + (if (pass.isNotEmpty()) ":$pass" else "") + "@"
+    if (user.isNotEmpty() || pass.isNotEmpty())
+      userinfo = user + (if (pass.isNotEmpty()) ":$pass" else "") + "@"
     if (authority.isEmpty()) return null
   }
   var hostPart = authority
@@ -490,7 +536,12 @@ fun whatwgHref(raw: String): String? {
     }
   }
   val path = "/" + segments.joinToString("/")
-  return lower + "://" + userinfo + host + portOut + path +
+  return lower +
+    "://" +
+    userinfo +
+    host +
+    portOut +
+    path +
     (if (query != null) "?" + percentEncode(query, ::inSpecialQuery) else "") +
     (if (fragment != null) "#" + percentEncode(fragment, ::inFragment) else "")
 }

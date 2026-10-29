@@ -16,7 +16,8 @@ typealias C4Attr = Any
 open class C4Element(
   var alias: String = "",
   var label: String = "",
-  // A named argument written where the alias or the label belongs. It is applied to the field it names.
+  // A named argument written where the alias or the label belongs. It is applied to the field it
+  // names.
   var aliasAttr: C4Named? = null,
   var labelAttr: C4Named? = null,
   var parent: C4Boundary? = null,

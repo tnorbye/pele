@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val treeView: Diagram<TreeViewModel> = object : Diagram<TreeViewModel> {
-  override val type = "treeView"
+val treeView: Diagram<TreeViewModel> =
+  object : Diagram<TreeViewModel> {
+    override val type = "treeView"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): TreeViewModel =
-    buildTreeView(readTreeView(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): TreeViewModel = buildTreeView(readTreeView(source), title)
 
-  override fun render(model: TreeViewModel, config: Config, options: RenderOptions): Rendered = renderTreeView(model, config, options)
-}
+    override fun render(model: TreeViewModel, config: Config, options: RenderOptions): Rendered =
+      renderTreeView(model, config, options)
+  }

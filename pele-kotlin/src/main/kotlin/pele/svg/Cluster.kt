@@ -2,12 +2,12 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.svg
 
+import kotlin.math.abs
+import kotlin.math.min
 import pele.IconResolver
 import pele.js.jsRound
 import pele.layout.CNode
 import pele.text.Label
-import kotlin.math.abs
-import kotlin.math.min
 
 // The x of every route point, by its rounded y: the edges that cross a cluster's top border.
 // PORT: keys are normalized with + 0.0, as JS Map keys treat -0 and 0 as one.
@@ -18,8 +18,7 @@ fun markCrossings(crossings: Crossings, route: List<Double>) {
   while (k < route.size) {
     val key = jsRound(route[k + 1]) + 0.0
     val list = crossings[key]
-    if (list != null) list.add(route[k])
-    else crossings[key] = arrayListOf(route[k])
+    if (list != null) list.add(route[k]) else crossings[key] = arrayListOf(route[k])
     k += 3
   }
 }
@@ -74,9 +73,16 @@ fun struckTitle(
     p = nodes[p].parent
   }
   // Each cluster is half its fill over what is behind it.
-  val fill = "color-mix(in srgb,var(--_a) ${num(100 * (1 - StrictMath.pow(0.5, depth.toDouble())))}%,var(--_bg))"
+  val fill =
+    "color-mix(in srgb,var(--_a) ${num(100 * (1 - StrictMath.pow(0.5, depth.toDouble())))}%,var(--_bg))"
   return "<g class=\"pele-cluster-title\" data-id=\"$id\">" +
-    labelSvg(label, x, y, " fill=\"none\" stroke=\"$fill\" stroke-width=\"5\" stroke-linejoin=\"round\"", icons) +
+    labelSvg(
+      label,
+      x,
+      y,
+      " fill=\"none\" stroke=\"$fill\" stroke-width=\"5\" stroke-linejoin=\"round\"",
+      icons,
+    ) +
     labelSvg(label, x, y, attrs, icons) +
     "</g>"
 }

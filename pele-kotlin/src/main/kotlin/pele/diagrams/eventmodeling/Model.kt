@@ -78,26 +78,28 @@ class EventModelingModel(
   val entities: List<String>,
 ) : Accessible
 
-private val KINDS = mapOf(
-  "ui" to "ui",
-  "pcr" to "processor",
-  "processor" to "processor",
-  "rmo" to "readmodel",
-  "readmodel" to "readmodel",
-  "cmd" to "command",
-  "command" to "command",
-  "evt" to "event",
-  "event" to "event",
-)
+private val KINDS =
+  mapOf(
+    "ui" to "ui",
+    "pcr" to "processor",
+    "processor" to "processor",
+    "rmo" to "readmodel",
+    "readmodel" to "readmodel",
+    "cmd" to "command",
+    "command" to "command",
+    "evt" to "event",
+    "event" to "event",
+  )
 
 private class GroupInfo(val first: Int, val label: String, val prefix: String)
 
 // [first index, label, label prefix for a namespace]
-private val GROUPS = mapOf(
-  "trigger" to GroupInfo(0, "UI/Automation", "UI/A: "),
-  "state" to GroupInfo(100, "Command/Read Model", "C/RM: "),
-  "stream" to GroupInfo(200, "Events", "Stream: "),
-)
+private val GROUPS =
+  mapOf(
+    "trigger" to GroupInfo(0, "UI/Automation", "UI/A: "),
+    "state" to GroupInfo(100, "Command/Read Model", "C/RM: "),
+    "stream" to GroupInfo(200, "Events", "Stream: "),
+  )
 
 private fun groupOf(kind: String): String =
   if (kind == "ui" || kind == "processor") "trigger" else if (kind == "event") "stream" else "state"
@@ -109,7 +111,8 @@ private fun blockText(raw: String): String {
   val open = raw.indexOf('{')
   val close = raw.lastIndexOf('}')
   val inner =
-    if (open != -1 && close > open) raw.jsSlice(open + 1, close) else if (open == -1 && raw.length >= 2) raw.jsSlice(1, -1) else ""
+    if (open != -1 && close > open) raw.jsSlice(open + 1, close)
+    else if (open == -1 && raw.length >= 2) raw.jsSlice(1, -1) else ""
   val lines = inner.jsReplace(RE_CR, "").jsSplit("\n").toMutableList()
   while (lines.size > 0 && lines[0].jsTrim() == "") lines.removeAt(0)
   while (lines.size > 0 && lines[lines.size - 1].jsTrim() == "") lines.removeAt(lines.size - 1)
@@ -118,7 +121,9 @@ private fun blockText(raw: String): String {
     if (line.jsTrim() == "") continue
     indent = minOf(indent, (line.length - line.jsTrimStart().length).toDouble())
   }
-  return lines.joinToString("\n") { line -> line.jsSlice(minOf(indent, line.length.toDouble()).toInt()).jsTrimEnd() }
+  return lines.joinToString("\n") { line ->
+    line.jsSlice(minOf(indent, line.length.toDouble()).toInt()).jsTrimEnd()
+  }
 }
 
 private val RE_LEADING = JsRegExp("""^\s+""", "g")
@@ -129,13 +134,18 @@ fun buildEventModel(ast: EventModelAst, title: String?): EventModelingModel {
   for (frame in ast.frames) {
     if (ids.contains(frame.name)) {
       val line = locate(ast.source, frame.offset).line
-      throw PeleError("Duplicate event modeling frame ID \"${frame.name}\" on line $line", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "eventmodeling", line = line))
+      throw PeleError(
+        "Duplicate event modeling frame ID \"${frame.name}\" on line $line",
+        PeleErrorCode.SEMANTIC,
+        PeleErrorInfo(type = "eventmodeling", line = line),
+      )
     }
     ids.add(frame.name)
   }
 
   val data = LinkedHashMap<String, String>()
-  for (entity in ast.dataEntities) if (!data.containsKey(entity.name)) data[entity.name] = entity.dataBlockValue
+  for (entity in ast.dataEntities) if (!data.containsKey(entity.name))
+    data[entity.name] = entity.dataBlockValue
 
   // One lane per group, and one more per namespace within a group.
   val laneOf = LinkedHashMap<String, EmLane>()
@@ -151,7 +161,13 @@ fun buildEventModel(ast: EventModelAst, title: String?): EventModelingModel {
         index = next[group] ?: (info.first + 1)
         next[group] = index + 1
       }
-      found = EmLane(index, if (namespace == null) info.label else info.prefix + namespace, group, namespace)
+      found =
+        EmLane(
+          index,
+          if (namespace == null) info.label else info.prefix + namespace,
+          group,
+          namespace,
+        )
       laneOf[key] = found
     }
     found
@@ -170,17 +186,18 @@ fun buildEventModel(ast: EventModelAst, title: String?): EventModelingModel {
       val block = data[frame.dataReference!!.refText]
       if (block != null) text = blockText(block)
     }
-    val box = EmBox(
-      id = frame.name,
-      kind = kind,
-      entity = frame.entityIdentifier,
-      name = if (parts.size == 2) parts[1] else frame.entityIdentifier,
-      namespace = namespace,
-      reset = frame.type == "EmResetFrame",
-      lane = lane(kind, namespace),
-      data = text,
-      dataType = frame.dataType,
-    )
+    val box =
+      EmBox(
+        id = frame.name,
+        kind = kind,
+        entity = frame.entityIdentifier,
+        name = if (parts.size == 2) parts[1] else frame.entityIdentifier,
+        namespace = namespace,
+        reset = frame.type == "EmResetFrame",
+        lane = lane(kind, namespace),
+        data = text,
+        dataType = frame.dataType,
+      )
     boxes.add(box)
     byId[box.id] = box
 
@@ -199,27 +216,38 @@ fun buildEventModel(ast: EventModelAst, title: String?): EventModelingModel {
     }
   }
 
-  val names = { statements: List<EmGwtStatement> -> statements.map { s -> s.entityIdentifier.refText } }
+  val names = { statements: List<EmGwtStatement> ->
+    statements.map { s -> s.entityIdentifier.refText }
+  }
   return EventModelingModel(
     type = "eventmodeling",
-    title = run {
-      val head = if (!ast.title.isNullOrEmpty()) titleValue(ast.title!!) else ast.title
-      if (!head.isNullOrEmpty()) head else title
-    },
-    accTitle = if (!ast.accTitle.isNullOrEmpty()) accTitleValue(ast.accTitle!!).jsReplace(RE_LEADING, "") else null,
-    accDescr = if (!ast.accDescr.isNullOrEmpty()) accDescrValue(ast.accDescr!!).jsReplace(RE_INDENT, "\n") else null,
+    title =
+      run {
+        val head = if (!ast.title.isNullOrEmpty()) titleValue(ast.title!!) else ast.title
+        if (!head.isNullOrEmpty()) head else title
+      },
+    accTitle =
+      if (!ast.accTitle.isNullOrEmpty()) accTitleValue(ast.accTitle!!).jsReplace(RE_LEADING, "")
+      else null,
+    accDescr =
+      if (!ast.accDescr.isNullOrEmpty()) accDescrValue(ast.accDescr!!).jsReplace(RE_INDENT, "\n")
+      else null,
     boxes = boxes,
     lanes = laneOf.values.sortedWith { a, b -> cmp((a.index - b.index).toDouble()) },
     relations = relations,
-    notes = ast.noteEntities.map { note -> EmNote(note.sourceFrame.refText, blockText(note.dataBlockValue), note.dataType) },
-    specifications = ast.gwtEntities.map { gwt ->
-      EmSpecification(
-        frame = gwt.sourceFrame.refText,
-        given = names(gwt.givenStatements),
-        `when` = names(gwt.whenStatements),
-        then = names(gwt.thenStatements),
-      )
-    },
+    notes =
+      ast.noteEntities.map { note ->
+        EmNote(note.sourceFrame.refText, blockText(note.dataBlockValue), note.dataType)
+      },
+    specifications =
+      ast.gwtEntities.map { gwt ->
+        EmSpecification(
+          frame = gwt.sourceFrame.refText,
+          given = names(gwt.givenStatements),
+          `when` = names(gwt.whenStatements),
+          then = names(gwt.thenStatements),
+        )
+      },
     entities = ast.modelEntities.map { entity -> entity.name },
   )
 }

@@ -60,7 +60,11 @@ class AgentEdge(
   var metadata: Metadata? = null,
 )
 
-class AgentClassDef(val id: String, val styles: MutableList<String>, val textStyles: MutableList<String>)
+class AgentClassDef(
+  val id: String,
+  val styles: MutableList<String>,
+  val textStyles: MutableList<String>,
+)
 
 class AgentSubgraph(
   val id: String,
@@ -86,7 +90,8 @@ class LinkInfo(
 typealias DocItem = Any
 
 class DirStatement(val value: String) {
-  val stmt: String get() = "dir"
+  val stmt: String
+    get() = "dir"
 }
 
 // PORT: classes without equals, because upstream tells mappings apart by identity.

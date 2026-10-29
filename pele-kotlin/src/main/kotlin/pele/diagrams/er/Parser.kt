@@ -6,13 +6,14 @@ import pele.js.jsSlice
 import pele.js.jsTrim
 import pele.syntaxError
 
-private val CARDINALITY: Map<Int, Cardinality> = mapOf(
-  T.ZERO_OR_ONE to "ZERO_OR_ONE",
-  T.ZERO_OR_MORE to "ZERO_OR_MORE",
-  T.ONE_OR_MORE to "ONE_OR_MORE",
-  T.ONLY_ONE to "ONLY_ONE",
-  T.MD_PARENT to "MD_PARENT",
-)
+private val CARDINALITY: Map<Int, Cardinality> =
+  mapOf(
+    T.ZERO_OR_ONE to "ZERO_OR_ONE",
+    T.ZERO_OR_MORE to "ZERO_OR_MORE",
+    T.ONE_OR_MORE to "ONE_OR_MORE",
+    T.ONLY_ONE to "ONLY_ONE",
+    T.MD_PARENT to "MD_PARENT",
+  )
 
 private val DIRECTIONS = listOf("TB", "BT", "RL", "LR")
 
@@ -26,7 +27,8 @@ private const val LINE =
 private class Frame(
   val id: String,
   val title: String,
-  // What Mermaid's grammar hands to addSubGraph: the value of every statement inside. Besides entity
+  // What Mermaid's grammar hands to addSubGraph: the value of every statement inside. Besides
+  // entity
   // names that includes accessibility text and the keywords `style`, `class` and `classDef`.
   val list: MutableList<DocItem>,
 )
@@ -41,7 +43,12 @@ fun parseEr(src: String, db: ErDb) {
   fun fail(expected: String): Nothing {
     val t = types[i]
     if (t == T.ERROR) throw syntaxError("er", src, starts[i], "", true)
-    throw syntaxError("er", src, starts[i], "Expecting $expected, got '${if (t == T.CHAR) texts[i] else TOKEN_NAMES[t]}'")
+    throw syntaxError(
+      "er",
+      src,
+      starts[i],
+      "Expecting $expected, got '${if (t == T.CHAR) texts[i] else TOKEN_NAMES[t]}'",
+    )
   }
 
   fun expect(type: Int): String {
@@ -56,7 +63,11 @@ fun parseEr(src: String, db: ErDb) {
   }
 
   fun isName(t: Int): Boolean =
-    t == T.UNICODE_TEXT || t == T.ENTITY_NAME || t == T.NUM || t == T.DECIMAL_NUM || t == T.ENTITY_ONE
+    t == T.UNICODE_TEXT ||
+      t == T.ENTITY_NAME ||
+      t == T.NUM ||
+      t == T.DECIMAL_NUM ||
+      t == T.ENTITY_ONE
 
   fun entityName(): String {
     val t = types[i]
@@ -76,7 +87,8 @@ fun parseEr(src: String, db: ErDb) {
     }
   }
 
-  fun isStyleComponent(t: Int): Boolean = t == T.STYLE_TEXT || t == T.NUM || t == T.COLON || t == T.BRKT
+  fun isStyleComponent(t: Int): Boolean =
+    t == T.STYLE_TEXT || t == T.NUM || t == T.COLON || t == T.BRKT
 
   fun stylesOpt(): List<String> {
     val styles = ArrayList<String>()
@@ -103,7 +115,8 @@ fun parseEr(src: String, db: ErDb) {
 
   fun role(): String {
     val t = types[i]
-    if (t != T.WORD && t != T.ENTITY_NAME && t != T.UNICODE_TEXT) fail("'UNICODE_TEXT', 'ENTITY_NAME', 'WORD'")
+    if (t != T.WORD && t != T.ENTITY_NAME && t != T.UNICODE_TEXT)
+      fail("'UNICODE_TEXT', 'ENTITY_NAME', 'WORD'")
     val text = texts[i++]
     return if (t == T.UNICODE_TEXT) text else text.jsSlice(1, -1)
   }
@@ -116,7 +129,8 @@ fun parseEr(src: String, db: ErDb) {
     do {
       var type = expect(T.ATTRIBUTE_WORD)
       if (isChar("?")) type += texts[i++]
-      if (types[i] != T.ATTRIBUTE_WORD) fail(if (type.endsWith("?")) "'ATTRIBUTE_WORD'" else "'ATTRIBUTE_WORD', '?'")
+      if (types[i] != T.ATTRIBUTE_WORD)
+        fail(if (type.endsWith("?")) "'ATTRIBUTE_WORD'" else "'ATTRIBUTE_WORD', '?'")
       val attribute = ParsedAttribute(type, texts[i++])
       if (types[i] == T.ATTRIBUTE_KEY) {
         val keys = arrayListOf(texts[i++])
@@ -194,7 +208,8 @@ fun parseEr(src: String, db: ErDb) {
   }
 
   expect(T.ER_DIAGRAM)
-  // Subgraphs nest on this stack rather than on the call stack; the first frame is the diagram itself.
+  // Subgraphs nest on this stack rather than on the call stack; the first frame is the diagram
+  // itself.
   val frames = arrayListOf(Frame("", "", ArrayList()))
   var frame = frames[0]
   var nested = false
@@ -249,7 +264,10 @@ fun parseEr(src: String, db: ErDb) {
         db.setAccDescription(value)
         if (nested) frame.list.add(value)
       }
-      T.direction_tb, T.direction_bt, T.direction_rl, T.direction_lr -> {
+      T.direction_tb,
+      T.direction_bt,
+      T.direction_rl,
+      T.direction_lr -> {
         i++
         val value = DIRECTIONS[t - T.direction_tb]
         if (nested) frame.list.add(DirStmt(value)) else db.setDirection(value)

@@ -27,33 +27,40 @@ private val RE_HREF = JsRegExp("""href\s+"""", "iy")
 private val RE_CALL = JsRegExp("""call\s+""", "iy")
 private val RE_CLICK = JsRegExp("""click\s+""", "iy")
 private val RE_EMPTY_CALL = JsRegExp("""\(\s*\)""", "y")
-private val RE_WEEKDAY = JsRegExp("""weekday\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b""", "iy")
-private val DAYS = listOf("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+private val RE_WEEKDAY =
+  JsRegExp("""weekday\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b""", "iy")
+private val DAYS =
+  listOf("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 private val RE_WEEKEND = JsRegExp("""weekend\s+(?:(friday)|saturday)\b""", "iy")
 private val RE_DATE = JsRegExp("""\d\d\d\d-\d\d-\d\d\b""", "y")
 private val RE_BARE_TITLE = JsRegExp("""title[^\S\r\n]*(?=[\r\n]|$)""", "iy")
 
-// Statements that start with a keyword, grouped by the keyword's first letter and kept in the grammar's rule order.
-private val KEYWORDS: Map<Int, List<Pair<JsRegExp, Int>>> = mapOf(
-  97 to listOf(
-    JsRegExp("""axisFormat\s[^#\n;]+""", "iy") to T.axisFormat,
-    JsRegExp("""accDescription\s[^#\n;]+""", "iy") to T.accDescription,
-  ),
-  103 to listOf(JsRegExp("""gantt\b""", "iy") to T.gantt),
-  100 to listOf(JsRegExp("""dateFormat\s[^#\n;]+""", "iy") to T.dateFormat),
-  105 to listOf(
-    JsRegExp("""inclusiveEndDates\b""", "iy") to T.inclusiveEndDates,
-    JsRegExp("""includes\s[^#\n;]+""", "iy") to T.includes,
-  ),
-  116 to listOf(
-    JsRegExp("""topAxis\b""", "iy") to T.topAxis,
-    JsRegExp("""tickInterval\s[^#\n;]+""", "iy") to T.tickInterval,
-    JsRegExp("""todayMarker\s[^\n;]+""", "iy") to T.todayMarker,
-    JsRegExp("""title[^\S\r\n][^\n]+""", "iy") to T.title,
-  ),
-  101 to listOf(JsRegExp("""excludes\s[^#\n;]+""", "iy") to T.excludes),
-  115 to listOf(JsRegExp("""section\s[^\n]+""", "iy") to T.section),
-)
+// Statements that start with a keyword, grouped by the keyword's first letter and kept in the
+// grammar's rule order.
+private val KEYWORDS: Map<Int, List<Pair<JsRegExp, Int>>> =
+  mapOf(
+    97 to
+      listOf(
+        JsRegExp("""axisFormat\s[^#\n;]+""", "iy") to T.axisFormat,
+        JsRegExp("""accDescription\s[^#\n;]+""", "iy") to T.accDescription,
+      ),
+    103 to listOf(JsRegExp("""gantt\b""", "iy") to T.gantt),
+    100 to listOf(JsRegExp("""dateFormat\s[^#\n;]+""", "iy") to T.dateFormat),
+    105 to
+      listOf(
+        JsRegExp("""inclusiveEndDates\b""", "iy") to T.inclusiveEndDates,
+        JsRegExp("""includes\s[^#\n;]+""", "iy") to T.includes,
+      ),
+    116 to
+      listOf(
+        JsRegExp("""topAxis\b""", "iy") to T.topAxis,
+        JsRegExp("""tickInterval\s[^#\n;]+""", "iy") to T.tickInterval,
+        JsRegExp("""todayMarker\s[^\n;]+""", "iy") to T.todayMarker,
+        JsRegExp("""title[^\S\r\n][^\n]+""", "iy") to T.title,
+      ),
+    101 to listOf(JsRegExp("""excludes\s[^#\n;]+""", "iy") to T.excludes),
+    115 to listOf(JsRegExp("""section\s[^\n]+""", "iy") to T.section),
+  )
 
 fun tokenize(src: String): Tokens {
   val n = src.length
@@ -222,7 +229,8 @@ fun tokenize(src: String): Tokens {
         }
       }
 
-      S.acc_title, S.acc_descr -> {
+      S.acc_title,
+      S.acc_descr -> {
         val type = if (state == S.acc_title) T.acc_title_value else T.acc_descr_value
         state = S.INITIAL
         emit(type, p, until('\n', p))

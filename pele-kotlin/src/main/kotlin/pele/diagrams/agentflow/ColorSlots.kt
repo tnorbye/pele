@@ -8,15 +8,16 @@ import kotlin.math.max
 // diagram around it never recolors it; containers count through the slots above the kinds, in the
 // order they were declared, so a frame does not take the color of a node inside it.
 
-val KIND_SLOT: Map<String, Int> = mapOf(
-  "tool" to 0,
-  "task" to 1,
-  "decision" to 2,
-  "input" to 3,
-  "refdoc" to 4,
-  "connector" to 5,
-  "action" to 6,
-)
+val KIND_SLOT: Map<String, Int> =
+  mapOf(
+    "tool" to 0,
+    "task" to 1,
+    "decision" to 2,
+    "input" to 3,
+    "refdoc" to 4,
+    "connector" to 5,
+    "action" to 6,
+  )
 
 val KIND_COUNT: Int = KIND_SLOT.size
 

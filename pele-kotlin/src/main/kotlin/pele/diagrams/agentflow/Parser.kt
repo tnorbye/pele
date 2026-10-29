@@ -11,61 +11,65 @@ import pele.js.jsTrimEnd
 import pele.replacements
 import pele.syntaxError
 
-private fun table(vararg tokens: Int): BooleanArray = BooleanArray(T.EOF + 1).also { t -> for (k in tokens) t[k] = true }
+private fun table(vararg tokens: Int): BooleanArray =
+  BooleanArray(T.EOF + 1).also { t -> for (k in tokens) t[k] = true }
 
-private val ID = table(
-  T.NUM,
-  T.NODE_STRING,
-  T.DOWN,
-  T.MINUS,
-  T.DEFAULT,
-  T.COMMA,
-  T.COLON,
-  T.AMP,
-  T.BRKT,
-  T.MULT,
-  T.UNICODE_TEXT,
-)
+private val ID =
+  table(
+    T.NUM,
+    T.NODE_STRING,
+    T.DOWN,
+    T.MINUS,
+    T.DEFAULT,
+    T.COMMA,
+    T.COLON,
+    T.AMP,
+    T.BRKT,
+    T.MULT,
+    T.UNICODE_TEXT,
+  )
 
-private val ALPHANUM = table(
-  T.NUM,
-  T.UNICODE_TEXT,
-  T.NODE_STRING,
-  T.DIR,
-  T.DOWN,
-  T.MINUS,
-  T.COMMA,
-  T.COLON,
-  T.AMP,
-  T.BRKT,
-  T.MULT,
-)
+private val ALPHANUM =
+  table(
+    T.NUM,
+    T.UNICODE_TEXT,
+    T.NODE_STRING,
+    T.DIR,
+    T.DOWN,
+    T.MINUS,
+    T.COMMA,
+    T.COLON,
+    T.AMP,
+    T.BRKT,
+    T.MULT,
+  )
 
-private val NO_TAGS = table(
-  T.NUM,
-  T.NODE_STRING,
-  T.SPACE,
-  T.MINUS,
-  T.AMP,
-  T.UNICODE_TEXT,
-  T.COLON,
-  T.MULT,
-  T.BRKT,
-  T.STYLE,
-  T.LINKSTYLE,
-  T.CLASSDEF,
-  T.CLASS,
-  T.CLICK,
-  T.GRAPH,
-  T.DIR,
-  T.flow,
-  T.connector,
-  T.global,
-  T.end,
-  T.DOWN,
-  T.UP,
-  T.START_LINK,
-)
+private val NO_TAGS =
+  table(
+    T.NUM,
+    T.NODE_STRING,
+    T.SPACE,
+    T.MINUS,
+    T.AMP,
+    T.UNICODE_TEXT,
+    T.COLON,
+    T.MULT,
+    T.BRKT,
+    T.STYLE,
+    T.LINKSTYLE,
+    T.CLASSDEF,
+    T.CLASS,
+    T.CLICK,
+    T.GRAPH,
+    T.DIR,
+    T.flow,
+    T.connector,
+    T.global,
+    T.end,
+    T.DOWN,
+    T.UP,
+    T.START_LINK,
+  )
 
 private val STYLE_PART = table(T.NUM, T.NODE_STRING, T.COLON, T.SPACE, T.BRKT, T.STYLE)
 
@@ -114,13 +118,16 @@ fun parseAgentflow(source: String, db: AgentflowDb, raw: Boolean = false) {
       while (k > 0 && TRAILING[types[k - 1]]) k--
       from = src.jsSlice(0, starts[k]).jsTrimEnd().length
     }
-    val at = if (src == source) from else inputOffset(listOf(replacements(source, RE_BRACE_TRAIL, 2)), from)
+    val at =
+      if (src == source) from
+      else inputOffset(listOf(replacements(source, RE_BRACE_TRAIL, 2)), from)
     if (t == T.ERROR) throw syntaxError("agentflow", source, at, "", true)
     throw syntaxError("agentflow", source, at, "Expecting $expected, got '${TOKEN_NAMES[t]}'")
   }
 
   // The span from the start of token `a` to the end of token `b`.
-  fun span(a: Int, b: Int): Loc = Loc(locs[4 * a], locs[4 * a + 1], locs[4 * b + 2], locs[4 * b + 3])
+  fun span(a: Int, b: Int): Loc =
+    Loc(locs[4 * a], locs[4 * a + 1], locs[4 * b + 2], locs[4 * b + 3])
 
   fun expect(type: Int, also: String = ""): String {
     if (types[i] != type) fail("'${TOKEN_NAMES[type]}'${if (also != "") ", $also" else ""}")
@@ -183,8 +190,7 @@ fun parseAgentflow(source: String, db: AgentflowDb, raw: Boolean = false) {
     val type: LabelType
     if (t == T.STR) type = "text"
     else if (t == T.MD_STR) type = "markdown"
-    else if (NO_TAGS[t]) type = "text"
-    else fail("'NODE_STRING', 'STR', 'MD_STR'")
+    else if (NO_TAGS[t]) type = "text" else fail("'NODE_STRING', 'STR', 'MD_STR'")
     var s = texts[i++]
     while (NO_TAGS[types[i]]) s += texts[i++]
     return FlowText(s, type)
@@ -321,8 +327,7 @@ fun parseAgentflow(source: String, db: AgentflowDb, raw: Boolean = false) {
       }
     }
     if (props != null) db.addVertex(id, label, type, props = props)
-    else if (type != null) db.addVertex(id, label, type)
-    else db.addVertex(id)
+    else if (type != null) db.addVertex(id, label, type) else db.addVertex(id)
     db.addVertexMapping(id, label, type, span(from, i - 1))
     return id
   }
@@ -487,8 +492,7 @@ fun parseAgentflow(source: String, db: AgentflowDb, raw: Boolean = false) {
           i++
           tooltip = expect(T.STR)
         }
-        if (hasArgs) db.setClickEvent(id, name, args)
-        else db.setClickEvent(id, name)
+        if (hasArgs) db.setClickEvent(id, name, args) else db.setClickEvent(id, name)
         if (tooltip != null) db.setTooltip(id, tooltip)
         return
       }
@@ -515,7 +519,8 @@ fun parseAgentflow(source: String, db: AgentflowDb, raw: Boolean = false) {
     }
   }
 
-  // Reads `flow` or `connector` up to the separator: an id, an optional bracketed title, optional metadata.
+  // Reads `flow` or `connector` up to the separator: an id, an optional bracketed title, optional
+  // metadata.
   fun header(at: Int): Frame {
     expect(T.SPACE, SEPARATORS)
     val id = textNoTags()
@@ -578,7 +583,11 @@ fun parseAgentflow(source: String, db: AgentflowDb, raw: Boolean = false) {
         db.addConnectorMapping(frame.id, frame.title, span(frame.at, frame.at), span(sep, sep))
         return id
       }
-      T.direction_tb, T.direction_bt, T.direction_rl, T.direction_lr, T.direction_td -> {
+      T.direction_tb,
+      T.direction_bt,
+      T.direction_rl,
+      T.direction_lr,
+      T.direction_td -> {
         i++
         return DirStatement(DIRECTIONS[t - T.direction_tb])
       }

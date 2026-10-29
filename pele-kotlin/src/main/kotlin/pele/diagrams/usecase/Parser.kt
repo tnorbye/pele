@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.usecase
 
+import kotlin.math.max
 import pele.PeleError
 import pele.PeleErrorCode
 import pele.PeleErrorInfo
@@ -13,7 +14,6 @@ import pele.js.jsReplaceAll
 import pele.js.jsSlice
 import pele.js.jsSplit
 import pele.js.jsTrim
-import kotlin.math.max
 
 // Mermaid parses use case diagrams with a Chevrotain parser, which decides each choice by looking
 // at most three tokens ahead and reports the first token that fits nowhere. This parser makes the
@@ -37,25 +37,26 @@ private const val STATEMENTS =
 private const val STYLE_PARTS =
   "WORD|PLAIN_STRING|NUMBER|HASH_COLOR|CSS_IDENTIFIER|CSS_ESCAPED_COMMA|DASH|DOT|PERCENT|CSS_PUNCTUATION|COLON|LPAREN|RPAREN|LBRACKET|RBRACKET|LBRACE|RBRACE|AT|MARKERLESS_SOLID"
 
-private val FLAGS = IntArray(T.RPAREN + 1).also { flags ->
-  fun flag(names: String, bits: Int) {
-    for (name in names.jsSplit("|")) {
-      // WORD is a category: every keyword and IDENTIFIER.
-      if (name == "WORD") for (t in T.USECASE..T.IDENTIFIER) flags[t] = flags[t] or bits
-      else {
-        val index = TOKEN_NAMES.indexOf(name)
-        flags[index] = flags[index] or bits
+private val FLAGS =
+  IntArray(T.RPAREN + 1).also { flags ->
+    fun flag(names: String, bits: Int) {
+      for (name in names.jsSplit("|")) {
+        // WORD is a category: every keyword and IDENTIFIER.
+        if (name == "WORD") for (t in T.USECASE..T.IDENTIFIER) flags[t] = flags[t] or bits
+        else {
+          val index = TOKEN_NAMES.indexOf(name)
+          flags[index] = flags[index] or bits
+        }
       }
     }
+    flag("NEWLINE|COMMENT|$STATEMENTS|$NAMES", LINE)
+    flag("IDENTIFIER|$ARROWS", RELATION)
+    flag(STYLE_PARTS, STYLE_PART)
+    flag("STEREOTYPE_START|CLASS_SEPARATOR|IDENTIFIER|$ARROWS|NEWLINE|EOF", FOLLOWS_NAME)
+    flag("NEWLINE|COMMENT|ACTOR|$NAMES", BOUNDARY_LINE)
+    flag("FORWARD_SOLID|MARKERLESS_SOLID|FORWARD_CIRCLE|FORWARD_CROSS", CLOSES_LABEL)
+    flag("NEWLINE|IDENTIFIER|PLAIN_STRING|RBRACE", METADATA_FIRST)
   }
-  flag("NEWLINE|COMMENT|$STATEMENTS|$NAMES", LINE)
-  flag("IDENTIFIER|$ARROWS", RELATION)
-  flag(STYLE_PARTS, STYLE_PART)
-  flag("STEREOTYPE_START|CLASS_SEPARATOR|IDENTIFIER|$ARROWS|NEWLINE|EOF", FOLLOWS_NAME)
-  flag("NEWLINE|COMMENT|ACTOR|$NAMES", BOUNDARY_LINE)
-  flag("FORWARD_SOLID|MARKERLESS_SOLID|FORWARD_CIRCLE|FORWARD_CROSS", CLOSES_LABEL)
-  flag("NEWLINE|IDENTIFIER|PLAIN_STRING|RBRACE", METADATA_FIRST)
-}
 
 private val FORBIDDEN = setOf("allowmixing", "newpage", "package", "rectangle", "skinparam")
 
@@ -91,7 +92,8 @@ private class Tail(
   lateinit var target: Item
 }
 
-// PORT: the parser's state is kept per call here, where upstream keeps it in module-level variables.
+// PORT: the parser's state is kept per call here, where upstream keeps it in module-level
+// variables.
 private class UsecaseParser(val src: String, tokens: Tokens) {
   val types: IntArray = tokens.types
   val starts: IntArray = tokens.starts
@@ -131,17 +133,23 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
   // Chevrotain lists every token sequence that would have been accepted.
   fun noAlternative(expected: String): Nothing {
     val list = expected.jsSplit("|").mapIndexed { i, sequence -> "  ${i + 1}. [$sequence]" }
-    fail("Expecting: one of these possible Token sequences:\n${list.joinToString("\n")}\nbut found: '${image(p)}'")
+    fail(
+      "Expecting: one of these possible Token sequences:\n${list.joinToString("\n")}\nbut found: '${image(p)}'"
+    )
   }
 
   fun statementSequences(): String {
     val names = NAMES.jsSplit("|")
     val metadata = names.flatMap { name ->
-      listOf("NEWLINE", "IDENTIFIER", "PLAIN_STRING", "RBRACE").map { next -> "$name, METADATA_START, $next" }
+      listOf("NEWLINE", "IDENTIFIER", "PLAIN_STRING", "RBRACE").map { next ->
+        "$name, METADATA_START, $next"
+      }
     }
     val follows = "STEREOTYPE_START|CLASS_SEPARATOR|IDENTIFIER|$ARROWS|NEWLINE|EOF".jsSplit("|")
     val entities = names.flatMapIndexed { i, name ->
-      (if (i == 0) listOf("LPAREN", "LBRACKET") + follows else follows).map { next -> "$name, $next" }
+      (if (i == 0) listOf("LPAREN", "LBRACKET") + follows else follows).map { next ->
+        "$name, $next"
+      }
     }
     return (listOf(STATEMENTS) + metadata + entities + metadata).joinToString("|")
   }
@@ -152,8 +160,7 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
 
   fun lineEnd() {
     lastEnd = ends[p - 1]
-    if (types[p] == T.NEWLINE) p++
-    else if (types[p] != T.EOF) noAlternative("NEWLINE|EOF")
+    if (types[p] == T.NEWLINE) p++ else if (types[p] != T.EOF) noAlternative("NEWLINE|EOF")
   }
 
   // The text of a name or string token, without its quotes.
@@ -164,7 +171,11 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
 
   fun tokenLabel(k: Int): DraftLabel {
     val at = content(k)
-    return DraftLabel(src.jsSlice(at[0], at[1]), if (types[k] == T.MARKDOWN_STRING) "markdown" else "text", at)
+    return DraftLabel(
+      src.jsSlice(at[0], at[1]),
+      if (types[k] == T.MARKDOWN_STRING) "markdown" else "text",
+      at,
+    )
   }
 
   fun generatedId(label: String): String = label.jsReplace(RE_NON_WORD, "_")
@@ -189,13 +200,16 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
     expect(T.COLON)
     val value = p
     val type = types[p]
-    if (!isKey(type) && type != T.TRUE && type != T.FALSE) noAlternative("IDENTIFIER|PLAIN_STRING|TRUE|FALSE")
+    if (!isKey(type) && type != T.TRUE && type != T.FALSE)
+      noAlternative("IDENTIFIER|PLAIN_STRING|TRUE|FALSE")
     p++
     val keySpan = content(key)
     val valueSpan = content(value)
     return DraftProperty(
       key = src.jsSlice(keySpan[0], keySpan[1]),
-      value = if (type == T.TRUE) true else if (type == T.FALSE) false else src.jsSlice(valueSpan[0], valueSpan[1]),
+      value =
+        if (type == T.TRUE) true
+        else if (type == T.FALSE) false else src.jsSlice(valueSpan[0], valueSpan[1]),
       span = span(starts[key], ends[value]),
       keySpan = keySpan,
       valueSpan = valueSpan,
@@ -211,7 +225,9 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
     val c = types[p + 2]
     if (a == T.COMMA) return isKey(b) || (b == T.NEWLINE && (c == T.NEWLINE || isKey(c)))
     if (a != T.NEWLINE) return false
-    return b == T.COMMA || isKey(b) || (b == T.NEWLINE && (c == T.NEWLINE || c == T.COMMA || isKey(c)))
+    return b == T.COMMA ||
+      isKey(b) ||
+      (b == T.NEWLINE && (c == T.NEWLINE || c == T.COMMA || isKey(c)))
   }
 
   fun metadata(): List<DraftProperty> {
@@ -236,8 +252,9 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
     return properties
   }
 
-  fun occurrences(properties: List<DraftProperty>): List<MetadataOccurrence> =
-    properties.map { MetadataOccurrence(it.key, it.span, it.keySpan, it.valueSpan) }
+  fun occurrences(properties: List<DraftProperty>): List<MetadataOccurrence> = properties.map {
+    MetadataOccurrence(it.key, it.span, it.keySpan, it.valueSpan)
+  }
 
   fun classSuffix(classes: MutableList<String>, spans: MutableList<Span>) {
     do {
@@ -252,15 +269,16 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
   fun name(brackets: Boolean): Item {
     val k = p
     val type = types[p]
-    val item = Item(
-      id = "",
-      span = content(k),
-      generated = type != T.IDENTIFIER,
-      classes = ArrayList(),
-      classSpans = ArrayList(),
-      explicit = false,
-      nodeSpan = span(0, 0),
-    )
+    val item =
+      Item(
+        id = "",
+        span = content(k),
+        generated = type != T.IDENTIFIER,
+        classes = ArrayList(),
+        classSpans = ArrayList(),
+        explicit = false,
+        nodeSpan = span(0, 0),
+      )
     if (type == T.IDENTIFIER) {
       p++
       item.id = image(k)
@@ -292,7 +310,8 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
       item.stereotypeSpan = span(text)
     }
     if (types[p] == T.CLASS_SEPARATOR) classSuffix(item.classes, item.classSpans)
-    item.explicit = !item.shape.isNullOrEmpty() || item.metadata != null || !item.stereotype.isNullOrEmpty()
+    item.explicit =
+      !item.shape.isNullOrEmpty() || item.metadata != null || !item.stereotype.isNullOrEmpty()
     item.nodeSpan = span(starts[first], ends[p - 1])
     return item
   }
@@ -350,12 +369,13 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
 
   fun relationTail(): Tail {
     val first = p
-    val tail = Tail(
-      type = "association",
-      arrowType = Arrow.SOLID_ARROW,
-      minlen = 1,
-      span = span(0, 0),
-    )
+    val tail =
+      Tail(
+        type = "association",
+        arrowType = Arrow.SOLID_ARROW,
+        minlen = 1,
+        span = span(0, 0),
+      )
     if (types[p] == T.IDENTIFIER && types[p + 1] == T.AT) {
       tail.explicitId = image(p)
       tail.explicitIdSpan = span(p)
@@ -386,14 +406,17 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
         if (close == T.FORWARD_SOLID) tail.arrowType = Arrow.SOLID_ARROW
         else if (close == T.FORWARD_CIRCLE) tail.arrowType = Arrow.CIRCLE_ARROW
         else if (close == T.FORWARD_CROSS) tail.arrowType = Arrow.CROSS_ARROW
-        else if (close != T.MARKERLESS_SOLID) noAlternative("FORWARD_SOLID|MARKERLESS_SOLID|FORWARD_CIRCLE|FORWARD_CROSS")
-        if (tail.arrowType == Arrow.SOLID_ARROW || tail.arrowType == Arrow.LINE_SOLID) tail.minlen = minimumLength(p)
+        else if (close != T.MARKERLESS_SOLID)
+          noAlternative("FORWARD_SOLID|MARKERLESS_SOLID|FORWARD_CIRCLE|FORWARD_CROSS")
+        if (tail.arrowType == Arrow.SOLID_ARROW || tail.arrowType == Arrow.LINE_SOLID)
+          tail.minlen = minimumLength(p)
         p++
       } else tail.minlen = minimumLength(k)
     } else if (type == T.FORWARD_CIRCLE) tail.arrowType = Arrow.CIRCLE_ARROW
     else if (type == T.FORWARD_CROSS) tail.arrowType = Arrow.CROSS_ARROW
     else if (type == T.BACKWARD_CIRCLE || type == T.BACKWARD_CROSS) {
-      tail.arrowType = if (type == T.BACKWARD_CIRCLE) Arrow.CIRCLE_ARROW_REVERSED else Arrow.CROSS_ARROW_REVERSED
+      tail.arrowType =
+        if (type == T.BACKWARD_CIRCLE) Arrow.CIRCLE_ARROW_REVERSED else Arrow.CROSS_ARROW_REVERSED
       if (labeledRight(0)) {
         tail.label = label()
         expect(T.MARKERLESS_SOLID)
@@ -409,7 +432,12 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
 
   fun statement(kind: String): GraphStatement = GraphStatement(kind, span(0, 0))
 
-  fun relationship(source: Item, declaration: Boolean, tail: Tail, nodes: MutableList<NodeOccurrence>): GraphStatement {
+  fun relationship(
+    source: Item,
+    declaration: Boolean,
+    tail: Tail,
+    nodes: MutableList<NodeOccurrence>,
+  ): GraphStatement {
     val target = tail.target
     if (target.explicit) drafts.elements.add(draft(target, "usecase"))
     drafts.relationships.add(
@@ -423,7 +451,7 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
         arrowType = tail.arrowType,
         label = tail.label,
         minlen = tail.minlen,
-      ),
+      )
     )
     nodes.add(occurrence(target, target.explicit))
     val out = statement("edge")
@@ -441,7 +469,8 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
     return out
   }
 
-  // `actor A, B` declares several actors; at the top level `actor A --> B` declares one and relates it.
+  // `actor A, B` declares several actors; at the top level `actor A --> B` declares one and relates
+  // it.
   fun actors(top: Boolean): GraphStatement {
     p++
     val items = arrayListOf(element(true))
@@ -468,19 +497,21 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
     }
     if (source.explicit) drafts.elements.add(draft(source, "usecase"))
     val nodes = arrayListOf(occurrence(source, source.explicit))
-    return if (tail != null) relationship(source, source.explicit, tail, nodes) else declaration(nodes)
+    return if (tail != null) relationship(source, source.explicit, tail, nodes)
+    else declaration(nodes)
   }
 
   fun boundary(): GraphStatement {
     p++
     val named = name(true)
-    val group = DraftBoundary(
-      id = named.id,
-      label = named.label,
-      span = named.span,
-      generated = named.generated,
-      classes = named.classes,
-    )
+    val group =
+      DraftBoundary(
+        id = named.id,
+        label = named.label,
+        span = named.span,
+        generated = named.generated,
+        classes = named.classes,
+      )
     val inline = if (types[p] == T.METADATA_START) metadata() else null
     if (types[p] == T.CLASS_SEPARATOR) classSuffix(named.classes, named.classSpans)
     lineEnd()
@@ -517,7 +548,7 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
     expect(T.COLON)
     if ((FLAGS[types[p]] and STYLE_PART) == 0) {
       fail(
-        "Expecting: expecting at least one iteration which starts with one of these possible Token sequences::\n  <[${STYLE_PARTS.jsReplaceAll("|", "] ,[")}]>\nbut found: '${image(p)}'",
+        "Expecting: expecting at least one iteration which starts with one of these possible Token sequences::\n  <[${STYLE_PARTS.jsReplaceAll("|", "] ,[")}]>\nbut found: '${image(p)}'"
       )
     }
     while ((FLAGS[types[p]] and STYLE_PART) != 0) p++
@@ -557,7 +588,8 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
       val text = image(k)
       if (type == T.ACC_DESCR_BLOCK) {
         drafts.accDescription = text.jsSlice(text.indexOf('{') + 1, text.lastIndexOf('}')).jsTrim()
-      } else if (type == T.ACC_DESCR_LINE) drafts.accDescription = text.jsSlice(text.indexOf(':') + 1).jsTrim()
+      } else if (type == T.ACC_DESCR_LINE)
+        drafts.accDescription = text.jsSlice(text.indexOf(':') + 1).jsTrim()
       else drafts.accTitle = text.jsSlice(text.indexOf(':') + 1).jsTrim()
       out = statement(if (type == T.ACC_TITLE_LINE) "accTitle" else "accDescr")
     } else if (type == T.DIRECTION) {
@@ -589,11 +621,15 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
       while (src.charCodeAt(from) == 32 || src.charCodeAt(from) == 9) from++
       var to = from
       while (RE_WORD.test(src.at(to) ?: "")) to++
-      val json = DraftJson(src.jsSlice(from, to), LinkedHashMap(), LinkedHashMap(), span(from, to), classes)
+      val json =
+        DraftJson(src.jsSlice(from, to), LinkedHashMap(), LinkedHashMap(), span(from, to), classes)
       drafts.jsons.add(json)
       pendingJson.add(Pair(json, literal))
       out = statement("json")
-      out.nodes = listOf(NodeOccurrence(json.id, json.span, json.span, defines = true, classSpans = classSpans))
+      out.nodes =
+        listOf(
+          NodeOccurrence(json.id, json.span, json.span, defines = true, classSpans = classSpans)
+        )
       out.classSpans = classSpans
     } else if (type == T.CLASS_DEF) {
       p++
@@ -610,7 +646,7 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
         DraftClasses(
           targets.map { id -> DraftClassTarget(image(id), span(id)) },
           classes.map { image(it) },
-        ),
+        )
       )
       out = statement("classAssign")
       out.ref = image(classes[0])
@@ -628,7 +664,8 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
         if ((FLAGS[types[p + 2]] and METADATA_FIRST) == 0) noAlternative(statementSequences())
         p++
         val target = reference(k)
-        if (type != T.IDENTIFIER) target.id = generatedId(src.jsSlice(target.span[0], target.span[1]))
+        if (type != T.IDENTIFIER)
+          target.id = generatedId(src.jsSlice(target.span[0], target.span[1]))
         val assigned = metadata()
         out = statement("metadata")
         out.nodes = listOf(target)
@@ -636,7 +673,8 @@ private class UsecaseParser(val src: String, tokens: Tokens) {
         drafts.metadata.add(DraftMetadata(target.id, target.span, assigned, out))
       } else {
         val follows =
-          (FLAGS[next] and FOLLOWS_NAME) != 0 || (type == T.IDENTIFIER && (next == T.LPAREN || next == T.LBRACKET))
+          (FLAGS[next] and FOLLOWS_NAME) != 0 ||
+            (type == T.IDENTIFIER && (next == T.LPAREN || next == T.LBRACKET))
         // Mermaid turns away the PlantUML statements people are most likely to try.
         if (!follows || (type == T.IDENTIFIER && FORBIDDEN.contains(image(k).lowercase()))) {
           noAlternative(statementSequences())

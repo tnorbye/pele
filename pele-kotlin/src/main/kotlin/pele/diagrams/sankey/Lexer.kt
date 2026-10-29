@@ -21,17 +21,18 @@ object T {
   const val EOF = 8
 }
 
-val TOKEN_NAMES: List<String> = listOf(
-  "\$end",
-  "STUCK",
-  "SANKEY",
-  "NEWLINE",
-  "COMMA",
-  "DQUOTE",
-  "NON_ESCAPED_TEXT",
-  "ESCAPED_TEXT",
-  "EOF",
-)
+val TOKEN_NAMES: List<String> =
+  listOf(
+    "\$end",
+    "STUCK",
+    "SANKEY",
+    "NEWLINE",
+    "COMMA",
+    "DQUOTE",
+    "NON_ESCAPED_TEXT",
+    "ESCAPED_TEXT",
+    "EOF",
+  )
 
 class Tokens(
   val types: MutableList<Int>,
@@ -84,8 +85,7 @@ fun tokenize(src: String): Tokens {
       while (q < n) {
         val d = src.jsCodePointAt(q)
         if (isTextData(d) || d == 44 || d == 13 || d == 10) q += if (d > 0xffff) 2 else 1
-        else if (d == 34 && src.charCodeAt(q + 1) == 34) q += 2
-        else break
+        else if (d == 34 && src.charCodeAt(q + 1) == 34) q += 2 else break
       }
       emit(T.ESCAPED_TEXT, p, q)
     } else {

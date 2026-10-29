@@ -34,7 +34,8 @@ private const val KEYWORDS =
 
 private val keywords: Set<String> by lazy { KEYWORDS.jsSplit(" ").toSet() }
 
-private val RE_TERM = JsRegExp("""^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?(%|deg|grad|rad|turn)?$""", "i")
+private val RE_TERM =
+  JsRegExp("""^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?(%|deg|grad|rad|turn)?$""", "i")
 private val RE_SPACES = JsRegExp("""\s+""")
 
 private object CK {
@@ -78,12 +79,18 @@ private fun isFunction(color: String): Boolean {
   if (parts.size != 3 || (alpha != null && !isAlpha(alpha, !legacy))) return false
   val kinds = parts.map { kind(it) }
   if (legacy) {
-    if (hsl) return (kinds[0] == CK.Number || kinds[0] == CK.Angle) && kinds[1] == CK.Percent && kinds[2] == CK.Percent
-    return (kinds[0] == CK.Number || kinds[0] == CK.Percent) && kinds[1] == kinds[0] && kinds[2] == kinds[0]
+    if (hsl)
+      return (kinds[0] == CK.Number || kinds[0] == CK.Angle) &&
+        kinds[1] == CK.Percent &&
+        kinds[2] == CK.Percent
+    return (kinds[0] == CK.Number || kinds[0] == CK.Percent) &&
+      kinds[1] == kinds[0] &&
+      kinds[2] == kinds[0]
   }
   for (i in 0 until 3) {
     val k = kinds[i]
-    val ok = k == CK.Number || k == CK.None || (if (hsl && i == 0) k == CK.Angle else k == CK.Percent)
+    val ok =
+      k == CK.Number || k == CK.None || (if (hsl && i == 0) k == CK.Angle else k == CK.Percent)
     if (!ok) return false
   }
   return true

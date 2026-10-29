@@ -29,12 +29,13 @@ fun jsDecodeURIComponent(s: String): String {
       sb.append(b.toChar())
       continue
     }
-    val count = when {
-      b and 0xE0 == 0xC0 -> 2
-      b and 0xF0 == 0xE0 -> 3
-      b and 0xF8 == 0xF0 -> 4
-      else -> throw JsUriError("URI malformed")
-    }
+    val count =
+      when {
+        b and 0xE0 == 0xC0 -> 2
+        b and 0xF0 == 0xE0 -> 3
+        b and 0xF8 == 0xF0 -> 4
+        else -> throw JsUriError("URI malformed")
+      }
     var cp = b and (0xFF shr (count + 1))
     for (j in 1 until count) {
       if (k >= n || s[k] != '%' || k + 2 >= n) throw JsUriError("URI malformed")
@@ -46,11 +47,12 @@ fun jsDecodeURIComponent(s: String): String {
       cp = (cp shl 6) or (bb and 0x3F)
       k += 3
     }
-    val min = when (count) {
-      2 -> 0x80
-      3 -> 0x800
-      else -> 0x10000
-    }
+    val min =
+      when (count) {
+        2 -> 0x80
+        3 -> 0x800
+        else -> 0x10000
+      }
     if (cp < min || cp > 0x10FFFF || (cp in 0xD800..0xDFFF)) throw JsUriError("URI malformed")
     sb.appendCodePoint(cp)
   }

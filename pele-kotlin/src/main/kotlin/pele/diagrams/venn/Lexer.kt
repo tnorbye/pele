@@ -33,28 +33,29 @@ object T {
   const val COLON = 19
 }
 
-val TOKEN_NAMES = listOf(
-  "\$end",
-  "INVALID",
-  "EOF",
-  "NEWLINE",
-  "VENN",
-  "TITLE",
-  "SET",
-  "UNION",
-  "TEXT",
-  "INDENT_TEXT",
-  "STYLE",
-  "BRACKET_LABEL",
-  "NUMERIC",
-  "HEXCOLOR",
-  "RGBCOLOR",
-  "RGBACOLOR",
-  "IDENTIFIER",
-  "STRING",
-  "COMMA",
-  "COLON",
-)
+val TOKEN_NAMES =
+  listOf(
+    "\$end",
+    "INVALID",
+    "EOF",
+    "NEWLINE",
+    "VENN",
+    "TITLE",
+    "SET",
+    "UNION",
+    "TEXT",
+    "INDENT_TEXT",
+    "STYLE",
+    "BRACKET_LABEL",
+    "NUMERIC",
+    "HEXCOLOR",
+    "RGBCOLOR",
+    "RGBACOLOR",
+    "IDENTIFIER",
+    "STRING",
+    "COMMA",
+    "COLON",
+  )
 
 // The part of the model the lexer talks to: an indented `text` line is a different token after a
 // set or union than anywhere else, and the parser is what knows which came before.
@@ -64,13 +65,14 @@ interface IndentHost {
   fun setIndentMode(enabled: Boolean)
 }
 
-private val KEYWORDS = listOf(
-  "venn-beta" to T.VENN,
-  "set" to T.SET,
-  "union" to T.UNION,
-  "text" to T.TEXT,
-  "style" to T.STYLE,
-)
+private val KEYWORDS =
+  listOf(
+    "venn-beta" to T.VENN,
+    "set" to T.SET,
+    "union" to T.UNION,
+    "text" to T.TEXT,
+    "style" to T.STYLE,
+  )
 
 // Reads tokens one at a time, as Mermaid's Jison lexer for venn diagrams does: every rule
 // ignores case, the first rule that matches wins, and a keyword must end at a word boundary.
@@ -95,7 +97,8 @@ class VennLexer(
     return true
   }
 
-  private fun keyword(at: Int, word: String): Boolean = this.word(at, word) && !isWord(this.src.charCodeAt(at + word.length))
+  private fun keyword(at: Int, word: String): Boolean =
+    this.word(at, word) && !isWord(this.src.charCodeAt(at + word.length))
 
   // The end of `rgb(1, 2, 3)` or `rgba(1, 2, 3, 0.5)` whose parenthesis opens at `at`, or -1.
   private fun color(at: Int, parts: Int): Int {
@@ -141,7 +144,12 @@ class VennLexer(
         this.at = this.lineEnd(i + 2)
         continue
       }
-      if (this.lineStart && this.word(i, "title") && this.afterLineFeed(i) && src.jsSlice(i + 5, this.lineEnd(i + 5)).jsTrim() == "") {
+      if (
+        this.lineStart &&
+          this.word(i, "title") &&
+          this.afterLineFeed(i) &&
+          src.jsSlice(i + 5, this.lineEnd(i + 5)).jsTrim() == ""
+      ) {
         // Skip a bare title like a comment, so it doesn't end indented text.
         var j = this.lineEnd(i + 5)
         while (src.charCodeAt(j) == 10 || src.charCodeAt(j) == 13) j++
@@ -197,7 +205,8 @@ class VennLexer(
         }
         for ((word, type) in KEYWORDS) {
           // A hyphen continues a name, as in `set-theory`.
-          if (this.keyword(i, word) && src.charCodeAt(i + word.length) != 45) return this.token(type, i + word.length)
+          if (this.keyword(i, word) && src.charCodeAt(i + word.length) != 45)
+            return this.token(type, i + word.length)
         }
         if (this.word(i, "rgb")) {
           val alpha = (src.charCodeAt(i + 3) or 32) == 97

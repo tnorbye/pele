@@ -8,16 +8,24 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val block: Diagram<BlockDb> = object : Diagram<BlockDb> {
-  override val type = "block"
-  override val math = true
+val block: Diagram<BlockDb> =
+  object : Diagram<BlockDb> {
+    override val type = "block"
+    override val math = true
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): BlockDb {
-    val db = BlockDb()
-    db.title = title
-    parseBlock(source, db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): BlockDb {
+      val db = BlockDb()
+      db.title = title
+      parseBlock(source, db)
+      return db
+    }
+
+    override fun render(model: BlockDb, config: Config, options: RenderOptions): Rendered =
+      renderBlock(model, config, options)
   }
-
-  override fun render(model: BlockDb, config: Config, options: RenderOptions): Rendered = renderBlock(model, config, options)
-}

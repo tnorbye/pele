@@ -42,6 +42,7 @@ interface Transition {
 class CynefinDb {
   var domains: MutableMap<String, CynefinDomain> = LinkedHashMap()
     private set
+
   var transitions: List<CynefinTransition> = ArrayList()
     private set
 
@@ -51,16 +52,20 @@ class CynefinDb {
     if (blocks == null) return
     for (block in blocks) {
       val name = block.domain
-      this.domains[name] = CynefinDomain(name, (block.items ?: emptyList()).map { item -> CynefinItem(item.label) })
+      this.domains[name] =
+        CynefinDomain(name, (block.items ?: emptyList()).map { item -> CynefinItem(item.label) })
     }
   }
 
   @JvmName("setTransitionList")
   fun setTransitions(transitions: List<Transition>?) {
     if (transitions == null) return
-    this.transitions = transitions
-      .filter { t -> t.from != t.to }
-      .map { t -> CynefinTransition(t.from, t.to, if (t.label.isNullOrEmpty()) null else t.label) }
+    this.transitions =
+      transitions
+        .filter { t -> t.from != t.to }
+        .map { t ->
+          CynefinTransition(t.from, t.to, if (t.label.isNullOrEmpty()) null else t.label)
+        }
   }
 }
 
@@ -74,8 +79,10 @@ fun buildCynefin(ast: CynefinAst, title: String?): CynefinModel {
   return CynefinModel(
     type = "cynefin",
     title = if (!ast.title.isNullOrEmpty()) ast.title else title,
-    accTitle = if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
-    accDescr = if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
+    accTitle =
+      if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
+    accDescr =
+      if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
     domains = db.domains,
     transitions = db.transitions,
   )

@@ -107,19 +107,20 @@ class WardleyBuilder {
   // replaced only when the caller passes those keys; `sets` says whether it does.
   fun addNode(node: WardleyNode, sets: Boolean = true) {
     val existing = this.nodes[node.id] ?: WardleyNode(node.id, node.label)
-    this.nodes[node.id] = WardleyNode(
-      id = node.id,
-      label = node.label,
-      x = node.x,
-      y = node.y,
-      className = node.className ?: existing.className,
-      labelOffsetX = node.labelOffsetX ?: existing.labelOffsetX,
-      labelOffsetY = node.labelOffsetY ?: existing.labelOffsetY,
-      inPipeline = existing.inPipeline,
-      isPipelineParent = existing.isPipelineParent,
-      inertia = if (sets) node.inertia else existing.inertia,
-      sourceStrategy = if (sets) node.sourceStrategy else existing.sourceStrategy,
-    )
+    this.nodes[node.id] =
+      WardleyNode(
+        id = node.id,
+        label = node.label,
+        x = node.x,
+        y = node.y,
+        className = node.className ?: existing.className,
+        labelOffsetX = node.labelOffsetX ?: existing.labelOffsetX,
+        labelOffsetY = node.labelOffsetY ?: existing.labelOffsetY,
+        inPipeline = existing.inPipeline,
+        isPipelineParent = existing.isPipelineParent,
+        inertia = if (sets) node.inertia else existing.inertia,
+        sourceStrategy = if (sets) node.sourceStrategy else existing.sourceStrategy,
+      )
     this.labels = null
   }
 
@@ -165,12 +166,13 @@ class WardleyBuilder {
 
   fun setAxes(partial: WardleyAxesConfig) {
     val axes = this.axes
-    this.axes = WardleyAxesConfig(
-      xLabel = partial.xLabel ?: axes.xLabel,
-      yLabel = partial.yLabel ?: axes.yLabel,
-      stages = partial.stages ?: axes.stages,
-      stageBoundaries = partial.stageBoundaries ?: axes.stageBoundaries,
-    )
+    this.axes =
+      WardleyAxesConfig(
+        xLabel = partial.xLabel ?: axes.xLabel,
+        yLabel = partial.yLabel ?: axes.yLabel,
+        stages = partial.stages ?: axes.stages,
+        stageBoundaries = partial.stageBoundaries ?: axes.stageBoundaries,
+      )
   }
 
   fun setSize(width: Double, height: Double) {
@@ -196,7 +198,11 @@ class WardleyBuilder {
     val nodes = ArrayList<WardleyNode>()
     for (node in this.nodes.values) {
       if (node.x == null || node.y == null) {
-        throw PeleError("Node \"${node.label}\" is missing coordinates", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "wardley"))
+        throw PeleError(
+          "Node \"${node.label}\" is missing coordinates",
+          PeleErrorCode.SEMANTIC,
+          PeleErrorInfo(type = "wardley"),
+        )
       }
       nodes.add(node)
     }
@@ -210,7 +216,13 @@ class WardleyBuilder {
       accelerators = ArrayList(this.accelerators),
       deaccelerators = ArrayList(this.deaccelerators),
       annotationsBox = this.annotationsBox,
-      axes = WardleyAxesConfig(this.axes.xLabel, this.axes.yLabel, this.axes.stages, this.axes.stageBoundaries),
+      axes =
+        WardleyAxesConfig(
+          this.axes.xLabel,
+          this.axes.yLabel,
+          this.axes.stages,
+          this.axes.stageBoundaries,
+        ),
       size = this.size,
     )
   }

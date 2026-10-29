@@ -34,35 +34,38 @@ private val ID = identifier("RR_ID")
 
 private fun word(name: String): TokenType = literal(name, listOf(ID))
 
-val IR_TOKENS: List<TokenType> = listOf(
-  opening("railroad-beta", ID),
-  word("nonterminal"),
-  word("zeroOrMore"),
-  word("oneOrMore"),
-  word("sequence"),
-  word("optional"),
-  word("terminal"),
-  word("special"),
-  word("choice"),
-  literal("="),
-  literal(";"),
-  literal("("),
-  literal(","),
-  literal(")"),
-  title("""[\w-]"""),
-  ACC_TITLE,
-  ACC_DESCR,
-  ID,
-  quoted("RR_STRING"),
-) + hiddenTokens("RR") + listOf(
-  TokenType(
-    name = "RR_BLOCK_COMMENT",
-    pattern = pele.js.JsRegExp("""\/\*[\s\S]*?\*\/""", "y"),
-    hidden = true,
-    first = "/",
-    opener = pele.js.JsRegExp("""\/\*""", "y"),
-  ),
-)
+val IR_TOKENS: List<TokenType> =
+  listOf(
+    opening("railroad-beta", ID),
+    word("nonterminal"),
+    word("zeroOrMore"),
+    word("oneOrMore"),
+    word("sequence"),
+    word("optional"),
+    word("terminal"),
+    word("special"),
+    word("choice"),
+    literal("="),
+    literal(";"),
+    literal("("),
+    literal(","),
+    literal(")"),
+    title("""[\w-]"""),
+    ACC_TITLE,
+    ACC_DESCR,
+    ID,
+    quoted("RR_STRING"),
+  ) +
+    hiddenTokens("RR") +
+    listOf(
+      TokenType(
+        name = "RR_BLOCK_COMMENT",
+        pattern = pele.js.JsRegExp("""\/\*[\s\S]*?\*\/""", "y"),
+        hidden = true,
+        first = "/",
+        opener = pele.js.JsRegExp("""\/\*""", "y"),
+      )
+    )
 
 sealed class IrExpression : Parent {
   class Sequence(override val elements: MutableList<IrExpression> = ArrayList()) : IrExpression()
@@ -101,18 +104,23 @@ private fun wrapper(`$type`: String): IrExpression = IrExpression.Wrapper(`$type
 private fun expression(r: Reader): IrExpression {
   val open = ArrayList<IrExpression>()
   while (true) {
-    var value: IrExpression = when (r.kind) {
-      IrT.terminal -> IrExpression.Terminal(argument(r))
-      IrT.nonterminal -> IrExpression.NonTerminal(argument(r))
-      IrT.special -> IrExpression.Special(argument(r))
-      IrT.sequence -> IrExpression.Sequence()
-      IrT.choice -> IrExpression.Choice()
-      IrT.optional -> wrapper("RailroadOptionalExpr")
-      IrT.oneOrMore -> wrapper("RailroadOneOrMoreExpr")
-      IrT.zeroOrMore -> wrapper("RailroadZeroOrMoreExpr")
-      else -> r.fail("an expression")
-    }
-    if (value is IrExpression.Sequence || value is IrExpression.Choice || value is IrExpression.Wrapper) {
+    var value: IrExpression =
+      when (r.kind) {
+        IrT.terminal -> IrExpression.Terminal(argument(r))
+        IrT.nonterminal -> IrExpression.NonTerminal(argument(r))
+        IrT.special -> IrExpression.Special(argument(r))
+        IrT.sequence -> IrExpression.Sequence()
+        IrT.choice -> IrExpression.Choice()
+        IrT.optional -> wrapper("RailroadOptionalExpr")
+        IrT.oneOrMore -> wrapper("RailroadOneOrMoreExpr")
+        IrT.zeroOrMore -> wrapper("RailroadZeroOrMoreExpr")
+        else -> r.fail("an expression")
+      }
+    if (
+      value is IrExpression.Sequence ||
+        value is IrExpression.Choice ||
+        value is IrExpression.Wrapper
+    ) {
       r.i++
       r.expect(IrT.open)
       open.add(value)
@@ -123,7 +131,9 @@ private fun expression(r: Reader): IrExpression {
       if (parent is IrExpression.Wrapper) {
         parent.element = value
       } else {
-        (if (parent is IrExpression.Sequence) parent.elements else (parent as IrExpression.Choice).alternatives).add(value)
+        (if (parent is IrExpression.Sequence) parent.elements
+          else (parent as IrExpression.Choice).alternatives)
+          .add(value)
         if (r.accept(IrT.comma)) break
       }
       r.expect(IrT.close)
@@ -152,7 +162,8 @@ private fun node(e: Parent, kids: List<RailroadNode>): RailroadNode {
     is IrExpression.Choice -> choice(kids)
     else -> {
       val w = e as IrExpression.Wrapper
-      if (w.`$type` == "RailroadOptionalExpr") optional(kids[0]) else repetition(kids[0], if (w.`$type` == "RailroadOneOrMoreExpr") 1.0 else 0.0)
+      if (w.`$type` == "RailroadOptionalExpr") optional(kids[0])
+      else repetition(kids[0], if (w.`$type` == "RailroadOneOrMoreExpr") 1.0 else 0.0)
     }
   }
 }

@@ -2,6 +2,9 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.agentflow
 
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -63,9 +66,6 @@ import pele.text.layoutLabel
 import pele.util.internalLink
 import pele.util.linked
 import pele.util.relAttr
-import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
 
 // The number of series tokens, which is the palette Mermaid's slot rules are applied to.
 const val PALETTE = 8
@@ -85,9 +85,11 @@ private val graphs = WeakIdentityMap<AgentflowDb, AgentGraph>()
 
 private val RE_DEFAULT_CLASS = JsRegExp("""^default\s?""")
 private val RE_INTERNAL = JsRegExp(""" internal-link(?: |$)""")
-private val RE_EDGE_CLASSES = JsRegExp("""edge-thickness-normal|edge-pattern-solid|flowchart-link""", "g")
+private val RE_EDGE_CLASSES =
+  JsRegExp("""edge-thickness-normal|edge-pattern-solid|flowchart-link""", "g")
 
-// Builds the graph once per model. Building it also records the model's shape and containment diagnostics.
+// Builds the graph once per model. Building it also records the model's shape and containment
+// diagnostics.
 fun agentGraph(db: AgentflowDb, config: Config): AgentGraph {
   var graph = graphs[db]
   if (graph == null) {
@@ -129,7 +131,12 @@ fun renderAgentflow(db: AgentflowDb, config: Config, options: RenderOptions): Re
 }
 
 // `turned` draws a diagram that runs across as one that runs down.
-private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned: Boolean): Rendered {
+private fun draw(
+  db: AgentflowDb,
+  config: Config,
+  options: RenderOptions,
+  turned: Boolean,
+): Rendered {
   val graph = agentGraph(db, config)
   val size = options.fontSize ?: 16.0
   val edgeSize = jsRound(size * 0.875)
@@ -145,7 +152,9 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
   graph.nodes.forEachIndexed { i, node -> index[node.id] = i }
 
   for (node in graph.nodes) {
-    val styles = if (node.cssStyles.isNotEmpty()) node.cssCompiledStyles + node.cssStyles else node.cssCompiledStyles
+    val styles =
+      if (node.cssStyles.isNotEmpty()) node.cssCompiledStyles + node.cssStyles
+      else node.cssCompiledStyles
     val style = resolveStyle(styles)
     val textStyle = (if (style.bold) Style.Bold else 0) or (if (style.italic) Style.Italic else 0)
     val markdown = node.labelType == "markdown"
@@ -172,7 +181,12 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
       val shape = canonicalShape(node.shape)
       val label = layoutLabel(node.label, markdown, measurer, fontSize, wrapWidth, textStyle)
       // A diamond grows twice as fast as its label, so it keeps the label's own width.
-      val s = shapeSize(shape, if (shape == "diam") label.width else max(label.width, minWidth), label.height)
+      val s =
+        shapeSize(
+          shape,
+          if (shape == "diam") label.width else max(label.width, minWidth),
+          label.height,
+        )
       view = NodeView(node, style, label, shape, s.w, s.h, s.dy, 0)
       c = cnode(s.w, s.h)
     }
@@ -183,7 +197,10 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
   graph.nodes.forEachIndexed { i, node ->
     cnodes[i].parent = if (node.parentId != null) (index[node.parentId] ?: -1) else -1
   }
-  inheritCrossedDirections(cnodes, graph.edges.map { edge -> Pair(index[edge.start] ?: -1, index[edge.end] ?: -1) })
+  inheritCrossedDirections(
+    cnodes,
+    graph.edges.map { edge -> Pair(index[edge.start] ?: -1, index[edge.end] ?: -1) },
+  )
 
   val rootDir = if (turned) "TB" else direction(db.direction)
   // The direction of the level a node sits in.
@@ -242,7 +259,8 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
     if (src == dst) {
       // A self-loop sits beside the node, across the flow, and the node's box grows to hold it.
       views[src].loops++
-      if (flowsSideways(src)) cnodes[src].h += 2 * (LOOP + (if (label.height > 0) label.height + 8 else 0.0))
+      if (flowsSideways(src))
+        cnodes[src].h += 2 * (LOOP + (if (label.height > 0) label.height + 8 else 0.0))
       else cnodes[src].w += 2 * (LOOP + (if (label.width > 0) label.width + 12 else 0.0))
     }
     drawn.add(edge)
@@ -257,21 +275,22 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
         route = ArrayList(),
         labelX = 0.0,
         labelY = 0.0,
-      ),
+      )
     )
   }
 
-  val layout = compoundLayout(
-    cnodes,
-    cedges,
-    rootDir,
-    LayeredOptions(
-      nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
-      edgeSep = EDGE_SEP,
-      rankSep = numberOption(config, "rankSpacing", RANK_SEP),
-      portSep = 20.0,
-    ),
-  )
+  val layout =
+    compoundLayout(
+      cnodes,
+      cedges,
+      rootDir,
+      LayeredOptions(
+        nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
+        edgeSep = EDGE_SEP,
+        rankSep = numberOption(config, "rankSpacing", RANK_SEP),
+        portSep = 20.0,
+      ),
+    )
 
   val title = layoutLabel(db.title, false, measurer, size, 4000.0, Style.Bold)
   val titleHeight = if (title.height > 0) title.height + 12 else 0.0
@@ -317,11 +336,11 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
         val c = cnodes[k]
         if (
           k != i &&
-          !c.isGroup &&
-          c.x + c.w / 2 > min(r[0], r[3]) - 1 &&
-          c.x - c.w / 2 < max(r[0], r[3]) + 1 &&
-          c.y + c.h / 2 > min(r[1], r[4]) - 1 &&
-          c.y - c.h / 2 < max(r[1], r[4]) + 1
+            !c.isGroup &&
+            c.x + c.w / 2 > min(r[0], r[3]) - 1 &&
+            c.x - c.w / 2 < max(r[0], r[3]) + 1 &&
+            c.y + c.h / 2 > min(r[1], r[4]) - 1 &&
+            c.y - c.h / 2 < max(r[1], r[4]) + 1
         ) {
           result = true
           break
@@ -367,15 +386,24 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
     val classes = classNames(node.cssClasses.jsReplace(RE_DEFAULT_CLASS, ""))
     val id = escText(node.id)
     if (c.isGroup) {
-      if (paints(view.style.shape)) fills.add(Fill(doubleArrayOf(x - c.w / 2, y - c.h / 2, x + c.w / 2, y + c.h / 2), view.style.shape))
+      if (paints(view.style.shape))
+        fills.add(
+          Fill(doubleArrayOf(x - c.w / 2, y - c.h / 2, x + c.w / 2, y + c.h / 2), view.style.shape)
+        )
       val titleX = clusterTitleX(c, view.label.width, crossings, GROUP_PAD)
       clusters.append(
         "<g class=\"pele-cluster pele-flow$classes\" data-id=\"$id\">" +
           "<rect x=\"${num(x - c.w / 2)}\" y=\"${num(y - c.h / 2)}\" width=\"${num(c.w)}\" height=\"${num(c.h)}\"${rounded(
-            tint(node.colorIndex ?: KIND_SLOT.size, "0.06", view.style) + view.style.shape,
+            tint(node.colorIndex ?: KIND_SLOT.size, "0.06", view.style) + view.style.shape
           )}/>" +
-          labelSvg(view.label, titleX, y - c.h / 2 + 8 + view.label.height / 2, " class=\"pele-cluster-label\"${inkFill(view.style, "var(--_m)")}${view.style.text}", icons) +
-          "</g>",
+          labelSvg(
+            view.label,
+            titleX,
+            y - c.h / 2 + 8 + view.label.height / 2,
+            " class=\"pele-cluster-label\"${inkFill(view.style, "var(--_m)")}${view.style.text}",
+            icons,
+          ) +
+          "</g>"
       )
       continue
     }
@@ -390,32 +418,36 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
       val dots = line + (DOTS + 2) / 2
       shape =
         "<rect x=\"${num(-w / 2)}\" y=\"${num(-h / 2)}\" width=\"${num(w)}\" height=\"${num(h)}\"${rounded(
-          tint(node.colorIndex ?: KIND_SLOT.size, "0.06", view.style) + view.style.shape,
+          tint(node.colorIndex ?: KIND_SLOT.size, "0.06", view.style) + view.style.shape
         )}/>" +
-        "<path d=\"M${num(-w / 2 + 10)},${num(line)}H${num(w / 2 - 10)}\" fill=\"none\" stroke=\"$color\" stroke-dasharray=\"3 3\"${view.style.line}/>" +
-        "<path class=\"pele-collapsed-mark\" d=\"${dot(-9.0, dots)}${dot(0.0, dots)}${dot(9.0, dots)}\" fill=\"$color\" stroke=\"none\"/>"
+          "<path d=\"M${num(-w / 2 + 10)},${num(line)}H${num(w / 2 - 10)}\" fill=\"none\" stroke=\"$color\" stroke-dasharray=\"3 3\"${view.style.line}/>" +
+          "<path class=\"pele-collapsed-mark\" d=\"${dot(-9.0, dots)}${dot(0.0, dots)}${dot(9.0, dots)}\" fill=\"$color\" stroke=\"none\"/>"
     } else {
       val slot = KIND_SLOT[node.kind ?: "task"] ?: 1
       kind = " pele-kind-${node.kind ?: "task"}"
-      shape = drawShape(
-        view.shape,
-        w,
-        h,
-        tint(slot, "0.14", view.style) + view.style.shape,
-        " stroke=\"${seriesColor(slot)}\"" + view.style.line,
-      )
+      shape =
+        drawShape(
+          view.shape,
+          w,
+          h,
+          tint(slot, "0.14", view.style) + view.style.shape,
+          " stroke=\"${seriesColor(slot)}\"" + view.style.line,
+        )
     }
 
     val ink = if (view.shape == COLLAPSED || shapeFilled(view.shape)) inkFill(view.style) else ""
-    var text = labelSvg(view.label, 0.0, view.dy, " class=\"pele-label\"$ink${view.style.text}", icons)
+    var text =
+      labelSvg(view.label, 0.0, view.dy, " class=\"pele-label\"$ink${view.style.text}", icons)
     val internal = RE_INTERNAL.test("$classes ")
     val nodeLabel = node.label
     if (internal && !nodeLabel.isNullOrEmpty() && options.links != false) {
-      // The label is a note name, but it still ends up in an href, so it gets the same check as a URL.
+      // The label is a note name, but it still ends up in an href, so it gets the same check as a
+      // URL.
       val name = decodeEntities(nodeLabel)
       val safe = internalLink(name, options)
       val target = esc(name)
-      text = "<a class=\"internal-link\"${if (safe) " href=\"$target\"${relAttr(options)}" else ""} data-href=\"$target\">$text</a>"
+      text =
+        "<a class=\"internal-link\"${if (safe) " href=\"$target\"${relAttr(options)}" else ""} data-href=\"$target\">$text</a>"
       links.add(pele.LinkInfo(node.id, name, true))
     }
     var body = shape + text
@@ -423,12 +455,20 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
     if (!tooltip.isNullOrEmpty()) body = "<title>${escText(tooltip)}</title>" + body
     val link = node.link
     if (!link.isNullOrEmpty()) {
-      body = linked(body, link, node.id, links, options, if (!node.linkTarget.isNullOrEmpty()) " target=\"${esc(node.linkTarget!!)}\"" else "")
+      body =
+        linked(
+          body,
+          link,
+          node.id,
+          links,
+          options,
+          if (!node.linkTarget.isNullOrEmpty()) " target=\"${esc(node.linkTarget!!)}\"" else "",
+        )
     }
     nodesOut.append(
       "<g class=\"pele-node pele-shape-${view.shape}$kind$classes\" data-id=\"$id\" transform=\"translate(${num(
-        x,
-      )},${num(y)})\">$body</g>",
+        x
+      )},${num(y)})\">$body</g>"
     )
   }
 
@@ -437,19 +477,25 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
   val labelsOut = StringBuilder()
   val put = { edge: GraphEdge, label: Label, path: EdgePath, x: Double, y: Double ->
     val style =
-      if (edge.style.isNotEmpty() || edge.cssCompiledStyles.isNotEmpty()) resolveStyle(edge.cssCompiledStyles + edge.style) else null
+      if (edge.style.isNotEmpty() || edge.cssCompiledStyles.isNotEmpty())
+        resolveStyle(edge.cssCompiledStyles + edge.style)
+      else null
     val endType = edge.arrowTypeEnd
-    val over = overFills(path.d, doubleArrayOf(path.ex, path.ey), fills, style?.line ?: "", path.tokens)
+    val over =
+      overFills(path.d, doubleArrayOf(path.ex, path.ey), fills, style?.line ?: "", path.tokens)
     val stroke = style?.stroke
-    val color = if (!over.isNullOrEmpty()) over else if (!stroke.isNullOrEmpty()) esc(stroke) else "var(--_l)"
-    val kind = if (edge.thickness == "dotted") "reference" else if (endType == "arrow_cross") "failure" else "sequence"
+    val color =
+      if (!over.isNullOrEmpty()) over else if (!stroke.isNullOrEmpty()) esc(stroke) else "var(--_l)"
+    val kind =
+      if (edge.thickness == "dotted") "reference"
+      else if (endType == "arrow_cross") "failure" else "sequence"
     val classes = classNames(edge.classes.jsReplace(RE_EDGE_CLASSES, ""))
     if (over == "") casings.append(edgeCasing(path, "none", endType, style?.line ?: ""))
     edgesOut.append(
       "<g class=\"pele-edge pele-edge-$kind$classes\" data-id=\"${escText(edge.id)}\"${if (!over.isNullOrEmpty()) " stroke=\"$over\"" else ""}${style?.line ?: ""}>" +
         "<path d=\"${path.d}\"${if (edge.thickness == "dotted") " stroke-dasharray=\"3 4\"" else ""}/>" +
         marker(endType, path.ex, path.ey, path.edx, path.edy, color) +
-        "</g>",
+        "</g>"
     )
     if (label.width > 0) {
       labelsOut.append(edgeLabelSvg(edge.id, label, x, y, style?.text ?: "", icons))
@@ -467,7 +513,17 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
       val view = views[ce.src]
       val k = loopSeen[ce.src] ?: 0
       loopSeen[ce.src] = k + 1
-      path = loopPath(cnodes[ce.src], view.w, view.h, k, flowsSideways(ce.src), LOOP, markerTrim(endType), ce)
+      path =
+        loopPath(
+          cnodes[ce.src],
+          view.w,
+          view.h,
+          k,
+          flowsSideways(ce.src),
+          LOOP,
+          markerTrim(endType),
+          ce,
+        )
     } else {
       val route = ArrayList(ce.route)
       insetRoute(route, 0, views[ce.src], cnodes[ce.src])
@@ -476,22 +532,34 @@ private fun draw(db: AgentflowDb, config: Config, options: RenderOptions, turned
     }
     put(edge, label, path, ce.labelX, ce.labelY)
   }
-  held.forEachIndexed { i, h -> put(h.edge, h.label, heldPaths[i], heldLabels[2 * i], heldLabels[2 * i + 1]) }
+  held.forEachIndexed { i, h ->
+    put(h.edge, h.label, heldPaths[i], heldLabels[2 * i], heldLabels[2 * i + 1])
+  }
 
-  val svg = svgDocument(
-    "agentflow",
-    width,
-    height,
-    size,
-    options,
-    db,
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
-      casingsSvg(casings.toString()) +
-      (if (edgesOut.isNotEmpty()) "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>" else "") +
-      (if (labelsOut.isNotEmpty()) "<g class=\"pele-edge-labels\" font-size=\"${jsStr(edgeSize)}\">$labelsOut</g>" else "") +
-      "<g class=\"pele-nodes\">$nodesOut</g>",
-  )
+  val svg =
+    svgDocument(
+      "agentflow",
+      width,
+      height,
+      size,
+      options,
+      db,
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
+        casingsSvg(casings.toString()) +
+        (if (edgesOut.isNotEmpty())
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>"
+        else "") +
+        (if (labelsOut.isNotEmpty())
+          "<g class=\"pele-edge-labels\" font-size=\"${jsStr(edgeSize)}\">$labelsOut</g>"
+        else "") +
+        "<g class=\"pele-nodes\">$nodesOut</g>",
+    )
 
   return Rendered(svg, width, height, links)
 }

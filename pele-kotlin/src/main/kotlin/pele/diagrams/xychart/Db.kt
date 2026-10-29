@@ -59,7 +59,8 @@ class XyChartDb : XyChartModel {
   override var accDescr: String? = null
   override var orientation: String? = null
   override var xAxis: XAxis = BandAxis("", ArrayList())
-  override var yAxis: LinearAxis = LinearAxis("", Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)
+  override var yAxis: LinearAxis =
+    LinearAxis("", Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)
   var hasSetXAxis = false
   override var hasSetYAxis = false
   override val plots: MutableList<Plot> = ArrayList()
@@ -98,7 +99,8 @@ class XyChartDb : XyChartModel {
     // The first series fixes the x range when no x-axis statement did.
     if (!this.hasSetXAxis) this.setXAxisRangeData(1.0, values.size.toDouble())
     val x = this.xAxis
-    if (x is BandAxis && values.size > x.categories.size) values = values.subList(0, x.categories.size)
+    if (x is BandAxis && values.size > x.categories.size)
+      values = values.subList(0, x.categories.size)
     if (!this.hasSetYAxis) {
       var min = this.yAxis.min
       var max = this.yAxis.max
@@ -108,7 +110,8 @@ class XyChartDb : XyChartModel {
       }
       this.yAxis = LinearAxis(this.yAxis.title, min, max)
     }
-    if (x is BandAxis) return x.categories.mapIndexed { i, category -> Pair(category, values.getOrNull(i)) }
+    if (x is BandAxis)
+      return x.categories.mapIndexed { i, category -> Pair(category, values.getOrNull(i)) }
     x as LinearAxis
     if (values.size == 1) return listOf(Pair(jsStr(x.min), values[0]))
     val step = (x.max - x.min) / (values.size - 1)
@@ -118,7 +121,8 @@ class XyChartDb : XyChartModel {
   private fun addPlot(type: String, title: XyText, data: List<DataPoint>) {
     val plot = Plot(type, title.text.jsTrim(), this.plotData(data.map { d -> d.value }))
     // Mermaid accepts labels on the points of a bar series and ignores them.
-    if (type == "line" && data.any { d -> d.label.jsTrim() != "" }) plot.pointLabels = data.map { d -> d.label.jsTrim() }
+    if (type == "line" && data.any { d -> d.label.jsTrim() != "" })
+      plot.pointLabels = data.map { d -> d.label.jsTrim() }
     this.plots.add(plot)
   }
 

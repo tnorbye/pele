@@ -2,6 +2,10 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.treemap
 
+import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
+import kotlin.math.abs
 import pele.js.JsRegExp
 import pele.js.jsNumber
 import pele.js.jsReplace
@@ -10,15 +14,12 @@ import pele.js.jsSlice
 import pele.js.jsStr
 import pele.js.toFixed
 import pele.js.toPrecision
-import java.math.BigDecimal
-import java.math.MathContext
-import java.math.RoundingMode
-import kotlin.math.abs
 
 // The parts of d3-format's specifier that treemap values use: an optional `$`, `,` for thousands
 // separators, a precision, and a type of `f`, `%`, `d`, `e` or none. Fill, alignment and width are
 // read and ignored. Anything else falls back to the default, `,`.
-private val RE_SPEC = JsRegExp("""^(?:.?[<>=^])?([-+( ])?(\$)?0?\d*(,)?(?:\.(\d+))?(~)?([a-zA-Z%])?$""")
+private val RE_SPEC =
+  JsRegExp("""^(?:.?[<>=^])?([-+( ])?(\$)?0?\d*(,)?(?:\.(\d+))?(~)?([a-zA-Z%])?$""")
 private val RE_ZEROS = JsRegExp("""\.?0+$""")
 
 private fun group(digits: String): String {
@@ -69,7 +70,8 @@ fun formatter(spec: String): (Double) -> String {
     }
 
     var text = body
-    if (!m[5].isNullOrEmpty() && text.contains('.') && !text.contains('e')) text = text.jsReplace(RE_ZEROS, "")
+    if (!m[5].isNullOrEmpty() && text.contains('.') && !text.contains('e'))
+      text = text.jsReplace(RE_ZEROS, "")
     if (comma && !text.contains('e')) {
       val dot = text.indexOf('.')
       text = if (dot == -1) group(text) else group(text.jsSlice(0, dot)) + text.jsSlice(dot)

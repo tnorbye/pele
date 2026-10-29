@@ -2,6 +2,8 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.c4
 
+import java.util.IdentityHashMap
+import kotlin.math.floor
 import pele.js.JsRegExp
 import pele.js.jsReplace
 import pele.js.jsSplit
@@ -11,15 +13,14 @@ import pele.text.Label
 import pele.text.Style
 import pele.text.TextMeasurer
 import pele.text.layoutLabel
-import java.util.IdentityHashMap
-import kotlin.math.floor
 
 private const val SHAPE_W = 216.0
 private const val SHAPE_MIN_H = 64.0
 private const val PAD_X = 14.0
 private const val PAD_Y = 12.0
 
-// Room between two columns for the label of a line across them, clear of an arrowhead on either side,
+// Room between two columns for the label of a line across them, clear of an arrowhead on either
+// side,
 // with an arrowhead's length to spare for a word a little wider than the label room.
 private const val GAP_X = NARROW + LABEL_PAD + 3 * ARROW
 private const val GAP_Y = 88.0
@@ -35,17 +36,18 @@ const val HEAD_TOP = 10.0
 private val RE_UNDERSCORES = JsRegExp("_", "g")
 
 // Shape keywords Mermaid accepts in $shape, $sprite or $tags, as names of the shared shapes.
-private val FORMS: Map<String, String> = mapOf(
-  "person" to "person",
-  "box" to "rect",
-  "rounded" to "rect",
-  "component" to "rect",
-  "cylinder" to "cyl",
-  "database" to "cyl",
-  "db" to "cyl",
-  "queue" to "h-cyl",
-  "pipe" to "h-cyl",
-)
+private val FORMS: Map<String, String> =
+  mapOf(
+    "person" to "person",
+    "box" to "rect",
+    "rounded" to "rect",
+    "component" to "rect",
+    "cylinder" to "cyl",
+    "database" to "cyl",
+    "db" to "cyl",
+    "queue" to "h-cyl",
+    "pipe" to "h-cyl",
+  )
 
 class Node(
   val shape: C4Shape,
@@ -92,21 +94,35 @@ private fun formOf(shape: C4Shape): String {
     }
   }
   val kind = shape.kind
-  return if (kind.endsWith("person")) "person" else if (kind.endsWith("_db")) "cyl" else if (kind.endsWith("_queue")) "h-cyl" else "rect"
+  return if (kind.endsWith("person")) "person"
+  else if (kind.endsWith("_db")) "cyl" else if (kind.endsWith("_queue")) "h-cyl" else "rect"
 }
 
-private fun measure(shape: C4Shape, measurer: TextMeasurer, size: Double, small: Double, width: Double = SHAPE_W): Node {
+private fun measure(
+  shape: C4Shape,
+  measurer: TextMeasurer,
+  size: Double,
+  small: Double,
+  width: Double = SHAPE_W,
+): Node {
   val form = formOf(shape)
   val capW = if (form == "h-cyl") 36.0 else 0.0
   val capH = if (form == "person") HEAD else if (form == "cyl") 24.0 else 0.0
   val inner = width - 2 * PAD_X - capW
   val techn = shape.techn
-  val labels = listOf(
-    layoutLabel("«" + shape.kind.jsReplace(RE_UNDERSCORES, " ") + "»", false, measurer, small - 1, inner),
-    layoutLabel(shape.label, false, measurer, size, inner, Style.Bold),
-    layoutLabel(if (!techn.isNullOrEmpty()) "[$techn]" else null, false, measurer, small, inner),
-    layoutLabel(shape.descr, false, measurer, small, inner),
-  )
+  val labels =
+    listOf(
+      layoutLabel(
+        "«" + shape.kind.jsReplace(RE_UNDERSCORES, " ") + "»",
+        false,
+        measurer,
+        small - 1,
+        inner,
+      ),
+      layoutLabel(shape.label, false, measurer, size, inner, Style.Bold),
+      layoutLabel(if (!techn.isNullOrEmpty()) "[$techn]" else null, false, measurer, small, inner),
+      layoutLabel(shape.descr, false, measurer, small, inner),
+    )
   var tw = 0.0
   var textH = if (labels[3].height > 0) 4.0 else 0.0
   for (label in labels) {
@@ -125,9 +141,16 @@ private fun measure(shape: C4Shape, measurer: TextMeasurer, size: Double, small:
   )
 }
 
-// Places boxes left to right in rows of `perRow`, from (0, 0), and returns the width and height the rows take.
+// Places boxes left to right in rows of `perRow`, from (0, 0), and returns the width and height the
+// rows take.
 // Shapes are stretched to the height of their row; boundaries keep their own.
-private fun rows(boxes: List<Box>, perRow: Double, gapX: Double, gapY: Double, stretch: Boolean): Pair<Double, Double> {
+private fun rows(
+  boxes: List<Box>,
+  perRow: Double,
+  gapX: Double,
+  gapY: Double,
+  stretch: Boolean,
+): Pair<Double, Double> {
   var width = 0.0
   var y = 0.0
   var from = 0.0
@@ -150,43 +173,60 @@ private fun rows(boxes: List<Box>, perRow: Double, gapX: Double, gapY: Double, s
   return Pair(width, if (boxes.size > 0) y - gapY else 0.0)
 }
 
-// Mermaid's grid: in each boundary, its shapes in rows of c4ShapeInRow, then the boundaries inside it
+// Mermaid's grid: in each boundary, its shapes in rows of c4ShapeInRow, then the boundaries inside
+// it
 // in rows of c4BoundaryInRow, each sized around its own content.
-fun layoutC4(db: C4Db, measurer: TextMeasurer, size: Double, small: Double, room: Double?, gap: Double): Layout {
+fun layoutC4(
+  db: C4Db,
+  measurer: TextMeasurer,
+  size: Double,
+  small: Double,
+  room: Double?,
+  gap: Double,
+): Layout {
   val groupPad = if (room == null) GROUP_PAD else 12.0
   val groups = LinkedHashMap<C4Boundary, Group>()
   for (boundary in db.boundaries) {
-    val labelRoom = if (room == null) 4000.0 else maxOf(80.0, room - 2 * HEAD_LEFT - 2 * GROUP_PAD * 2)
+    val labelRoom =
+      if (room == null) 4000.0 else maxOf(80.0, room - 2 * HEAD_LEFT - 2 * GROUP_PAD * 2)
     val type = boundary.type
-    val labels = if (boundary.parent != null) {
-      listOf(
-        layoutLabel(boundary.label, false, measurer, size, labelRoom, Style.Bold),
-        layoutLabel(if (!type.isNullOrEmpty()) "[$type]" else null, false, measurer, small, labelRoom),
-        layoutLabel(boundary.descr, false, measurer, small, labelRoom),
-      )
-    } else {
-      emptyList()
-    }
+    val labels =
+      if (boundary.parent != null) {
+        listOf(
+          layoutLabel(boundary.label, false, measurer, size, labelRoom, Style.Bold),
+          layoutLabel(
+            if (!type.isNullOrEmpty()) "[$type]" else null,
+            false,
+            measurer,
+            small,
+            labelRoom,
+          ),
+          layoutLabel(boundary.descr, false, measurer, small, labelRoom),
+        )
+      } else {
+        emptyList()
+      }
     var head = 0.0
     var headW = 0.0
     for (label in labels) {
       head += label.height
       headW = maxOf(headW, label.width)
     }
-    groups[boundary] = Group(
-      boundary,
-      ArrayList(),
-      ArrayList(),
-      labels,
-      if (head > 0) head + HEAD_TOP + 6 + LANE else groupPad,
-      headW,
-      HEAD_LEFT,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      "rect",
-    )
+    groups[boundary] =
+      Group(
+        boundary,
+        ArrayList(),
+        ArrayList(),
+        labels,
+        if (head > 0) head + HEAD_TOP + 6 + LANE else groupPad,
+        headW,
+        HEAD_LEFT,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        "rect",
+      )
   }
   val root = groups[db.boundaries[0]]!!
   for (group in groups.values) {
@@ -209,7 +249,9 @@ fun layoutC4(db: C4Db, measurer: TextMeasurer, size: Double, small: Double, room
     val parent = shape.parent
     if (parent != null) {
       val depth = depths[parent] ?: 0.0
-      val nodeWidth = if (room == null) SHAPE_W else maxOf(100.0, minOf(SHAPE_W, room - 2 * depth * groupPad - 32))
+      val nodeWidth =
+        if (room == null) SHAPE_W
+        else maxOf(100.0, minOf(SHAPE_W, room - 2 * depth * groupPad - 32))
       groups[parent]?.nodes?.add(measure(shape, measurer, size, small, nodeWidth))
     }
   }
@@ -227,7 +269,8 @@ fun layoutC4(db: C4Db, measurer: TextMeasurer, size: Double, small: Double, room
       return maxOf(1.0, minOf(limit, floor((room + gap - 2 * groupPad) / (widest + gap))))
     }
     val (gridW, gridH) = rows(group.nodes, count(group.nodes, perRow, gapX), gapX, GAP_Y, true)
-    val (kidsW, kidsH) = rows(group.kids, count(group.kids, groupsPerRow, GROUP_GAP), GROUP_GAP, GROUP_GAP, false)
+    val (kidsW, kidsH) =
+      rows(group.kids, count(group.kids, groupsPerRow, GROUP_GAP), GROUP_GAP, GROUP_GAP, false)
     val between = if (gridH > 0 && kidsH > 0) GROUP_GAP else 0.0
     val frame = if (group === root) 0.0 else groupPad
     kidsTop[group] = gridH + between

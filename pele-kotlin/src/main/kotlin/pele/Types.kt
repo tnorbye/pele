@@ -11,9 +11,11 @@ sealed interface MathMarkup {
   val width: Double
   val height: Double
 
-  data class Svg(val svg: String, override val width: Double, override val height: Double) : MathMarkup
+  data class Svg(val svg: String, override val width: Double, override val height: Double) :
+    MathMarkup
 
-  data class Html(val html: String, override val width: Double, override val height: Double) : MathMarkup
+  data class Html(val html: String, override val width: Double, override val height: Double) :
+    MathMarkup
 }
 
 // TeX excludes the $$ delimiters; font size is in pixels.
@@ -60,7 +62,12 @@ data class RenderOptions(
 
 data class LinkInfo(val id: String, val href: String, val internal: Boolean)
 
-open class Rendered(val svg: String, val width: Double, val height: Double, val links: List<LinkInfo>)
+open class Rendered(
+  val svg: String,
+  val width: Double,
+  val height: Double,
+  val links: List<LinkInfo>,
+)
 
 class RenderResult(
   val type: DiagramType,
@@ -80,16 +87,25 @@ interface Diagram<Model> {
   val type: DiagramType
 
   // The name of this type's section in Mermaid's config, when it is not the type's own name.
-  val section: String? get() = null
+  val section: String?
+    get() = null
 
   // A diagram that reports source positions is given the text with its `%%` comment lines kept.
   // `lineOffset` is the number of front matter lines that were removed before that text.
-  val keepComments: Boolean get() = false
+  val keepComments: Boolean
+    get() = false
 
   // Enables $$...$$ in labels.
-  val math: Boolean get() = false
+  val math: Boolean
+    get() = false
 
-  fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): Model
+  fun parse(
+    source: String,
+    config: Config,
+    title: String?,
+    lineOffset: Int,
+    limits: ParseLimits,
+  ): Model
 
   fun render(model: Model, config: Config, options: RenderOptions): Rendered
 }

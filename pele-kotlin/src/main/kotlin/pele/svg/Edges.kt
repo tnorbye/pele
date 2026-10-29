@@ -2,8 +2,14 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.svg
 
-import pele.js.JsNumberArray
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sign
+import kotlin.math.sqrt
 import pele.IconResolver
+import pele.js.JsNumberArray
 import pele.js.JsRegExp
 import pele.js.charCodeAt
 import pele.js.jsHypot
@@ -18,12 +24,6 @@ import pele.layout.CEdge
 import pele.layout.CNode
 import pele.layout.ease
 import pele.text.Label
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sign
-import kotlin.math.sqrt
 
 const val ARROW = 8.0
 
@@ -55,7 +55,8 @@ class SideReach {
 
   fun add(node: Int, side: Int, type: String) {
     val trim = markerTrim(type)
-    if (side >= 0 && trim > 0 && trim + LEAD > (reach[node * 4 + side] ?: 0.0)) reach[node * 4 + side] = trim + LEAD
+    if (side >= 0 && trim > 0 && trim + LEAD > (reach[node * 4 + side] ?: 0.0))
+      reach[node * 4 + side] = trim + LEAD
   }
 
   fun of(node: Int, side: Int): Double = if (side >= 0) (reach[node * 4 + side] ?: 0.0) else 0.0
@@ -72,7 +73,8 @@ fun sideReach(): SideReach = SideReach()
 // rounds it a little, and any other but a linear one turns as widely as it can: the turn takes
 // the whole of a leg that ends at a node and half of a leg it shares with the next turn.
 // `startReach` and `endReach` say how far from its nodes the edge starts to turn, where the
-// other edges on the same side of a node need it to; by default, far enough to clear its own marker.
+// other edges on the same side of a node need it to; by default, far enough to clear its own
+// marker.
 fun routePath(
   route: List<Double>,
   curve: String?,
@@ -87,7 +89,9 @@ fun routePath(
   val xs = JsNumberArray()
   val ys = JsNumberArray()
   val axes = JsNumberArray()
-  val near = { ax: Double, ay: Double, bx: Double, by: Double -> abs(ax - bx) < 0.01 && abs(ay - by) < 0.01 }
+  val near = { ax: Double, ay: Double, bx: Double, by: Double ->
+    abs(ax - bx) < 0.01 && abs(ay - by) < 0.01
+  }
   var i0 = 0
   while (i0 < route.size) {
     val x = route[i0]
@@ -120,15 +124,17 @@ fun routePath(
   val aligned = { i: Int -> abs(xs[i] - xs[i - 1]) < 0.01 || abs(ys[i] - ys[i - 1]) < 0.01 }
   val straight = { i: Int -> linear || aligned(i) }
   // The way the route heads from point i to point j: along the flow where an S joins them.
-  val unit = fun(i: Int, j: Int, axis: Double): DoubleArray {
-    if (!straight(max(i, j))) {
-      return if (axis == 0.0) doubleArrayOf(0.0, sign(ys[j] - ys[i]).jsOr { 1.0 }) else doubleArrayOf(sign(xs[j] - xs[i]).jsOr { 1.0 }, 0.0)
+  val unit =
+    fun(i: Int, j: Int, axis: Double): DoubleArray {
+      if (!straight(max(i, j))) {
+        return if (axis == 0.0) doubleArrayOf(0.0, sign(ys[j] - ys[i]).jsOr { 1.0 })
+        else doubleArrayOf(sign(xs[j] - xs[i]).jsOr { 1.0 }, 0.0)
+      }
+      val dx = xs[j] - xs[i]
+      val dy = ys[j] - ys[i]
+      val len = jsHypot(dx, dy).jsOr { 1.0 }
+      return doubleArrayOf(dx / len, dy / len)
     }
-    val dx = xs[j] - xs[i]
-    val dy = ys[j] - ys[i]
-    val len = jsHypot(dx, dy).jsOr { 1.0 }
-    return doubleArrayOf(dx / len, dy / len)
-  }
   val su = unit(0, 1, axes[1])
   val sdx = su[0]
   val sdy = su[1]
@@ -146,12 +152,20 @@ fun routePath(
   val length = { i: Int -> abs(xs[i] - xs[i - 1]) + abs(ys[i] - ys[i - 1]) }
   // Whether the route turns a corner at point i, from running one way to running the other.
   val turns = { i: Int ->
-    !linear && i > 0 && i < last && aligned(i) && aligned(i + 1) && length(i) >= 0.01 && length(i + 1) >= 0.01 &&
+    !linear &&
+      i > 0 &&
+      i < last &&
+      aligned(i) &&
+      aligned(i + 1) &&
+      length(i) >= 0.01 &&
+      length(i + 1) >= 0.01 &&
       (abs(xs[i] - xs[i - 1]) < 0.01) != (abs(xs[i + 1] - xs[i]) < 0.01)
   }
   // An edge that curves into a marker runs straight for a little way first, where it has the
   // room, so that the marker does not sit on the bend.
-  val along = { i: Int, ux: Double, uy: Double -> abs(xs[i] - xs[i - 1]) * abs(ux) + abs(ys[i] - ys[i - 1]) * abs(uy) }
+  val along = { i: Int, ux: Double, uy: Double ->
+    abs(xs[i] - xs[i - 1]) * abs(ux) + abs(ys[i] - ys[i - 1]) * abs(uy)
+  }
   // Of the way from the end of a run to where it turns, the part that makes up for a larger
   // marker beside this one is kept where it can be, and the rest is at most a quarter of what
   // is left, so that ends on one side of a node turn equally far from it.
@@ -159,8 +173,14 @@ fun routePath(
     val room = min(max(0.0, reach - LEAD - trim), run / 4)
     room + min(reach - trim - room, (run - room) / 4)
   }
-  val arrives = if (endReach > endTrim && (!straight(last) || turns(last - 1))) lead(endReach, endTrim, along(last, edx, edy)) else 0.0
-  val leaves = if (startReach > startTrim && (!straight(1) || turns(1))) lead(startReach, startTrim, along(1, sdx, sdy)) else 0.0
+  val arrives =
+    if (endReach > endTrim && (!straight(last) || turns(last - 1)))
+      lead(endReach, endTrim, along(last, edx, edy))
+    else 0.0
+  val leaves =
+    if (startReach > startTrim && (!straight(1) || turns(1)))
+      lead(startReach, startTrim, along(1, sdx, sdy))
+    else 0.0
   if (arrives >= 1) {
     xs.add(last, xs[last] - edx * arrives)
     ys.add(last, ys[last] - edy * arrives)
@@ -186,14 +206,15 @@ fun routePath(
   d.append("M").append(tok(xs[0])).append(",").append(tok(ys[0]))
   var atX = xs[0]
   var atY = ys[0]
-  val lineTo = fun(x: Double, y: Double) {
-    if (near(x, y, atX, atY)) return
-    tokens.add(76.0)
-    tokens.add(2.0)
-    d.append("L").append(tok(x)).append(",").append(tok(y))
-    atX = x
-    atY = y
-  }
+  val lineTo =
+    fun(x: Double, y: Double) {
+      if (near(x, y, atX, atY)) return
+      tokens.add(76.0)
+      tokens.add(2.0)
+      d.append("L").append(tok(x)).append(",").append(tok(y))
+      atX = x
+      atY = y
+    }
   for (i in 1..last) {
     val x = xs[i]
     val y = ys[i]
@@ -205,16 +226,31 @@ fun routePath(
       val uy = if (down) sign(alongRun) * k else 0.0
       tokens.add(67.0)
       tokens.add(6.0)
-      d.append("C").append(tok(atX + ux)).append(",").append(tok(atY + uy)).append(" ")
-        .append(tok(x - ux)).append(",").append(tok(y - uy)).append(" ")
-        .append(tok(x)).append(",").append(tok(y))
+      d.append("C")
+        .append(tok(atX + ux))
+        .append(",")
+        .append(tok(atY + uy))
+        .append(" ")
+        .append(tok(x - ux))
+        .append(",")
+        .append(tok(y - uy))
+        .append(" ")
+        .append(tok(x))
+        .append(",")
+        .append(tok(y))
       atX = x
       atY = y
       continue
     }
     if (!turns(i)) {
       // A point part of the way along one straight run adds nothing to the path.
-      if (i < last && aligned(i) && aligned(i + 1) && (x - xs[i - 1]) * (xs[i + 1] - x) + (y - ys[i - 1]) * (ys[i + 1] - y) > 0) continue
+      if (
+        i < last &&
+          aligned(i) &&
+          aligned(i + 1) &&
+          (x - xs[i - 1]) * (xs[i + 1] - x) + (y - ys[i - 1]) * (ys[i + 1] - y) > 0
+      )
+        continue
       lineTo(x, y)
       continue
     }
@@ -238,23 +274,48 @@ fun routePath(
     if (stepped) {
       tokens.add(81.0)
       tokens.add(4.0)
-      d.append("Q").append(tok(x)).append(",").append(tok(y)).append(" ").append(tok(atX)).append(",").append(tok(atY))
+      d.append("Q")
+        .append(tok(x))
+        .append(",")
+        .append(tok(y))
+        .append(" ")
+        .append(tok(atX))
+        .append(",")
+        .append(tok(atY))
     } else {
       tokens.add(67.0)
       tokens.add(6.0)
-      d.append("C").append(tok(x - ux * before * (1 - HANDLE))).append(",").append(tok(y - uy * before * (1 - HANDLE))).append(" ")
-        .append(tok(x + vx * after * (1 - HANDLE))).append(",").append(tok(y + vy * after * (1 - HANDLE))).append(" ")
-        .append(tok(atX)).append(",").append(tok(atY))
+      d.append("C")
+        .append(tok(x - ux * before * (1 - HANDLE)))
+        .append(",")
+        .append(tok(y - uy * before * (1 - HANDLE)))
+        .append(" ")
+        .append(tok(x + vx * after * (1 - HANDLE)))
+        .append(",")
+        .append(tok(y + vy * after * (1 - HANDLE)))
+        .append(" ")
+        .append(tok(atX))
+        .append(",")
+        .append(tok(atY))
     }
   }
   return EdgePath(d.toString(), tokens, sx, sy, -sdx, -sdy, ex, ey, edx, edy)
 }
 
 fun markerTrim(type: String): Double =
-  if (type == "arrow_point") ARROW - 1 else if (type == "arrow_circle") ARROW else if (type == "arrow_cross") 4.0 else 0.0
+  if (type == "arrow_point") ARROW - 1
+  else if (type == "arrow_circle") ARROW else if (type == "arrow_cross") 4.0 else 0.0
 
 // Draws a marker whose tip is at (x, y), pointing along (dx, dy).
-fun marker(type: String, x: Double, y: Double, dx: Double, dy: Double, color: String, stroke: String = "none"): String {
+fun marker(
+  type: String,
+  x: Double,
+  y: Double,
+  dx: Double,
+  dy: Double,
+  color: String,
+  stroke: String = "none",
+): String {
   val nx = -dy
   val ny = dx
   if (type == "arrow_point") {
@@ -262,7 +323,7 @@ fun marker(type: String, x: Double, y: Double, dx: Double, dy: Double, color: St
     val by = y - dy * ARROW
     val half = ARROW * 0.42
     return "<path class=\"pele-marker\" d=\"M${num(x)},${num(y)}L${num(bx + nx * half)},${num(by + ny * half)}L${num(
-      bx - nx * half,
+      bx - nx * half
     )},${num(by - ny * half)}Z\" fill=\"$color\" stroke=\"$stroke\"/>"
   }
   if (type == "arrow_circle") {
@@ -277,7 +338,7 @@ fun marker(type: String, x: Double, y: Double, dx: Double, dy: Double, color: St
     val vx = (dx - nx) * a
     val vy = (dy - ny) * a
     return "<path class=\"pele-marker\" d=\"M${num(cx - ux)},${num(cy - uy)}L${num(cx + ux)},${num(cy + uy)}M${num(
-      cx - vx,
+      cx - vx
     )},${num(cy - vy)}L${num(cx + vx)},${num(cy + vy)}\"/>"
   }
   return ""
@@ -317,7 +378,13 @@ private fun tokenize(d: String): List<Double> {
       var v: Double
       if ((d.charCodeAt(j) or 32) == 101 || m > 9007199254740991.0 || places > 22) {
         k = d.charCodeAt(j)
-        while (k == 46 || k == 101 || k == 69 || (k >= 48 && k <= 57) || ((k == 45 || k == 43) && (d.charCodeAt(j - 1) or 32) == 101)) k = d.charCodeAt(++j)
+        while (
+          k == 46 ||
+            k == 101 ||
+            k == 69 ||
+            (k >= 48 && k <= 57) ||
+            ((k == 45 || k == 43) && (d.charCodeAt(j - 1) or 32) == 101)
+        ) k = d.charCodeAt(++j)
         v = jsNumber(d.jsSlice(i, j))
       } else {
         v = if (places > 0) m / TENS[places] else m
@@ -395,7 +462,17 @@ private fun sample(tokens: List<Double>): List<Double> {
     } else if (cmd == 65) {
       var k = s
       while (k + 7 <= e) {
-        arc(out, x, y, tokens[k], tokens[k + 1], tokens[k + 3], tokens[k + 4], tokens[k + 5], tokens[k + 6])
+        arc(
+          out,
+          x,
+          y,
+          tokens[k],
+          tokens[k + 1],
+          tokens[k + 3],
+          tokens[k + 4],
+          tokens[k + 5],
+          tokens[k + 6],
+        )
         x = tokens[k + 5]
         y = tokens[k + 6]
         k += 7
@@ -419,7 +496,17 @@ private fun sample(tokens: List<Double>): List<Double> {
 }
 
 // Samples an unrotated arc from (x1, y1), after SVG's conversion from end points to a center.
-private fun arc(out: MutableList<Double>, x1: Double, y1: Double, rxIn: Double, ryIn: Double, large: Double, sweep: Double, x2: Double, y2: Double) {
+private fun arc(
+  out: MutableList<Double>,
+  x1: Double,
+  y1: Double,
+  rxIn: Double,
+  ryIn: Double,
+  large: Double,
+  sweep: Double,
+  x2: Double,
+  y2: Double,
+) {
   var rx = rxIn
   var ry = ryIn
   val hx = (x1 - x2) / 2
@@ -434,15 +521,20 @@ private fun arc(out: MutableList<Double>, x1: Double, y1: Double, rxIn: Double, 
   ry *= scale
   val k =
     (if (large == sweep) -1 else 1) *
-      sqrt(max(0.0, (rx * rx * ry * ry - rx * rx * hy * hy - ry * ry * hx * hx) / (rx * rx * hy * hy + ry * ry * hx * hx)))
+      sqrt(
+        max(
+          0.0,
+          (rx * rx * ry * ry - rx * rx * hy * hy - ry * ry * hx * hx) /
+            (rx * rx * hy * hy + ry * ry * hx * hx),
+        )
+      )
   val cx = (k * rx * hy) / ry + (x1 + x2) / 2
   val cy = (-k * ry * hx) / rx + (y1 + y2) / 2
   val from = StrictMath.atan2((y1 - cy) / ry, (x1 - cx) / rx)
   var turn = StrictMath.atan2((y2 - cy) / ry, (x2 - cx) / rx) - from
   // PORT: `sweep` is a number in JS, truthy unless 0 or NaN.
   val swept = sweep != 0.0 && !sweep.isNaN()
-  if (swept && turn < 0) turn += 2 * PI
-  else if (!swept && turn > 0) turn -= 2 * PI
+  if (swept && turn < 0) turn += 2 * PI else if (!swept && turn > 0) turn -= 2 * PI
   for (i in 1..8) {
     out.add(cx + rx * StrictMath.cos(from + (turn * i) / 8))
     out.add(cy + ry * StrictMath.sin(from + (turn * i) / 8))
@@ -450,7 +542,16 @@ private fun arc(out: MutableList<Double>, x1: Double, y1: Double, rxIn: Double, 
 }
 
 // Test segment overlap with the box using Liang-Barsky clipping.
-private fun clips(x: Double, y: Double, dx: Double, dy: Double, l: Double, t: Double, r: Double, b: Double): Boolean {
+private fun clips(
+  x: Double,
+  y: Double,
+  dx: Double,
+  dy: Double,
+  l: Double,
+  t: Double,
+  r: Double,
+  b: Double,
+): Boolean {
   var lo = 0.0
   var hi = 1.0
   for (side in 0 until 4) {
@@ -458,8 +559,7 @@ private fun clips(x: Double, y: Double, dx: Double, dy: Double, l: Double, t: Do
     val q = if (side == 0) x - l else if (side == 1) r - x else if (side == 2) y - t else b - y
     if (p == 0.0) {
       if (q < 0) hi = -1.0
-    } else if (p < 0) lo = max(lo, q / p)
-    else hi = min(hi, q / p)
+    } else if (p < 0) lo = max(lo, q / p) else hi = min(hi, q / p)
   }
   return lo < hi
 }
@@ -481,7 +581,8 @@ private fun enters(points: List<Double>, l: Double, t: Double, r: Double, b: Dou
 // Fill bounds are [left, top, right, bottom].
 class Fill(val box: DoubleArray, val shape: String)
 
-// The innermost fill holding the whole edge and its marker tips, '' when it crosses a border, or undefined off fills.
+// The innermost fill holding the whole edge and its marker tips, '' when it crosses a border, or
+// undefined off fills.
 // PORT: returns a Fill, the string "", or null.
 fun fillUnder(d: String, tips: DoubleArray, fills: List<Fill>, tokens: List<Double>? = null): Any? {
   if (fills.isEmpty()) return null
@@ -511,7 +612,8 @@ fun fillUnder(d: String, tips: DoubleArray, fills: List<Fill>, tokens: List<Doub
     var touched = enters(points, l + 0.5, t + 0.5, r - 0.5, b - 0.5)
     var j = 0
     while (j < tips.size && !touched) {
-      touched = tips[j] > l + 0.5 && tips[j] < r - 0.5 && tips[j + 1] > t + 0.5 && tips[j + 1] < b - 0.5
+      touched =
+        tips[j] > l + 0.5 && tips[j] < r - 0.5 && tips[j + 1] > t + 0.5 && tips[j + 1] < b - 0.5
       j += 2
     }
     if (!touched) continue
@@ -527,8 +629,10 @@ fun fillUnder(d: String, tips: DoubleArray, fills: List<Fill>, tokens: List<Doub
 
 private val RE_STROKE_DECL = JsRegExp("""[";]stroke:""")
 
-// The fill's ink for an edge on it, or '' for a casing when unknown or when the line style sets a stroke.
-fun edgeInk(fill: Fill, line: String = ""): String = (if (RE_STROKE_DECL.test(line)) null else ink(fill.shape)) ?: ""
+// The fill's ink for an edge on it, or '' for a casing when unknown or when the line style sets a
+// stroke.
+fun edgeInk(fill: Fill, line: String = ""): String =
+  (if (RE_STROKE_DECL.test(line)) null else ink(fill.shape)) ?: ""
 
 private val RE_FILL_DECL = JsRegExp("""[";]fill:([^;"]*)""")
 private val RE_BG_FILL = JsRegExp(""" fill="var\(--_bg\)"""", "g")
@@ -539,21 +643,34 @@ fun hollowOn(markers: String, fill: Fill): String {
   return if (!color.isNullOrEmpty()) markers.jsReplace(RE_BG_FILL, " fill=\"$color\"") else markers
 }
 
-// The ink of the innermost fill that holds the whole edge, '' for a casing where it crosses a border, or undefined off fills.
-fun overFills(d: String, tips: DoubleArray, fills: List<Fill>, line: String = "", tokens: List<Double>? = null): String? {
+// The ink of the innermost fill that holds the whole edge, '' for a casing where it crosses a
+// border, or undefined off fills.
+fun overFills(
+  d: String,
+  tips: DoubleArray,
+  fills: List<Fill>,
+  line: String = "",
+  tokens: List<Double>? = null,
+): String? {
   val fill = fillUnder(d, tips, fills, tokens)
   return if (fill is Fill) edgeInk(fill, line) else fill as String?
 }
 
 private const val CASE = 4.0
 
-private val RE_DECLS = listOf("stroke", "stroke-width", "opacity", "stroke-opacity").associateWith { prop -> JsRegExp("[\";]$prop:([^;\"]+);") }
+private val RE_DECLS =
+  listOf("stroke", "stroke-width", "opacity", "stroke-opacity").associateWith { prop ->
+    JsRegExp("[\";]$prop:([^;\"]+);")
+  }
 private val RE_PX_WIDTH = JsRegExp("""^[\d.]+(?:px)?$""")
 private val RE_MARKER_CLASS = JsRegExp(""" class="pele-marker"""", "g")
 
-// A wider page-colored stroke under an edge, as faint as it; markers drop their class so marker styles skip it.
+// A wider page-colored stroke under an edge, as faint as it; markers drop their class so marker
+// styles skip it.
 fun casing(d: String, markers: String, line: String = "", thick: Boolean = false): String {
-  val decl = { prop: String -> if (line.contains(prop)) RE_DECLS.getValue(prop).exec(line)?.get(1)?.jsTrim() else null }
+  val decl = { prop: String ->
+    if (line.contains(prop)) RE_DECLS.getValue(prop).exec(line)?.get(1)?.jsTrim() else null
+  }
   val stroke = decl("stroke")
   if (stroke == "none" || stroke == "transparent") return ""
   val width = if (thick) "2.5" else decl("stroke-width")
@@ -569,10 +686,18 @@ fun casing(d: String, markers: String, line: String = "", thick: Boolean = false
     if (value != null) style += "$prop:$value;"
   }
   val body = "<path d=\"$d\"/>" + markers.jsReplace(RE_MARKER_CLASS, "")
-  return if (attrs != "" || style != "") "<g$attrs${if (style != "") " style=\"$style\"" else ""}>$body</g>" else body
+  return if (attrs != "" || style != "")
+    "<g$attrs${if (style != "") " style=\"$style\"" else ""}>$body</g>"
+  else body
 }
 
-fun edgeCasing(path: EdgePath, startType: String, endType: String, line: String = "", thick: Boolean = false): String =
+fun edgeCasing(
+  path: EdgePath,
+  startType: String,
+  endType: String,
+  line: String = "",
+  thick: Boolean = false,
+): String =
   casing(
     path.d,
     marker(startType, path.sx, path.sy, path.sdx, path.sdy, "var(--_bg)", "var(--_bg)") +
@@ -589,7 +714,14 @@ fun casingsSvg(casings: String): String =
   }
 
 // An edge label on a patch of the background, so the line does not run through the text.
-fun edgeLabelSvg(id: String, label: Label, x: Double, y: Double, attrs: String, icons: IconResolver? = null): String {
+fun edgeLabelSvg(
+  id: String,
+  label: Label,
+  x: Double,
+  y: Double,
+  attrs: String,
+  icons: IconResolver? = null,
+): String {
   val w = label.width + 8
   val h = label.height
   return "<g class=\"pele-edge-label\" data-id=\"${escText(id)}\">" +
@@ -617,7 +749,8 @@ fun loopPath(
   val len = jsHypot(reach, spread).jsOr { 1.0 }
   // Local frame: `out` points away from the node, `along` runs along its side.
   val at = { out: Double, along: Double ->
-    if (sideways) "${num(c.x + along)},${num(c.y + h / 2 + out)}" else "${num(c.x + w / 2 + out)},${num(c.y + along)}"
+    if (sideways) "${num(c.x + along)},${num(c.y + h / 2 + out)}"
+    else "${num(c.x + w / 2 + out)},${num(c.y + along)}"
   }
   val tx = (reach / len) * trim
   val ty = (spread / len) * trim
@@ -629,7 +762,8 @@ fun loopPath(
     e.labelY = c.y
   }
   return EdgePath(
-    d = "M${at(0.0, -spread)}C${at(reach, -spread * 2)} ${at(reach, spread * 2)} ${at(tx, spread + ty)}",
+    d =
+      "M${at(0.0, -spread)}C${at(reach, -spread * 2)} ${at(reach, spread * 2)} ${at(tx, spread + ty)}",
     sx = if (sideways) c.x - spread else c.x + w / 2,
     sy = if (sideways) c.y + h / 2 else c.y - spread,
     sdx = if (sideways) 0.0 else -1.0,

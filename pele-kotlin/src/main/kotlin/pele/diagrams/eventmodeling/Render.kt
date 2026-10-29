@@ -2,6 +2,8 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.eventmodeling
 
+import kotlin.math.abs
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -30,16 +32,15 @@ import pele.text.Style
 import pele.text.decodeEntities
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.abs
-import kotlin.math.ceil
 
 // Series slot for each kind of entity. A UI has none and is drawn plain.
-private val SERIES = mapOf(
-  "command" to 0,
-  "event" to 1,
-  "readmodel" to 2,
-  "processor" to 6,
-)
+private val SERIES =
+  mapOf(
+    "command" to 0,
+    "event" to 1,
+    "readmodel" to 2,
+    "processor" to 6,
+  )
 
 private const val BOX_PAD_X = 12.0
 private const val BOX_PAD_Y = 10.0
@@ -91,7 +92,8 @@ private fun hardWrap(text: String, columns: Int): List<String> {
 private fun lines(rows: List<String>, x: Double, y: Double, step: Double, attrs: String): String {
   var body = ""
   for (i in rows.indices) {
-    if (rows[i] != "") body += "<tspan x=\"${num(x)}\" y=\"${num(y + i * step)}\">${esc(rows[i])}</tspan>"
+    if (rows[i] != "")
+      body += "<tspan x=\"${num(x)}\" y=\"${num(y + i * step)}\">${esc(rows[i])}</tspan>"
   }
   return if (body == "") "" else "<text$attrs xml:space=\"preserve\">$body</text>"
 }
@@ -99,7 +101,12 @@ private fun lines(rows: List<String>, x: Double, y: Double, step: Double, attrs:
 fun renderEventModel(model: EventModelingModel, _config: Config, options: RenderOptions): Rendered =
   turnToFit(options) { down -> draw(model, _config, options, down) }
 
-private fun draw(model: EventModelingModel, _config: Config, options: RenderOptions, down: Boolean): Rendered {
+private fun draw(
+  model: EventModelingModel,
+  _config: Config,
+  options: RenderOptions,
+  down: Boolean,
+): Rendered {
   if (down) return verticalEventModel(model, options)
   val size = options.fontSize ?: 16.0
   val nameSize = jsRound(size * 0.875)
@@ -138,7 +145,9 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
     var x = 0.0
     if (previous != null) {
       val stagger = previous.x + maxOf(previous.w / 2, previous.w - STAGGER)
-      x = if (previous.box.lane === box.lane) band.right + BOX_GAP else maxOf(stagger, band.right + BOX_GAP)
+      x =
+        if (previous.box.lane === box.lane) band.right + BOX_GAP
+        else maxOf(stagger, band.right + BOX_GAP)
     }
     val item = Placed(box, name, data, x, 0.0, w, h)
     band.right = x + w
@@ -164,9 +173,14 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
     band.h += 2 * LANE_PAD
     lanes +=
       "<g class=\"pele-cluster pele-em-lane\" data-id=\"${escText(band.lane.label)}\">" +
-      "<rect x=\"${num(left)}\" y=\"${num(y)}\" width=\"${num(laneWidth)}\" height=\"${num(band.h)}\" fill=\"var(--_s)\"$ROUNDED/>" +
-      labelSvg(band.label, left + LANE_PAD + band.label.width / 2, y + band.h / 2, " class=\"pele-cluster-label\" font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\" fill=\"var(--_m)\"") +
-      "</g>"
+        "<rect x=\"${num(left)}\" y=\"${num(y)}\" width=\"${num(laneWidth)}\" height=\"${num(band.h)}\" fill=\"var(--_s)\"$ROUNDED/>" +
+        labelSvg(
+          band.label,
+          left + LANE_PAD + band.label.width / 2,
+          y + band.h / 2,
+          " class=\"pele-cluster-label\" font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\" fill=\"var(--_m)\"",
+        ) +
+        "</g>"
     y += band.h + LANE_GAP
   }
   var bottom = if (bands.size > 0) y - LANE_GAP else top
@@ -177,7 +191,8 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
     item.x += left + labelColumn
     item.y = band.y + (band.h - item.h) / 2
     val series = SERIES[item.box.kind]
-    val frame = "x=\"${num(item.x)}\" y=\"${num(item.y)}\" width=\"${num(item.w)}\" height=\"${num(item.h)}\""
+    val frame =
+      "x=\"${num(item.x)}\" y=\"${num(item.y)}\" width=\"${num(item.w)}\" height=\"${num(item.h)}\""
     val shape =
       if (series == null) {
         "<rect $frame fill=\"var(--_bg)\" stroke=\"var(--_b)\"$ROUNDED/>"
@@ -186,7 +201,12 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
       }
     val nameY = item.y + BOX_PAD_Y + item.name.height / 2
     val text =
-      labelSvg(item.name, item.x + item.w / 2, nameY, " class=\"pele-label\" font-size=\"${jsStr(nameSize)}\" font-weight=\"var(--_hw)\"") +
+      labelSvg(
+        item.name,
+        item.x + item.w / 2,
+        nameY,
+        " class=\"pele-label\" font-size=\"${jsStr(nameSize)}\" font-weight=\"var(--_hw)\"",
+      ) +
         lines(
           item.data,
           item.x + BOX_PAD_X,
@@ -194,7 +214,8 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
           monoStep,
           " class=\"pele-em-data\" font-family=\"$FONT_MONO\" font-size=\"${jsStr(mono)}\"",
         )
-    nodes += "<g class=\"pele-node pele-em-${item.box.kind}${if (item.box.reset) " pele-em-reset" else ""}\" data-id=\"${escText(item.box.id)}\">$shape$text</g>"
+    nodes +=
+      "<g class=\"pele-node pele-em-${item.box.kind}${if (item.box.reset) " pele-em-reset" else ""}\" data-id=\"${escText(item.box.id)}\">$shape$text</g>"
   }
 
   var edges = ""
@@ -221,17 +242,24 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
       val from = maxOf(s.x, t.x)
       val to = minOf(s.x + s.w, t.x + t.w)
       val inset = { w: Double -> minOf(24.0, w / 4) }
-      val sx = if (to - from >= 16) (from + to) / 2 else if (t.x > s.x) s.x + s.w - inset(s.w) else s.x + inset(s.w)
-      val tx = if (to - from >= 16) sx else if (t.x > s.x) t.x + inset(t.w) else t.x + t.w - inset(t.w)
+      val sx =
+        if (to - from >= 16) (from + to) / 2
+        else if (t.x > s.x) s.x + s.w - inset(s.w) else s.x + inset(s.w)
+      val tx =
+        if (to - from >= 16) sx else if (t.x > s.x) t.x + inset(t.w) else t.x + t.w - inset(t.w)
       val sy = if (down) s.y + s.h else s.y
       val ty = if (down) t.y else t.y + t.h
       val dir = if (down) 1.0 else -1.0
       val end = ty - dir * trim
       val mid = (sy + end) / 2
-      d = if (sx == tx) "M${num(sx)},${num(sy)}V${num(end)}" else "M${num(sx)},${num(sy)}C${num(sx)},${num(mid)} ${num(tx)},${num(mid)} ${num(tx)},${num(end)}"
+      d =
+        if (sx == tx) "M${num(sx)},${num(sy)}V${num(end)}"
+        else
+          "M${num(sx)},${num(sy)}C${num(sx)},${num(mid)} ${num(tx)},${num(mid)} ${num(tx)},${num(end)}"
       head = marker("arrow_point", tx, ty, 0.0, dir, "var(--_l)")
     }
-    edges += "<g class=\"pele-edge\" data-id=\"${escText(relation.source.id)}-${escText(relation.target.id)}\"><path d=\"$d\" fill=\"none\" stroke=\"var(--_l)\"/>$head</g>"
+    edges +=
+      "<g class=\"pele-edge\" data-id=\"${escText(relation.source.id)}-${escText(relation.target.id)}\"><path d=\"$d\" fill=\"none\" stroke=\"var(--_l)\"/>$head</g>"
   }
 
   // Notes and given/when/then specifications, listed under the lanes with the frame they belong to.
@@ -240,16 +268,35 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
   var cards = ""
   var cardsRight = 0.0
   fun card(kind: String, heading: String, frame: String, rows: List<String>) {
-    val head = layoutLabel("$heading · $frame${if (names.containsKey(frame)) " " + names[frame]!! else ""}", false, measurer, small, 4000.0, Style.Bold)
+    val head =
+      layoutLabel(
+        "$heading · $frame${if (names.containsKey(frame)) " " + names[frame]!! else ""}",
+        false,
+        measurer,
+        small,
+        4000.0,
+        Style.Bold,
+      )
     val w = maxOf(head.width, widest(rows, small, 0)) + 2 * BOX_PAD_X
     val h = 2 * BOX_PAD_Y + head.height + rows.size * smallStep
     val cy = bottom + (if (cards == "" && bands.size == 0) 0.0 else CARD_GAP)
     cards +=
       "<g class=\"pele-em-$kind\" data-id=\"${escText(frame)}\">" +
-      "<rect x=\"${num(left)}\" y=\"${num(cy)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"$ROUNDED/>" +
-      labelSvg(head, left + BOX_PAD_X + head.width / 2, cy + BOX_PAD_Y + head.height / 2, " font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"") +
-      lines(rows, left + BOX_PAD_X, cy + BOX_PAD_Y + head.height + smallStep / 2 + small * 0.35, smallStep, " font-size=\"${jsStr(small)}\"") +
-      "</g>"
+        "<rect x=\"${num(left)}\" y=\"${num(cy)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"$ROUNDED/>" +
+        labelSvg(
+          head,
+          left + BOX_PAD_X + head.width / 2,
+          cy + BOX_PAD_Y + head.height / 2,
+          " font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"",
+        ) +
+        lines(
+          rows,
+          left + BOX_PAD_X,
+          cy + BOX_PAD_Y + head.height + smallStep / 2 + small * 0.35,
+          smallStep,
+          " font-size=\"${jsStr(small)}\"",
+        ) +
+        "</g>"
     bottom = cy + h
     cardsRight = maxOf(cardsRight, w)
   }
@@ -258,14 +305,24 @@ private fun draw(model: EventModelingModel, _config: Config, options: RenderOpti
     val rows = mutableListOf("Given  ${spec.given.joinToString(", ")}")
     if (spec.`when`.size > 0) rows.add("When  ${spec.`when`.joinToString(", ")}")
     rows.add("Then  ${spec.then.joinToString(", ")}")
-    card("specification", "Given / When / Then", spec.frame, rows.flatMap { row -> hardWrap(row, NOTE_COLUMNS) })
+    card(
+      "specification",
+      "Given / When / Then",
+      spec.frame,
+      rows.flatMap { row -> hardWrap(row, NOTE_COLUMNS) },
+    )
   }
 
   val width = maxOf(maxOf(if (bands.size > 0) laneWidth else 0.0, cardsRight), title.width)
   val totalWidth = ceil(width + 2 * pad)
   val totalHeight = ceil(bottom + pad)
   val content =
-    labelSvg(title, totalWidth / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") + lanes + edges + nodes + cards
+    labelSvg(
+      title,
+      totalWidth / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) + lanes + edges + nodes + cards
 
   return Rendered(
     svgDocument("eventmodeling", totalWidth, totalHeight, size, options, model, content),
@@ -314,7 +371,10 @@ private fun verticalEventModel(model: EventModelingModel, options: RenderOptions
   }
   val railOf = LinkedHashMap<EmBox, Int>()
   val railEnds = ArrayList<Int>()
-  for ((target, span) in runs.entries.map { e -> Pair(e.key, e.value) }.sortedWith { a, b -> cmp((a.second[0] - b.second[0]).toDouble()) }) {
+  for ((target, span) in
+    runs.entries
+      .map { e -> Pair(e.key, e.value) }
+      .sortedWith { a, b -> cmp((a.second[0] - b.second[0]).toDouble()) }) {
     val from = span[0]
     val to = span[1]
     var rail = railEnds.indexOfFirst { end -> end < from }
@@ -334,25 +394,57 @@ private fun verticalEventModel(model: EventModelingModel, options: RenderOptions
   var edges = ""
   var cards = ""
   val placed = LinkedHashMap<EmBox, Slot>()
-  fun text(raw: String, fontSize: Double, style: Int = 0): Label = literalLabel(decodeEntities(raw), measurer, fontSize, textRoom, style)
+  fun text(raw: String, fontSize: Double, style: Int = 0): Label =
+    literalLabel(decodeEntities(raw), measurer, fontSize, textRoom, style)
   model.boxes.forEachIndexed { index, box ->
     val laneRoom = if (passed.contains(box)) textRoom - ARROW_ROOM else textRoom
-    val lane = breakLabel(layoutLabel(box.lane.label, false, measurer, small, laneRoom, Style.Bold), measurer, laneRoom)
+    val lane =
+      breakLabel(
+        layoutLabel(box.lane.label, false, measurer, small, laneRoom, Style.Bold),
+        measurer,
+        laneRoom,
+      )
     val name = layoutLabel(box.name, false, measurer, small, textRoom - 36, Style.Bold)
     val data = if (!box.data.isNullOrEmpty()) text(box.data, mono, Style.Mono) else null
-    val w = maxOf(maxOf(cardWidth, lane.width + 2 * BOX_PAD_X), maxOf(name.width + 2 * BOX_PAD_X + 36, (data?.width ?: 0.0) + 2 * BOX_PAD_X))
+    val w =
+      maxOf(
+        maxOf(cardWidth, lane.width + 2 * BOX_PAD_X),
+        maxOf(name.width + 2 * BOX_PAD_X + 36, (data?.width ?: 0.0) + 2 * BOX_PAD_X),
+      )
     val headH = lane.height + 12
     val h = 2 * BOX_PAD_Y + name.height + (if (data != null) data.height + 6 else 0.0)
     val series = SERIES[box.kind]
     val cy = y + headH
     val frame = "x=\"${num(pad)}\" y=\"${num(cy)}\" width=\"${num(w)}\" height=\"${num(h)}\""
-    nodes += "<g class=\"pele-cluster pele-em-lane\" data-id=\"${escText(box.lane.label)}\">" +
-      leftLabelSvg(lane, pad + BOX_PAD_X, y, " class=\"pele-cluster-label\" font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\" fill=\"var(--_m)\"") +
-      "<g class=\"pele-node pele-em-${box.kind}${if (box.reset) " pele-em-reset" else ""}\" data-id=\"${escText(box.id)}\"><rect $frame fill=\"var(--_bg)\" stroke=\"var(--_b)\"$ROUNDED/>" +
-      (if (series == null) "" else "<rect $frame fill=\"${seriesColor(series)}\" fill-opacity=\"0.22\" stroke=\"${seriesColor(series)}\"$ROUNDED/>") +
-      labelSvg(name, pad + BOX_PAD_X + name.width / 2, cy + BOX_PAD_Y + name.height / 2, " class=\"pele-label\" font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"") +
-      "<text class=\"pele-em-frame\" x=\"${num(pad + w - BOX_PAD_X)}\" y=\"${num(cy + BOX_PAD_Y + small)}\" text-anchor=\"end\" font-size=\"${jsStr(mono)}\" fill=\"var(--_m)\">${esc(box.id)}</text>" +
-      (if (data != null) lines(data.lines.map { line -> line.joinToString("") { span -> span.text } }, pad + BOX_PAD_X, cy + BOX_PAD_Y + name.height + 6 + data.lineHeight / 2 + mono * 0.35, data.lineHeight, " class=\"pele-em-data\" font-family=\"$FONT_MONO\" font-size=\"${jsStr(mono)}\"") else "") + "</g></g>"
+    nodes +=
+      "<g class=\"pele-cluster pele-em-lane\" data-id=\"${escText(box.lane.label)}\">" +
+        leftLabelSvg(
+          lane,
+          pad + BOX_PAD_X,
+          y,
+          " class=\"pele-cluster-label\" font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\" fill=\"var(--_m)\"",
+        ) +
+        "<g class=\"pele-node pele-em-${box.kind}${if (box.reset) " pele-em-reset" else ""}\" data-id=\"${escText(box.id)}\"><rect $frame fill=\"var(--_bg)\" stroke=\"var(--_b)\"$ROUNDED/>" +
+        (if (series == null) ""
+        else
+          "<rect $frame fill=\"${seriesColor(series)}\" fill-opacity=\"0.22\" stroke=\"${seriesColor(series)}\"$ROUNDED/>") +
+        labelSvg(
+          name,
+          pad + BOX_PAD_X + name.width / 2,
+          cy + BOX_PAD_Y + name.height / 2,
+          " class=\"pele-label\" font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"",
+        ) +
+        "<text class=\"pele-em-frame\" x=\"${num(pad + w - BOX_PAD_X)}\" y=\"${num(cy + BOX_PAD_Y + small)}\" text-anchor=\"end\" font-size=\"${jsStr(mono)}\" fill=\"var(--_m)\">${esc(box.id)}</text>" +
+        (if (data != null)
+          lines(
+            data.lines.map { line -> line.joinToString("") { span -> span.text } },
+            pad + BOX_PAD_X,
+            cy + BOX_PAD_Y + name.height + 6 + data.lineHeight / 2 + mono * 0.35,
+            data.lineHeight,
+            " class=\"pele-em-data\" font-family=\"$FONT_MONO\" font-size=\"${jsStr(mono)}\"",
+          )
+        else "") +
+        "</g></g>"
     placed[box] = Slot(cy, h, w, index, lane.width)
     width = maxOf(width, w + gutter)
     bottom = cy + h
@@ -375,24 +467,48 @@ private fun verticalEventModel(model: EventModelingModel, options: RenderOptions
       head = marker("arrow_point", cx, ty, 0.0, dir, "var(--_l)")
     } else {
       val rail = pad + width - gutter + 12 + RAIL_GAP * (railOf[relation.target] ?: 0)
-      // A card can send one relation and receive another: they leave above and arrive below its middle.
+      // A card can send one relation and receive another: they leave above and arrive below its
+      // middle.
       val from = s.y + s.h / 2 - 5
       val to = t.y + t.h / 2 + 5
-      d = "M${num(pad + s.w)},${num(from)}H${num(rail)}V${num(to)}H${num(pad + t.w + markerTrim("arrow_point"))}"
+      d =
+        "M${num(pad + s.w)},${num(from)}H${num(rail)}V${num(to)}H${num(pad + t.w + markerTrim("arrow_point"))}"
       head = marker("arrow_point", pad + t.w, to, -1.0, 0.0, "var(--_l)")
     }
-    edges += "<g class=\"pele-edge\" data-id=\"${escText(relation.source.id)}-${escText(relation.target.id)}\"><path d=\"$d\" fill=\"none\" stroke=\"var(--_l)\"/>$head</g>"
+    edges +=
+      "<g class=\"pele-edge\" data-id=\"${escText(relation.source.id)}-${escText(relation.target.id)}\"><path d=\"$d\" fill=\"none\" stroke=\"var(--_l)\"/>$head</g>"
   }
   val names = LinkedHashMap<String, String>()
   for (box in model.boxes) names[box.id] = box.name
   fun card(kind: String, heading: String, frame: String, raw: String) {
-    val head = layoutLabel("$heading · $frame${if (names.containsKey(frame)) " " + names[frame]!! else ""}", false, measurer, small, textRoom, Style.Bold)
+    val head =
+      layoutLabel(
+        "$heading · $frame${if (names.containsKey(frame)) " " + names[frame]!! else ""}",
+        false,
+        measurer,
+        small,
+        textRoom,
+        Style.Bold,
+      )
     val body = text(raw, small)
     val w = maxOf(cardWidth, head.width + 2 * BOX_PAD_X, body.width + 2 * BOX_PAD_X)
     val h = 2 * BOX_PAD_Y + head.height + body.height
-    cards += "<g class=\"pele-em-$kind\" data-id=\"${escText(frame)}\"><rect x=\"${num(pad)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"$ROUNDED/>" +
-      labelSvg(head, pad + BOX_PAD_X + head.width / 2, y + BOX_PAD_Y + head.height / 2, " font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"") +
-      lines(body.lines.map { line -> line.joinToString("") { span -> span.text } }, pad + BOX_PAD_X, y + BOX_PAD_Y + head.height + body.lineHeight / 2 + small * 0.35, body.lineHeight, " font-size=\"${jsStr(small)}\"") + "</g>"
+    cards +=
+      "<g class=\"pele-em-$kind\" data-id=\"${escText(frame)}\"><rect x=\"${num(pad)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"$ROUNDED/>" +
+        labelSvg(
+          head,
+          pad + BOX_PAD_X + head.width / 2,
+          y + BOX_PAD_Y + head.height / 2,
+          " font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"",
+        ) +
+        lines(
+          body.lines.map { line -> line.joinToString("") { span -> span.text } },
+          pad + BOX_PAD_X,
+          y + BOX_PAD_Y + head.height + body.lineHeight / 2 + small * 0.35,
+          body.lineHeight,
+          " font-size=\"${jsStr(small)}\"",
+        ) +
+        "</g>"
     bottom = y + h
     y = bottom + CARD_GAP
     width = maxOf(width, w)
@@ -406,6 +522,17 @@ private fun verticalEventModel(model: EventModelingModel, options: RenderOptions
   }
   val totalWidth = ceil(width + 2 * pad)
   val height = ceil(bottom + pad)
-  val content = labelSvg(title, totalWidth / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") + edges + nodes + cards
-  return Rendered(svgDocument("eventmodeling", totalWidth, height, size, options, model, content), totalWidth, height, ArrayList())
+  val content =
+    labelSvg(
+      title,
+      totalWidth / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) + edges + nodes + cards
+  return Rendered(
+    svgDocument("eventmodeling", totalWidth, height, size, options, model, content),
+    totalWidth,
+    height,
+    ArrayList(),
+  )
 }

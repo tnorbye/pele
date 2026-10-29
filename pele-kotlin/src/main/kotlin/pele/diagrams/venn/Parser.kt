@@ -9,7 +9,8 @@ import pele.js.jsParseFloat
 import pele.js.jsSlice
 import pele.syntaxError
 
-private const val STATEMENT = "'EOF', 'NEWLINE', 'TITLE', 'SET', 'UNION', 'TEXT', 'INDENT_TEXT', 'STYLE'"
+private const val STATEMENT =
+  "'EOF', 'NEWLINE', 'TITLE', 'SET', 'UNION', 'TEXT', 'INDENT_TEXT', 'STYLE'"
 private const val VALUE = "'NUMERIC', 'IDENTIFIER', 'STRING', 'HEXCOLOR', 'RGBCOLOR', 'RGBACOLOR'"
 
 // Ports Mermaid's venn grammar. A token is read only when the grammar has to look at one to
@@ -61,7 +62,12 @@ fun parseVenn(src: String, db: VennDb) {
       size = jsParseFloat(expect(T.NUMERIC))
     }
     if (union) {
-      if (ids.size < 2) throw PeleError("union requires multiple identifiers", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "venn"))
+      if (ids.size < 2)
+        throw PeleError(
+          "union requires multiple identifiers",
+          PeleErrorCode.SEMANTIC,
+          PeleErrorInfo(type = "venn"),
+        )
       db.validateUnionIdentifiers(ids)
     }
     db.addSubsetData(ids, label, size)
@@ -71,7 +77,8 @@ fun parseVenn(src: String, db: VennDb) {
   // The id of a text, and the label in brackets that an id which is not a number may carry.
   fun text(sets: () -> List<String>) {
     val kind = peek()
-    if (kind != T.IDENTIFIER && kind != T.STRING && kind != T.NUMERIC) fail("'NUMERIC', 'IDENTIFIER', 'STRING'")
+    if (kind != T.IDENTIFIER && kind != T.STRING && kind != T.NUMERIC)
+      fail("'NUMERIC', 'IDENTIFIER', 'STRING'")
     val id = take()
     val label = if (kind != T.NUMERIC && peek() == T.BRACKET_LABEL) take() else null
     db.addTextData(sets(), id, label)
@@ -88,7 +95,9 @@ fun parseVenn(src: String, db: VennDb) {
         value = take()
       } else {
         val parts = ArrayList<String>()
-        while (peek() == T.IDENTIFIER || (type >= T.NUMERIC && type <= T.RGBACOLOR)) parts.add(take())
+        while (peek() == T.IDENTIFIER || (type >= T.NUMERIC && type <= T.RGBACOLOR)) parts.add(
+          take()
+        )
         if (parts.size == 0) fail(VALUE)
         value = parts.joinToString(" ")
       }
@@ -117,7 +126,13 @@ fun parseVenn(src: String, db: VennDb) {
       text { ids }
     } else if (statement == T.INDENT_TEXT) {
       text {
-        val current = db.getCurrentSets() ?: throw PeleError("text requires set", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "venn"))
+        val current =
+          db.getCurrentSets()
+            ?: throw PeleError(
+              "text requires set",
+              PeleErrorCode.SEMANTIC,
+              PeleErrorInfo(type = "venn"),
+            )
         current
       }
     } else if (statement == T.STYLE) {

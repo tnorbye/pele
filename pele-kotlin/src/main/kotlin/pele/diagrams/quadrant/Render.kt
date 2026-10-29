@@ -27,7 +27,8 @@ private const val CAREFUL = 300
 
 private class Dot(val cx: Double, val cy: Double, val reach: Double, val text: Label)
 
-private fun setting(config: Config, key: String): Any? = (config["quadrantChart"] as? Map<*, *>)?.get(key)
+private fun setting(config: Config, key: String): Any? =
+  (config["quadrantChart"] as? Map<*, *>)?.get(key)
 
 private fun length(config: Config, key: String, fallback: Double, max: Double): Double {
   val value = setting(config, key)
@@ -43,7 +44,8 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
   val natural = jsRound(maxOf(100.0, length(config, "chartWidth", 500.0, 4000.0)))
   val width = jsRound(capWidth(options, natural, 280.0))
-  val height = jsRound((maxOf(100.0, length(config, "chartHeight", 500.0, 4000.0)) * width) / natural)
+  val height =
+    jsRound((maxOf(100.0, length(config, "chartHeight", 500.0, 4000.0)) * width) / natural)
   val outer = length(config, "quadrantPadding", options.padding ?: 8.0, 200.0)
   val xPad = length(config, "xAxisLabelPadding", 5.0, 200.0)
   val yPad = length(config, "yAxisLabelPadding", 5.0, 200.0)
@@ -53,7 +55,8 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
     layoutLabel(text?.text, text?.type == "markdown", measurer, fontSize, maxOf(max, 40.0))
   }
 
-  val title = layoutLabel(model.title, false, measurer, size, maxOf(width - 2 * outer, 40.0), Style.Bold)
+  val title =
+    layoutLabel(model.title, false, measurer, size, maxOf(width - 2 * outer, 40.0), Style.Bold)
   val titlePad = length(config, "titlePadding", 10.0, 200.0)
   val titleSpace = if (title.height > 0) title.height + titlePad else 0.0
 
@@ -64,12 +67,14 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
   val yRight = setting(config, "yAxisPosition") == "right"
 
   val side = width - 2 * outer
-  val xLeft = label(model.xAxisLeft, axisSize, if (model.xAxisRight != null) side / 2 - 16 else side)
+  val xLeft =
+    label(model.xAxisLeft, axisSize, if (model.xAxisRight != null) side / 2 - 16 else side)
   val xRight = label(model.xAxisRight, axisSize, side / 2 - 16)
   val xHeight = maxOf(xLeft.height, xRight.height)
   val xSpace = if (hasX) xHeight + xPad else 0.0
   val tall = height - 2 * outer - titleSpace - xSpace
-  val yBottom = label(model.yAxisBottom, axisSize, if (model.yAxisTop != null) tall / 2 - 16 else tall)
+  val yBottom =
+    label(model.yAxisBottom, axisSize, if (model.yAxisTop != null) tall / 2 - 16 else tall)
   val yTop = label(model.yAxisTop, axisSize, tall / 2 - 16)
   val yHeight = maxOf(yBottom.height, yTop.height)
   val ySpace = if (hasY) yHeight + yPad else 0.0
@@ -83,7 +88,17 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
 
   // Boxes a point label keeps clear of: the gaps between quadrants, quadrant labels, points,
   // and the labels placed before it.
-  val taken = arrayListOf(left + tileW, top, left + w - tileW, top + h, left, top + tileH, left + w, top + h - tileH)
+  val taken =
+    arrayListOf(
+      left + tileW,
+      top,
+      left + w - tileW,
+      top + h,
+      left,
+      top + tileH,
+      left + w,
+      top + h - tileH,
+    )
   val isClear = { from: Int, x0: Double, y0: Double, x1: Double, y1: Double ->
     var clear = true
     var k = from
@@ -116,9 +131,9 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
     taken.add(cy + text.height / 2)
     quadrants +=
       "<g class=\"pele-quadrant\" data-id=\"${k + 1}\">" +
-      "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(tileW)}\" height=\"${num(tileH)}\"$ROUNDED/>" +
-      labelSvg(text, cx, cy, " class=\"pele-label\" fill=\"var(--_fg)\" stroke=\"none\"") +
-      "</g>"
+        "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(tileW)}\" height=\"${num(tileH)}\"$ROUNDED/>" +
+        labelSvg(text, cx, cy, " class=\"pele-label\" fill=\"var(--_fg)\" stroke=\"none\"") +
+        "</g>"
   }
 
   var axes = ""
@@ -126,15 +141,18 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
     val y = if (xBelow) top + h + xPad + xHeight / 2 else top - xPad - xHeight / 2
     axes +=
       labelSvg(xLeft, if (xRight.height > 0) left + w / 4 else left + xLeft.width / 2, y, "") +
-      labelSvg(xRight, left + (w * 3) / 4, y, "")
+        labelSvg(xRight, left + (w * 3) / 4, y, "")
   }
   if (hasY) {
     val x = if (yRight) left + w + yPad + yHeight / 2 else left - yPad - yHeight / 2
     val turned = { text: Label, y: Double ->
-      if (text.height > 0) "<g transform=\"translate(${num(x)},${num(y)}) rotate(-90)\">${labelSvg(text, 0.0, 0.0, "")}</g>" else ""
+      if (text.height > 0)
+        "<g transform=\"translate(${num(x)},${num(y)}) rotate(-90)\">${labelSvg(text, 0.0, 0.0, "")}</g>"
+      else ""
     }
     axes +=
-      turned(yBottom, if (yTop.height > 0) top + (h * 3) / 4 else top + h - yBottom.width / 2) + turned(yTop, top + h / 4)
+      turned(yBottom, if (yTop.height > 0) top + (h * 3) / 4 else top + h - yBottom.width / 2) +
+        turned(yTop, top + h / 4)
   }
 
   val radius = length(config, "pointRadius", 5.0, 200.0)
@@ -163,12 +181,14 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
         cy,
         r + (if (!strokeWidth.isNullOrEmpty()) minOf(jsParseInt(strokeWidth), 400.0) / 2 else 0.0),
         label(point.text, pointSize, 200.0),
-      ),
+      )
     )
     circles.add(
       "<circle class=\"pele-point${classNames(point.className)}\" data-id=\"${escText(point.text.text)}\" cx=\"${num(cx)}\" cy=\"${num(cy)}\" r=\"${num(r)}\"" +
-        (if (!strokeWidth.isNullOrEmpty() && strokeColor.isNullOrEmpty()) " stroke=\"$fill\"" else "") +
-        resolveStyle(styles).shape + "/>",
+        (if (!strokeWidth.isNullOrEmpty() && strokeColor.isNullOrEmpty()) " stroke=\"$fill\""
+        else "") +
+        resolveStyle(styles).shape +
+        "/>"
     )
   }
 
@@ -195,9 +215,25 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
     val halfH = text.size * 0.6 + (text.height - text.lineHeight) / 2
     val away = reach + textPad
     val inset = minOf(away, maxOf(0.0, (tileW - text.width) / 2))
-    val heading = 8 + 4 * (if (cx < left + w / 2) (if (cy < top + h / 2) 1 else 2) else (if (cy < top + h / 2) 0 else 3))
+    val heading =
+      8 +
+        4 *
+          (if (cx < left + w / 2) (if (cy < top + h / 2) 1 else 2)
+          else (if (cy < top + h / 2) 0 else 3))
     val below = maxOf(cy + away, taken[heading + 3] + textPad) + halfH
-    val spots = doubleArrayOf(cx, cy + away + halfH, cx, cy - away - halfH, cx + away + halfW, cy, cx - away - halfW, cy, cx, below)
+    val spots =
+      doubleArrayOf(
+        cx,
+        cy + away + halfH,
+        cx,
+        cy - away - halfH,
+        cx + away + halfW,
+        cy,
+        cx - away - halfW,
+        cy,
+        cx,
+        below,
+      )
     var tx = cx
     var ty = spots[1]
     var found = false
@@ -207,13 +243,16 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
       // A label moved below a title keeps clear of the plot's edge.
       val margin = if (spot == 8) inset else 0.0
       val x =
-        if ((spot < 4 || spot == 8) && text.width < w) minOf(maxOf(spots[spot], left + halfW + margin), left + w - halfW - margin) else spots[spot]
+        if ((spot < 4 || spot == 8) && text.width < w)
+          minOf(maxOf(spots[spot], left + halfW + margin), left + w - halfW - margin)
+        else spots[spot]
       val y = spots[spot + 1]
       if (x - halfW < left || x + halfW > left + w || y - halfH < top || y + halfH > top + h) {
         k += 2
         continue
       }
-      val free = !careful || isClear(if (k < 10) 0 else 8, x - halfW, y - halfH, x + halfW, y + halfH)
+      val free =
+        !careful || isClear(if (k < 10) 0 else 8, x - halfW, y - halfH, x + halfW, y + halfH)
       if (!found || free) {
         tx = x
         ty = y
@@ -233,9 +272,16 @@ fun renderQuadrant(model: QuadrantModel, config: Config, options: RenderOptions)
 
   // Mermaid puts each new point under the ones before it.
   val content =
-    labelSvg(title, width / 2, titlePad / 2 + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
+    labelSvg(
+      title,
+      width / 2,
+      titlePad / 2 + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) +
       "<g class=\"pele-quadrants\" fill=\"var(--_s)\" stroke=\"var(--_b)\">$quadrants</g>" +
-      (if (axes.isNotEmpty()) "<g class=\"pele-axis-labels\" font-size=\"${jsStr(axisSize)}\" fill=\"var(--_m)\">$axes</g>" else "") +
+      (if (axes.isNotEmpty())
+        "<g class=\"pele-axis-labels\" font-size=\"${jsStr(axisSize)}\" fill=\"var(--_m)\">$axes</g>"
+      else "") +
       (if (dots.size > 0) {
         "<g class=\"pele-points\" fill=\"$fill\">${circles.reversed().joinToString("")}</g>" +
           "<g class=\"pele-point-labels\" font-size=\"${jsStr(pointSize)}\">$labels</g>"

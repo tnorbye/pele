@@ -20,7 +20,12 @@ fun parseIshikawa(src: String, db: IshikawaDb) {
   var i = 0
 
   fun fail(expected: String): Nothing {
-    throw syntaxError("ishikawa", src, starts[i], "Expecting $expected, got '${TOKEN_NAMES[types[i]]}'")
+    throw syntaxError(
+      "ishikawa",
+      src,
+      starts[i],
+      "Expecting $expected, got '${TOKEN_NAMES[types[i]]}'",
+    )
   }
 
   if (types[i] == T.SPACELINE) {
@@ -39,7 +44,10 @@ fun parseIshikawa(src: String, db: IshikawaDb) {
       val text = if (type == T.TEXT) i else i + 1
       i = text + 1
       if (types[i] != T.SPACELINE && types[i] != T.NL && types[i] != T.EOF) fail(STOP)
-      db.addNode(if (type == T.TEXT) 0 else ends[text - 1] - starts[text - 1], src.jsSlice(starts[text], ends[text]).jsTrim())
+      db.addNode(
+        if (type == T.TEXT) 0 else ends[text - 1] - starts[text - 1],
+        src.jsSlice(starts[text], ends[text]).jsTrim(),
+      )
     } else if (type == T.SPACELINE || type == T.SPACELIST) {
       i++
       if (types[i] != T.SPACELINE && types[i] != T.NL && types[i] != T.EOF) {

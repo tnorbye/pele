@@ -14,15 +14,16 @@ import pele.js.jsTrim
 import pele.js.jsTrimStart
 import pele.js.toInt32
 import pele.js.whatwgHref
-import pele.svg.stripInvalidXml
 import pele.svg.esc
+import pele.svg.stripInvalidXml
 import pele.text.decodeEntities
 
 private const val BLANK = "about:blank"
 private val RE_INVALID_PROTOCOL = JsRegExp("""^([^\w]*)(javascript|data|vbscript)""", "im")
 private val RE_HTML_ENTITIES = JsRegExp("""&#(\w+)(^\w|;)?""", "g")
 private val RE_HTML_CTRL_ENTITY = JsRegExp("""&(newline|tab);""", "gi")
-private val RE_CTRL = JsRegExp("[\\u0000-\\u001F\\u007F-\\u009F -‍﻿\\uD800-\\uDFFF\\uFFFE\\uFFFF]", "gimu")
+private val RE_CTRL =
+  JsRegExp("[\\u0000-\\u001F\\u007F-\\u009F -‍﻿\\uD800-\\uDFFF\\uFFFE\\uFFFF]", "gimu")
 private val RE_SCHEME = JsRegExp("""^.+(:|&colon;)""", "gim")
 private val RE_WS_ESCAPE = JsRegExp("""(\\|%5[cC])((%(6[eE]|72|74))|[nrt])""", "g")
 
@@ -46,16 +47,20 @@ private fun unwrap(url: String, percent: Boolean): String? {
   var rounds = 0
   do {
     if (++rounds > 32) return null
-    out = out
-      .jsReplace(RE_CTRL, "")
-      .jsReplace(RE_HTML_ENTITIES) { m -> charFromCode(m[1]!!) }
-      .jsReplace(RE_HTML_CTRL_ENTITY, "")
-      .jsReplace(RE_CTRL, "")
-      .jsReplace(RE_WS_ESCAPE, "")
-      .jsTrim()
+    out =
+      out
+        .jsReplace(RE_CTRL, "")
+        .jsReplace(RE_HTML_ENTITIES) { m -> charFromCode(m[1]!!) }
+        .jsReplace(RE_HTML_CTRL_ENTITY, "")
+        .jsReplace(RE_CTRL, "")
+        .jsReplace(RE_WS_ESCAPE, "")
+        .jsTrim()
     if (percent) out = decode(out)
-    val more = out.jsMatchGlobal(RE_CTRL) ?: out.jsMatchGlobal(RE_HTML_ENTITIES) ?: out.jsMatchGlobal(RE_HTML_CTRL_ENTITY)
-      ?: out.jsMatchGlobal(RE_WS_ESCAPE)
+    val more =
+      out.jsMatchGlobal(RE_CTRL)
+        ?: out.jsMatchGlobal(RE_HTML_ENTITIES)
+        ?: out.jsMatchGlobal(RE_HTML_CTRL_ENTITY)
+        ?: out.jsMatchGlobal(RE_WS_ESCAPE)
   } while (more != null && more.isNotEmpty())
   return out
 }
@@ -129,7 +134,14 @@ fun internalLink(name: String, options: RenderOptions): Boolean {
   return linkUrl(seen, options) != null
 }
 
-fun linked(body: String, url: String, id: String, links: MutableList<LinkInfo>, options: RenderOptions, attrs: String = ""): String {
+fun linked(
+  body: String,
+  url: String,
+  id: String,
+  links: MutableList<LinkInfo>,
+  options: RenderOptions,
+  attrs: String = "",
+): String {
   val href = linkUrl(url, options) ?: return body
   links.add(LinkInfo(id, href, false))
   return "<a href=\"${esc(href)}\"$attrs${relAttr(options)}>$body</a>"

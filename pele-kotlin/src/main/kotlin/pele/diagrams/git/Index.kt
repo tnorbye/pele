@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val gitGraph: Diagram<GitModel> = object : Diagram<GitModel> {
-  override val type = "gitGraph"
+val gitGraph: Diagram<GitModel> =
+  object : Diagram<GitModel> {
+    override val type = "gitGraph"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): GitModel =
-    buildGit(parseGit(source), config, title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): GitModel = buildGit(parseGit(source), config, title)
 
-  override fun render(model: GitModel, config: Config, options: RenderOptions): Rendered = renderGit(model, config, options)
-}
+    override fun render(model: GitModel, config: Config, options: RenderOptions): Rendered =
+      renderGit(model, config, options)
+  }

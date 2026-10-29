@@ -2,6 +2,11 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.state
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sign
 import pele.Config
 import pele.LinkInfo
 import pele.RenderOptions
@@ -53,11 +58,6 @@ import pele.text.defaultMeasurer
 import pele.text.layoutLabel
 import pele.util.linked
 import pele.util.safeUrl
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sign
 
 private const val NODE_SEP = 40.0
 private const val EDGE_SEP = 16.0
@@ -73,7 +73,8 @@ private const val CORNER = 10.0
 private const val BAR = 8.0
 private const val SURFACE = " fill=\"var(--_s)\" stroke=\"var(--_b)\""
 private const val RULE = " fill=\"none\" stroke=\"var(--_b)\""
-private val MERMAID_CLASSES = JsRegExp("""(?:^| )statediagram-(?:state|cluster-alt|cluster|note)(?= |$)""", "g")
+private val MERMAID_CLASSES =
+  JsRegExp("""(?:^| )statediagram-(?:state|cluster-alt|cluster|note)(?= |$)""", "g")
 
 private object K {
   const val State = 0
@@ -89,28 +90,30 @@ private object K {
   const val Hidden = 10
 }
 
-private val KINDS: Map<String?, Int> = mapOf(
-  "rectWithTitle" to K.Described,
-  "stateStart" to K.Start,
-  "stateEnd" to K.End,
-  "choice" to K.Choice,
-  "fork" to K.Fork,
-  "join" to K.Join,
-  "note" to K.Note,
-  "divider" to K.Hidden,
-)
+private val KINDS: Map<String?, Int> =
+  mapOf(
+    "rectWithTitle" to K.Described,
+    "stateStart" to K.Start,
+    "stateEnd" to K.End,
+    "choice" to K.Choice,
+    "fork" to K.Fork,
+    "join" to K.Join,
+    "note" to K.Note,
+    "divider" to K.Hidden,
+  )
 
-private val CLASSES = listOf(
-  "pele-node pele-state",
-  "pele-node pele-state",
-  "pele-node pele-state-start",
-  "pele-node pele-state-end",
-  "pele-node pele-state-choice",
-  "pele-node pele-state-fork",
-  "pele-node pele-state-join",
-  "pele-note",
-  "pele-cluster pele-state-composite",
-)
+private val CLASSES =
+  listOf(
+    "pele-node pele-state",
+    "pele-node pele-state",
+    "pele-node pele-state-start",
+    "pele-node pele-state-end",
+    "pele-node pele-state-choice",
+    "pele-node pele-state-fork",
+    "pele-node pele-state-join",
+    "pele-note",
+    "pele-cluster pele-state-composite",
+  )
 
 private class View(
   // Absent for the unseen helpers the layout needs.
@@ -141,7 +144,8 @@ private fun unquote(text: String): String {
   return text.jsSlice(from, to)
 }
 
-private fun clamp(value: Double, min: Double, max: Double): Double = if (value < min) min else if (value > max) max else value
+private fun clamp(value: Double, min: Double, max: Double): Double =
+  if (value < min) min else if (value > max) max else value
 
 private fun rect(x: Double, y: Double, w: Double, h: Double, rest: String): String =
   "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(h)}\"$rest/>"
@@ -174,7 +178,9 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
   val icons = options.icons
   val rootDir = if (turned) "TB" else direction(db.direction)
   val noLabel = layoutLabel(null, false, measurer, size, 0.0)
-  val text = { raw: String?, fontSize: Double, wrap: Double, style: Int -> layoutLabel(raw, true, measurer, fontSize, wrap, style) }
+  val text = { raw: String?, fontSize: Double, wrap: Double, style: Int ->
+    layoutLabel(raw, true, measurer, fontSize, wrap, style)
+  }
 
   val index = LinkedHashMap<String, Int>()
   val views = ArrayList<View>()
@@ -186,7 +192,9 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
   }
   for (node in graph.nodes) {
     if (node.shape == "noteGroup") continue
-    val kind = if (node.isGroup) (if (node.shape == "divider") K.Region else K.Composite) else (KINDS[node.shape] ?: K.State)
+    val kind =
+      if (node.isGroup) (if (node.shape == "divider") K.Region else K.Composite)
+      else (KINDS[node.shape] ?: K.State)
     index[node.id] = add(node, kind, null)
   }
   val states = views.size
@@ -277,7 +285,11 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
   for (i in 0 until states) {
     val view = views[i]
     val node = view.node!!
-    val style = resolveStyle(if (node.cssStyles.size > 0) node.cssCompiledStyles + node.cssStyles else node.cssCompiledStyles)
+    val style =
+      resolveStyle(
+        if (node.cssStyles.size > 0) node.cssCompiledStyles + node.cssStyles
+        else node.cssCompiledStyles
+      )
     val textStyle = (if (style.bold) Style.Bold else 0) or (if (style.italic) Style.Italic else 0)
     val fontSize = style.fontSize ?: size
     view.style = style
@@ -302,7 +314,8 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
         view.h = 30.0
         view.w = view.h
       }
-      K.Fork, K.Join -> {
+      K.Fork,
+      K.Join -> {
         val length = clamp(40.0 * degree[i] + 16, 72.0, 320.0)
         view.w = if (across(i)) length else BAR
         view.h = if (across(i)) BAR else length
@@ -332,14 +345,16 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
     }
     if (c == null) c = cnode(view.w, view.h)
     // The transitions on one side of a state's box spread along it, clear of its corners.
-    if (view.kind == K.State || view.kind == K.Described) c.span = (if (across(i)) view.w else view.h) - 24
+    if (view.kind == K.State || view.kind == K.Described)
+      c.span = (if (across(i)) view.w else view.h) - 24
     cnodes.add(c)
   }
 
   val cedges = ArrayList<CEdge>()
   val edgeLabels = ArrayList<Label>()
   val drawn = ArrayList<StateEdge>()
-  // The transitions each state makes to itself: how many, their widest label, and their labels' height.
+  // The transitions each state makes to itself: how many, their widest label, and their labels'
+  // height.
   val loopCount = IntArray(states)
   val loopWidth = DoubleArray(states)
   val loopHeight = DoubleArray(states)
@@ -382,7 +397,18 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
     }
     drawn.add(edge)
     edgeLabels.add(label)
-    cedges.add(CEdge(src, dst, 1.0, labelW, if (label.height > 0) label.height + 4 else 0.0, ArrayList(), 0.0, 0.0))
+    cedges.add(
+      CEdge(
+        src,
+        dst,
+        1.0,
+        labelW,
+        if (label.height > 0) label.height + 4 else 0.0,
+        ArrayList(),
+        0.0,
+        0.0,
+      )
+    )
   }
 
   // A state with notes, or a composite with self-transitions, sits in an unseen group of its
@@ -390,7 +416,8 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
   for (i in 0 until states) {
     if (owners[i] != -1) continue
     val item = cnodes[i]
-    // Loops hang off the right, or below when the flow is horizontal, with their labels beyond them.
+    // Loops hang off the right, or below when the flow is horizontal, with their labels beyond
+    // them.
     var room = 0.0
     if (loopCount[i] > 0) {
       val reach = LOOP + (loopCount[i] - 1) * 8
@@ -428,17 +455,18 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
       if (p >= 0) members[p].add(i) else top.add(i)
     }
     val initial = { i: Int -> if (views[i].kind == K.Start) 0 else 1 }
-    val byFlow = Comparator<Int> { a, b ->
-      val first = initial(a) - initial(b)
-      if (first != 0) {
-        first
-      } else {
-        val x: Double = appear[a]
-        val y: Double = appear[b]
-        val second = if (x == y) 0 else if (x < y) -1 else 1
-        if (second != 0) second else a - b
+    val byFlow =
+      Comparator<Int> { a, b ->
+        val first = initial(a) - initial(b)
+        if (first != 0) {
+          first
+        } else {
+          val x: Double = appear[a]
+          val y: Double = appear[b]
+          val second = if (x == y) 0 else if (x < y) -1 else 1
+          if (second != 0) second else a - b
+        }
       }
-    }
     var seq = 0
     top.sortWith(byFlow)
     top.reverse()
@@ -452,20 +480,21 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
     }
   }
 
-  val layout = compoundLayout(
-    cnodes,
-    cedges,
-    rootDir,
-    LayeredOptions(
-      nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
-      edgeSep = EDGE_SEP,
-      rankSep = numberOption(config, "rankSpacing", RANK_SEP),
-      portSep = 20.0,
-      tracks = curve == "step" || curve == "stepBefore" || curve == "stepAfter",
-      straight = curve == "linear",
-      headRoom = markerTrim("arrow_point"),
-    ),
-  )
+  val layout =
+    compoundLayout(
+      cnodes,
+      cedges,
+      rootDir,
+      LayeredOptions(
+        nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
+        edgeSep = EDGE_SEP,
+        rankSep = numberOption(config, "rankSpacing", RANK_SEP),
+        portSep = 20.0,
+        tracks = curve == "step" || curve == "stepBefore" || curve == "stepAfter",
+        straight = curve == "linear",
+        headRoom = markerTrim("arrow_point"),
+      ),
+    )
 
   val width = ceil(layout.width + 2 * pad)
   val height = ceil(layout.height + 2 * pad)
@@ -507,28 +536,44 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
   fun divide(items: List<Int>, left: Double, top: Double, right: Double, bottom: Double) {
     val regions = items.filter { views[it].kind == K.Region }
     if (regions.size < 2) return
-    val lo = { i: Int, x: Boolean -> if (x) cnodes[i].x - cnodes[i].w / 2 else cnodes[i].y - cnodes[i].h / 2 }
-    val hi = { i: Int, x: Boolean -> if (x) cnodes[i].x + cnodes[i].w / 2 else cnodes[i].y + cnodes[i].h / 2 }
+    val lo = { i: Int, x: Boolean ->
+      if (x) cnodes[i].x - cnodes[i].w / 2 else cnodes[i].y - cnodes[i].h / 2
+    }
+    val hi = { i: Int, x: Boolean ->
+      if (x) cnodes[i].x + cnodes[i].w / 2 else cnodes[i].y + cnodes[i].h / 2
+    }
     for (x in listOf(true, false)) {
-      val sorted = regions.sortedWith { a, b -> cmp((lo(a, x) - lo(b, x)).jsOr { (a - b).toDouble() }) }
+      val sorted = regions.sortedWith { a, b ->
+        cmp((lo(a, x) - lo(b, x)).jsOr { (a - b).toDouble() })
+      }
       var apart = true
-      for (k in 1 until sorted.size) if (hi(sorted[k - 1], x) > lo(sorted[k], x) + 0.5) apart = false
+      for (k in 1 until sorted.size) if (hi(sorted[k - 1], x) > lo(sorted[k], x) + 0.5)
+        apart = false
       if (!apart) continue
       for (k in 1 until sorted.size) {
         val at = num((hi(sorted[k - 1], x) + lo(sorted[k], x)) / 2 + pad)
-        dividers += "<path class=\"pele-divider\" d=\"M${if (x) "$at,${num(top)}V${num(bottom)}" else "${num(left)},${at}H${num(right)}"}\"/>"
+        dividers +=
+          "<path class=\"pele-divider\" d=\"M${if (x) "$at,${num(top)}V${num(bottom)}" else "${num(left)},${at}H${num(right)}"}\"/>"
       }
       return
     }
     // Regions that sit neither side by side nor in a stack each get an outline.
     for (i in regions) {
       val c = cnodes[i]
-      dividers += rect(c.x - c.w / 2 + pad, c.y - c.h / 2 + pad, c.w, c.h, " class=\"pele-divider\" rx=\"${jsStr(CORNER)}\"")
+      dividers +=
+        rect(
+          c.x - c.w / 2 + pad,
+          c.y - c.h / 2 + pad,
+          c.w,
+          c.h,
+          " class=\"pele-divider\" rx=\"${jsStr(CORNER)}\"",
+        )
     }
   }
   divide(roots, pad / 2, pad / 2, width - pad / 2, height - pad / 2)
 
-  // Picks where a composite's title sits in its title bar so that edges entering from above do not cross it.
+  // Picks where a composite's title sits in its title bar so that edges entering from above do not
+  // cross it.
   fun titleX(c: CNode, width: Double): Double {
     val xs = crossings[jsRound(c.y - c.h / 2) + 0.0]
     if (xs == null || width == 0.0) return c.x
@@ -566,25 +611,38 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
       K.Composite -> {
         val left = x - c.w / 2
         val top = y - c.h / 2
-        if (paints(style.shape)) fills.add(Fill(doubleArrayOf(left, top, left + c.w, top + c.h), style.shape))
-        body = rect(left, top, c.w, c.h, " rx=\"${jsStr(CORNER)}\" fill=\"var(--_a)\"${if (setsFill(style.shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"${style.shape}")
+        if (paints(style.shape))
+          fills.add(Fill(doubleArrayOf(left, top, left + c.w, top + c.h), style.shape))
+        body =
+          rect(
+            left,
+            top,
+            c.w,
+            c.h,
+            " rx=\"${jsStr(CORNER)}\" fill=\"var(--_a)\"${if (setsFill(style.shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"${style.shape}",
+          )
         if (view.titleH > 0) {
           body +=
             "<path d=\"M${num(left)},${num(top + view.titleH)}H${num(left + c.w)}\"$RULE${style.line}/>" +
-            labelSvg(
-              view.label,
-              titleX(c, view.label.width) + pad,
-              top + view.titleH / 2,
-              " class=\"pele-cluster-label\"$ink${style.text}",
-              icons,
-            )
+              labelSvg(
+                view.label,
+                titleX(c, view.label.width) + pad,
+                top + view.titleH / 2,
+                " class=\"pele-cluster-label\"$ink${style.text}",
+                icons,
+              )
         }
         divide(children[i], left, top + view.titleH, left + c.w, top + c.h)
       }
       K.Start -> body = "<circle r=\"7\" fill=\"var(--_l)\"${style.shape}/>"
-      K.End -> body = "<circle r=\"8.5\" fill=\"var(--_bg)\" stroke=\"var(--_l)\"${style.line}/><circle r=\"5\" fill=\"var(--_l)\"${style.shape}/>"
-      K.Choice -> body = "<polygon points=\"0,${num(-h / 2)} ${num(w / 2)},0 0,${num(h / 2)} ${num(-w / 2)},0\"$SURFACE${style.shape}/>"
-      K.Fork, K.Join -> body = rect(-w / 2, -h / 2, w, h, " rx=\"2\" fill=\"var(--_l)\"${style.shape}")
+      K.End ->
+        body =
+          "<circle r=\"8.5\" fill=\"var(--_bg)\" stroke=\"var(--_l)\"${style.line}/><circle r=\"5\" fill=\"var(--_l)\"${style.shape}/>"
+      K.Choice ->
+        body =
+          "<polygon points=\"0,${num(-h / 2)} ${num(w / 2)},0 0,${num(h / 2)} ${num(-w / 2)},0\"$SURFACE${style.shape}/>"
+      K.Fork,
+      K.Join -> body = rect(-w / 2, -h / 2, w, h, " rx=\"2\" fill=\"var(--_l)\"${style.shape}")
       K.Note -> {
         val r = num(w / 2)
         val b = num(h / 2)
@@ -592,19 +650,35 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
         val corner = num(FOLD - h / 2)
         body =
           "<path d=\"M-$r,-${b}H${fold}L$r,${corner}V${b}H-${r}Z\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"/>" +
-          "<path d=\"M$fold,-${b}V${corner}H$r\"$RULE/>" +
-          labelSvg(view.label, 0.0, 0.0, " class=\"pele-label\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\"", icons)
+            "<path d=\"M$fold,-${b}V${corner}H$r\"$RULE/>" +
+            labelSvg(
+              view.label,
+              0.0,
+              0.0,
+              " class=\"pele-label\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\"",
+              icons,
+            )
       }
       else -> {
-        body = rect(-w / 2, -h / 2, w, h, " rx=\"${num(min(CORNER, h / 2))}\"$SURFACE${style.shape}")
+        body =
+          rect(-w / 2, -h / 2, w, h, " rx=\"${num(min(CORNER, h / 2))}\"$SURFACE${style.shape}")
         if (view.kind == K.State) {
           body += labelSvg(view.label, 0.0, 0.0, labelAttrs, icons)
         } else {
           var at = PAD_Y - h / 2 + view.label.height
-          body += "<path d=\"M${num(-w / 2)},${num(at + 6)}H${num(w / 2)}\"$RULE${style.line}/>" + labelSvg(view.label, 0.0, at - view.label.height / 2, labelAttrs, icons)
+          body +=
+            "<path d=\"M${num(-w / 2)},${num(at + 6)}H${num(w / 2)}\"$RULE${style.line}/>" +
+              labelSvg(view.label, 0.0, at - view.label.height / 2, labelAttrs, icons)
           at += 14
           for (line in view.lines) {
-            body += labelSvg(line, 0.0, at + line.height / 2, " class=\"pele-state-description\" font-size=\"${jsStr(small)}\"$ink${style.text}", icons)
+            body +=
+              labelSvg(
+                line,
+                0.0,
+                at + line.height / 2,
+                " class=\"pele-state-description\" font-size=\"${jsStr(small)}\"$ink${style.text}",
+                icons,
+              )
             at += line.height
           }
         }
@@ -618,9 +692,11 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
       if (tooltip.isNotEmpty()) body = "<title>${esc(tooltip)}</title>" + body
       body = linked(body, safeUrl(unquote(link.url)), node.id, links, options, " target=\"_blank\"")
     }
-    val open = "<g class=\"${CLASSES[view.kind]}${classNames(node.cssClasses.jsReplace(MERMAID_CLASSES, ""))}\" data-id=\"${escText(node.id)}\""
+    val open =
+      "<g class=\"${CLASSES[view.kind]}${classNames(node.cssClasses.jsReplace(MERMAID_CLASSES, ""))}\" data-id=\"${escText(node.id)}\""
     if (view.kind == K.Composite) clusters += "$open>$body</g>"
-    else if (view.kind == K.Note) notesOut += "$open transform=\"translate(${num(x)},${num(y)})\">$body</g>"
+    else if (view.kind == K.Note)
+      notesOut += "$open transform=\"translate(${num(x)},${num(y)})\">$body</g>"
     else nodesOut += "$open transform=\"translate(${num(x)},${num(y)})\">$body</g>"
   }
 
@@ -642,7 +718,8 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
       if (abs(abs(delta) - extent / 2) >= 0.5) continue
       route[at + axis] = route[at + axis] - (sign(delta) * (extent - drawnExtent)) / 2
       if (bar && breadth > drawnExtent) {
-        route[at + 1 - axis] = clamp(route[other + 1 - axis], cross - breadth / 2 + 6, cross + breadth / 2 - 6)
+        route[at + 1 - axis] =
+          clamp(route[other + 1 - axis], cross - breadth / 2 + 6, cross + breadth / 2 - 6)
       }
       return
     }
@@ -671,7 +748,8 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
       val a = cnodes[ce.src]
       val view = views[ce.src]
       val k = loopSeen[ce.src]++
-      // The loop hangs off a side the flow does not use: the right, or below when the flow is horizontal.
+      // The loop hangs off a side the flow does not use: the right, or below when the flow is
+      // horizontal.
       val side = across(ce.src)
       val w = if (a.isGroup) a.w else view.w
       val h = if (a.isGroup) a.h else view.h
@@ -686,23 +764,26 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
       val rawDx = px(-reach, -spread) - px(0.0, 0.0)
       val rawDy = py(-reach, -spread) - py(0.0, 0.0)
       val len = jsHypot(rawDx, rawDy).jsOr { 1.0 }
-      path = EdgePath(
-        d = "M${at(0.0, -spread)}C${at(reach, -2 * spread)} ${at(reach, 2 * spread)} ${at(reach * trim, spread + spread * trim)}",
-        sx = 0.0,
-        sy = 0.0,
-        sdx = 0.0,
-        sdy = 0.0,
-        ex = px(0.0, spread),
-        ey = py(0.0, spread),
-        edx = rawDx / len,
-        edy = rawDy / len,
-      )
+      path =
+        EdgePath(
+          d =
+            "M${at(0.0, -spread)}C${at(reach, -2 * spread)} ${at(reach, 2 * spread)} ${at(reach * trim, spread + spread * trim)}",
+          sx = 0.0,
+          sy = 0.0,
+          sdx = 0.0,
+          sdy = 0.0,
+          ex = px(0.0, spread),
+          ey = py(0.0, spread),
+          edx = rawDx / len,
+          edy = rawDy / len,
+        )
       // Labels stack beyond the outermost loop, in the order of their transitions.
       val furthest = LOOP + (loopCount[ce.src] - 1) * 8
       val below = loopText[ce.src] + label.height / 2
       loopText[ce.src] += label.height
       ce.labelX = if (side) a.x + out + furthest + 4 + ce.labelW / 2 else a.x
-      ce.labelY = if (side) a.y - loopHeight[ce.src] / 2 + below else a.y + out + furthest * 0.75 + 4 + below
+      ce.labelY =
+        if (side) a.y - loopHeight[ce.src] / 2 + below else a.y + out + furthest * 0.75 + 4 + below
     } else {
       var route: MutableList<Double> = ArrayList(ce.route)
       val leaves = reachOf.of(ce.src, endSide(route, 0, cnodes[ce.src]))
@@ -722,23 +803,43 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
         val at = if (inward) 0 else route.size - 3
         val near = (g.dir == "TB" || g.dir == "LR") == inward
         val point =
-          if (vertical(g.dir)) listOf(route[at], g.y + pad + (if (near) views[composite].titleH - g.h / 2 else g.h / 2), 0.0)
+          if (vertical(g.dir))
+            listOf(
+              route[at],
+              g.y + pad + (if (near) views[composite].titleH - g.h / 2 else g.h / 2),
+              0.0,
+            )
           else listOf(g.x + pad + (if (near) -g.w / 2 else g.w / 2), route[at + 1], 1.0)
         route = if (inward) (point + route).toMutableList() else (route + point).toMutableList()
       }
-      path = routePath(route, if (curve is String) curve else null, 0.0, markerTrim(endType), leaves, arrives)
+      path =
+        routePath(
+          route,
+          if (curve is String) curve else null,
+          0.0,
+          markerTrim(endType),
+          leaves,
+          arrives,
+        )
     }
     val over = overFills(path.d, doubleArrayOf(path.ex, path.ey), fills, "", path.tokens)
     if (over == "") casings += edgeCasing(path, "none", endType)
     val kind =
-      if (note) "pele-note-edge\" stroke=\"${if (over.isNullOrEmpty()) "var(--_b)" else over}\" stroke-dasharray=\"3 4"
-      else if (!over.isNullOrEmpty()) "pele-transition\" stroke=\"$over"
-      else "pele-transition"
+      if (note)
+        "pele-note-edge\" stroke=\"${if (over.isNullOrEmpty()) "var(--_b)" else over}\" stroke-dasharray=\"3 4"
+      else if (!over.isNullOrEmpty()) "pele-transition\" stroke=\"$over" else "pele-transition"
     edgesOut +=
       "<g class=\"pele-edge $kind\" data-id=\"${escText(edge.id)}\">" +
-      "<path d=\"${path.d}\"/>" +
-      marker(endType, path.ex, path.ey, path.edx, path.edy, if (over.isNullOrEmpty()) "var(--_l)" else over) +
-      "</g>"
+        "<path d=\"${path.d}\"/>" +
+        marker(
+          endType,
+          path.ex,
+          path.ey,
+          path.edx,
+          path.edy,
+          if (over.isNullOrEmpty()) "var(--_l)" else over,
+        ) +
+        "</g>"
     if (label.width > 0) {
       val x = ce.labelX + pad
       val y = ce.labelY + pad
@@ -746,20 +847,27 @@ private fun draw(db: StateDb, config: Config, options: RenderOptions, turned: Bo
     }
   }
 
-  val titled = withTitle(
-    db.title,
-    measurer,
-    size,
-    pad,
-    width,
-    height,
-    (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
-      (if (dividers.isNotEmpty()) "<g class=\"pele-dividers\" stroke-dasharray=\"4 4\"$RULE>$dividers</g>" else "") +
-      casingsSvg(casings) +
-      (if (edgesOut.isNotEmpty()) "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>" else "") +
-      (if (labelsOut.isNotEmpty()) "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>" else "") +
-      "<g class=\"pele-nodes\">$nodesOut$notesOut</g>",
-  )
+  val titled =
+    withTitle(
+      db.title,
+      measurer,
+      size,
+      pad,
+      width,
+      height,
+      (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
+        (if (dividers.isNotEmpty())
+          "<g class=\"pele-dividers\" stroke-dasharray=\"4 4\"$RULE>$dividers</g>"
+        else "") +
+        casingsSvg(casings) +
+        (if (edgesOut.isNotEmpty())
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>"
+        else "") +
+        (if (labelsOut.isNotEmpty())
+          "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>"
+        else "") +
+        "<g class=\"pele-nodes\">$nodesOut$notesOut</g>",
+    )
   val svg = svgDocument("state", titled.width, titled.height, size, options, db, titled.content)
 
   return Rendered(svg, titled.width, titled.height, links)

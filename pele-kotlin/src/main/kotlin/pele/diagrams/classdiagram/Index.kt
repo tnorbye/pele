@@ -8,16 +8,24 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val classDiagram: Diagram<ClassDb> = object : Diagram<ClassDb> {
-  override val type = "class"
-  override val math = true
+val classDiagram: Diagram<ClassDb> =
+  object : Diagram<ClassDb> {
+    override val type = "class"
+    override val math = true
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): ClassDb {
-    val db = ClassDb()
-    if (!title.isNullOrEmpty()) db.title = title
-    parseClassDiagram(source, db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): ClassDb {
+      val db = ClassDb()
+      if (!title.isNullOrEmpty()) db.title = title
+      parseClassDiagram(source, db)
+      return db
+    }
+
+    override fun render(model: ClassDb, config: Config, options: RenderOptions): Rendered =
+      renderClass(model, config, options)
   }
-
-  override fun render(model: ClassDb, config: Config, options: RenderOptions): Rendered = renderClass(model, config, options)
-}

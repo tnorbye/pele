@@ -6,10 +6,11 @@ import pele.IconResolver
 import pele.svg.escText
 import pele.svg.num
 
-// A square for a named icon, in the form labels use. The host's resolver supplies the drawing, if any.
+// A square for a named icon, in the form labels use. The host's resolver supplies the drawing, if
+// any.
 fun iconSvg(name: String, x: Double, y: Double, side: Double, icons: IconResolver?): String =
   "<svg class=\"pele-icon\" data-icon=\"${escText(name)}\" x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(side)}\" height=\"${num(
-    side,
+    side
   )}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">${
     icons?.invoke(name) ?: ""
   }</svg>"

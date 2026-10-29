@@ -6,12 +6,12 @@ import pele.PeleError
 import pele.PeleErrorCode
 import pele.PeleErrorInfo
 import pele.js.JsRegExp
+import pele.js.isTruthy
 import pele.js.jsEntries
 import pele.js.jsReplace
 import pele.js.jsSlice
 import pele.js.jsString
 import pele.js.jsTrim
-import pele.js.isTruthy
 import pele.js.jsonParse
 import pele.js.toCodePointStrings
 import pele.util.YamlValue
@@ -61,7 +61,8 @@ private fun splitBox(str: String): Pair<String, String>? {
 }
 
 private fun entries(value: Any?): List<Pair<String, Any?>> {
-  if (value is String) return value.toCodePointStrings().mapIndexed { i, ch -> Pair(i.toString(), ch) }
+  if (value is String)
+    return value.toCodePointStrings().mapIndexed { i, ch -> Pair(i.toString(), ch) }
   if (value is Map<*, *>) {
     @Suppress("UNCHECKED_CAST")
     return jsEntries(value as Map<String, Any?>)
@@ -81,8 +82,10 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
   override var title: String? = null
   override var accTitle: String? = null
     private set
+
   override var accDescr: String? = null
     private set
+
   private var prevActor: String? = null
   private var currentBox: SeqBox? = null
   private var lastCreated: String? = null
@@ -126,7 +129,13 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
     boxes.add(box)
   }
 
-  fun addActor(id: String, name: String, descriptionIn: SeqText?, typeIn: String?, metadata: String? = null) {
+  fun addActor(
+    id: String,
+    name: String,
+    descriptionIn: SeqText?,
+    typeIn: String?,
+    metadata: String? = null,
+  ) {
     var description = descriptionIn
     var type = typeIn
     var assignedBox = currentBox
@@ -134,7 +143,8 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
     if (metadata != null) {
       val parsed: YamlValue
       try {
-        parsed = parseYaml(if (metadata.contains('\n')) metadata + "\n" else "{\n" + metadata + "\n}")
+        parsed =
+          parseYaml(if (metadata.contains('\n')) metadata + "\n" else "{\n" + metadata + "\n}")
       } catch (error: Exception) {
         throw PeleError(
           "Config of participant \"$id\" is not valid YAML. ${error.message}",
@@ -142,8 +152,7 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
           PeleErrorInfo(type = "sequence"),
         )
       }
-      @Suppress("UNCHECKED_CAST")
-      if (parsed is Map<*, *>) doc = parsed as Map<String, Any?>
+      @Suppress("UNCHECKED_CAST") if (parsed is Map<*, *>) doc = parsed as Map<String, Any?>
     }
     val docType = if (doc != null && doc.containsKey("type")) doc["type"] else null
     val docAlias = if (doc != null && doc.containsKey("alias")) doc["alias"] else null
@@ -158,26 +167,28 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
       val oldBox = old.box
       if (currentBox != null && oldBox != null && currentBox !== oldBox) {
         fail(
-          "A same participant should only be defined in one Box: ${old.name} can't be in '${oldBox.name ?: "undefined"}' and in '${currentBox.name ?: "undefined"}' at the same time.",
+          "A same participant should only be defined in one Box: ${old.name} can't be in '${oldBox.name ?: "undefined"}' and in '${currentBox.name ?: "undefined"}' at the same time."
         )
       }
       assignedBox = oldBox ?: currentBox
       old.box = assignedBox
       if (name == old.name && description == null) return
     }
-    // A participant that is only mentioned in a message has no kind and takes its name as its label.
+    // A participant that is only mentioned in a message has no kind and takes its name as its
+    // label.
     if (description == null || type == null) description = SeqText(name, null)
 
-    actors[id] = SeqActor(
-      box = assignedBox,
-      name = name,
-      description = description.text,
-      wrap = description.wrap ?: autoWrap(),
-      prevActor = prevActor,
-      links = LinkedHashMap(),
-      properties = LinkedHashMap(),
-      type = type ?: "participant",
-    )
+    actors[id] =
+      SeqActor(
+        box = assignedBox,
+        name = name,
+        description = description.text,
+        wrap = description.wrap ?: autoWrap(),
+        prevActor = prevActor,
+        links = LinkedHashMap(),
+        properties = LinkedHashMap(),
+        type = type ?: "participant",
+      )
     val prevId = prevActor
     if (!prevId.isNullOrEmpty()) {
       val prev = actors[prevId]
@@ -196,7 +207,7 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
         message = message.text,
         wrap = message.wrap ?: autoWrap(),
         answer = answer,
-      ),
+      )
     )
   }
 
@@ -226,7 +237,7 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
         type = type,
         activate = activate,
         centralConnection = centralConnection ?: 0,
-      ),
+      )
     )
     return true
   }
@@ -245,7 +256,7 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
         wrap = wrap,
         type = LINETYPE.NOTE,
         placement = placement,
-      ),
+      )
     )
   }
 
@@ -320,16 +331,21 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
             id = messages.size.toString(),
             from = null,
             to = null,
-            message = SeqNumbering(param.sequenceIndex, param.sequenceIndexStep, param.sequenceVisible == true),
+            message =
+              SeqNumbering(
+                param.sequenceIndex,
+                param.sequenceIndexStep,
+                param.sequenceVisible == true,
+              ),
             wrap = false,
             type = param.signalType,
-          ),
+          )
         )
       "addParticipant" -> addActor(actor!!, actor, param.description, param.draw, param.config)
       "createParticipant" -> {
         if (actors.containsKey(actor!!)) {
           fail(
-            "It is not possible to have actors with the same id, even if one is destroyed before the next is created. Use 'AS' aliases to simulate the behavior",
+            "It is not possible to have actors with the same id, even if one is destroyed before the next is created. Use 'AS' aliases to simulate the behavior"
           )
         }
         lastCreated = actor
@@ -340,8 +356,10 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
         lastDestroyed = actor
         destroyedActors[actor!!] = messages.size
       }
-      "activeStart", "activeEnd", "centralConnection", "centralConnectionReverse" ->
-        addSignal(actor, null, null, param.signalType)
+      "activeStart",
+      "activeEnd",
+      "centralConnection",
+      "centralConnectionReverse" -> addSignal(actor, null, null, param.signalType)
       "addNote" -> addNote(param.actor!!, param.placement!!, param.text!!)
       "addLinks" -> addLinks(actor!!, param.text!!)
       "addALink" -> addALink(actor!!, param.text!!)
@@ -353,32 +371,46 @@ class SeqDb(options: SeqDbOptions = SeqDbOptions()) : SequenceModel, SeqBuilder 
         if (!created.isNullOrEmpty()) {
           if (param.to != created) {
             fail(
-              "The created participant $created does not have an associated creating message after its declaration. Please check the sequence diagram.",
+              "The created participant $created does not have an associated creating message after its declaration. Please check the sequence diagram."
             )
           }
           lastCreated = null
         } else if (!destroyed.isNullOrEmpty()) {
           if (param.to != destroyed && param.from != destroyed) {
             fail(
-              "The destroyed participant $destroyed does not have an associated destroying message after its declaration. Please check the sequence diagram.",
+              "The destroyed participant $destroyed does not have an associated destroying message after its declaration. Please check the sequence diagram."
             )
           }
           lastDestroyed = null
         }
-        addSignal(param.from, param.to, param.msg, param.signalType, param.activate ?: false, param.centralConnection)
+        addSignal(
+          param.from,
+          param.to,
+          param.msg,
+          param.signalType,
+          param.activate ?: false,
+          param.centralConnection,
+        )
       }
       "boxStart" -> addBox(param.boxData!!)
       "boxEnd" -> currentBox = null
       "loopStart" -> addSignal(null, null, param.loopText as SeqText, param.signalType)
       "rectStart" -> addSignal(null, null, param.color, param.signalType)
       "optStart" -> addSignal(null, null, param.optText, param.signalType)
-      "altStart", "else" -> addSignal(null, null, param.altText, param.signalType)
-      "parStart", "and" -> addSignal(null, null, param.parText, param.signalType)
+      "altStart",
+      "else" -> addSignal(null, null, param.altText, param.signalType)
+      "parStart",
+      "and" -> addSignal(null, null, param.parText, param.signalType)
       "criticalStart" -> addSignal(null, null, param.criticalText, param.signalType)
       "option" -> addSignal(null, null, param.optionText, param.signalType)
       "breakStart" -> addSignal(null, null, param.breakText, param.signalType)
-      "loopEnd", "rectEnd", "optEnd", "altEnd", "parEnd", "criticalEnd", "breakEnd" ->
-        addSignal(null, null, null, param.signalType)
+      "loopEnd",
+      "rectEnd",
+      "optEnd",
+      "altEnd",
+      "parEnd",
+      "criticalEnd",
+      "breakEnd" -> addSignal(null, null, null, param.signalType)
     }
   }
 }

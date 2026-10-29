@@ -11,7 +11,9 @@ import pele.js.jsTrim
 // Mermaid takes one pair of quotes off an id, label or style value.
 fun normalizeText(text: String): String {
   val trimmed = text.jsTrim()
-  return if (trimmed.length >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"")) trimmed.jsSlice(1, -1) else trimmed
+  return if (trimmed.length >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\""))
+    trimmed.jsSlice(1, -1)
+  else trimmed
 }
 
 private fun normalizeIds(ids: List<String>): List<String> = ids.map { normalizeText(it) }.sorted()
@@ -38,12 +40,22 @@ class VennDb : VennModel, IndentHost {
     this.current = sets
     if (sets.size == 1) this.known.add(sets[0])
     this.subsets.add(
-      VennSubset(sets, size ?: (10.0 / (ids.size.toDouble() * ids.size)), if (!label.isNullOrEmpty()) normalizeText(label) else null),
+      VennSubset(
+        sets,
+        size ?: (10.0 / (ids.size.toDouble() * ids.size)),
+        if (!label.isNullOrEmpty()) normalizeText(label) else null,
+      )
     )
   }
 
   fun addTextData(ids: List<String>, id: String, label: String?) {
-    this.textNodes.add(VennText(normalizeIds(ids), normalizeText(id), if (!label.isNullOrEmpty()) normalizeText(label) else null))
+    this.textNodes.add(
+      VennText(
+        normalizeIds(ids),
+        normalizeText(id),
+        if (!label.isNullOrEmpty()) normalizeText(label) else null,
+      )
+    )
   }
 
   fun addStyleData(ids: List<String>, data: List<Pair<String, String>>) {
@@ -55,7 +67,11 @@ class VennDb : VennModel, IndentHost {
   fun validateUnionIdentifiers(ids: List<String>) {
     val unknown = ids.map { normalizeText(it) }.filter { !this.known.contains(it) }
     if (unknown.isNotEmpty()) {
-      throw PeleError("unknown set identifier: ${unknown.joinToString(", ")}", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "venn"))
+      throw PeleError(
+        "unknown set identifier: ${unknown.joinToString(", ")}",
+        PeleErrorCode.SEMANTIC,
+        PeleErrorInfo(type = "venn"),
+      )
     }
   }
 

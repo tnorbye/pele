@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val treemap: Diagram<TreemapModel> = object : Diagram<TreemapModel> {
-  override val type = "treemap"
+val treemap: Diagram<TreemapModel> =
+  object : Diagram<TreemapModel> {
+    override val type = "treemap"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): TreemapModel =
-    buildTreemap(parseTreemap(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): TreemapModel = buildTreemap(parseTreemap(source), title)
 
-  override fun render(model: TreemapModel, config: Config, options: RenderOptions): Rendered = renderTreemap(model, config, options)
-}
+    override fun render(model: TreemapModel, config: Config, options: RenderOptions): Rendered =
+      renderTreemap(model, config, options)
+  }

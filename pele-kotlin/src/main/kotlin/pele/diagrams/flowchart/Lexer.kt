@@ -37,9 +37,12 @@ private object S {
   const val shapeDataStr = 17
 }
 
-private val NODE_CHAR: BooleanArray = BooleanArray(128).also { table ->
-  for (ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#\$%&'*+.`?\\_/") table[ch.code] = true
-}
+private val NODE_CHAR: BooleanArray =
+  BooleanArray(128).also { table ->
+    for (ch in
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#\$%&'*+.`?\\_/") table[
+      ch.code] = true
+  }
 
 private val RE_ACC_TITLE = JsRegExp("""accTitle\s*:\s*""", "y")
 private val RE_ACC_DESCR = JsRegExp("""accDescr\s*:\s*""", "y")
@@ -50,13 +53,14 @@ private val RE_NODIR = JsRegExp("""(?:\r?\n)*\s*\n""", "y")
 private val RE_DIR = JsRegExp("""\s*(?:LR|RL|TB|BT|TD|BR)\b""", "y")
 private val RE_DIR_SYM = JsRegExp("""\s*[<>^]""", "y")
 private val RE_DIR_V = JsRegExp("""\s*v\b""", "y")
-private val RE_DIRECTION = listOf(
-  JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+TD[^\n]*""", "y"),
-)
+private val RE_DIRECTION =
+  listOf(
+    JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+TD[^\n]*""", "y"),
+  )
 private val RE_LINE_END = JsRegExp("""[\n\r  ]""", "g")
 private val RE_LINK = JsRegExp("""\s*[xo<]?--+[-xo>]\s*""", "y")
 private val RE_START_LINK = JsRegExp("""\s*[xo<]?--\s*""", "y")
@@ -102,9 +106,7 @@ fun tokenize(src: String): Tokens {
     stack.add(state)
     state = s
   }
-  val pop = {
-    if (stack.size > 0) state = stack.removeAt(stack.size - 1)
-  }
+  val pop = { if (stack.size > 0) state = stack.removeAt(stack.size - 1) }
   val at = { re: JsRegExp, q: Int ->
     re.lastIndex = q
     if (re.test(src)) re.lastIndex else -1
@@ -146,63 +148,65 @@ fun tokenize(src: String): Tokens {
     }
   }
 
-  val invisLink = fun(): Boolean {
-    if (!invisAhead(p)) return false
-    val e = at(RE_INVIS_LINK, p)
-    if (e < 0) return false
-    emit(T.LINK, p, e)
-    return true
-  }
+  val invisLink =
+    fun(): Boolean {
+      if (!invisAhead(p)) return false
+      val e = at(RE_INVIS_LINK, p)
+      if (e < 0) return false
+      emit(T.LINK, p, e)
+      return true
+    }
 
-  val opener = fun(c: Int): Boolean {
-    val d = src.charCodeAt(p + 1)
-    if (c == 40) {
-      if (d == 45) {
-        push(S.ellipseText)
-        emit(T.ELLIPSE_START, p, p + 2)
-      } else if (d == 91) {
-        push(S.text)
-        emit(T.STADIUMSTART, p, p + 2)
-      } else if (d == 40 && src.charCodeAt(p + 2) == 40) {
-        push(S.text)
-        emit(T.DOUBLECIRCLESTART, p, p + 3)
-      } else {
-        push(S.text)
-        emit(T.PS, p, p + 1)
+  val opener =
+    fun(c: Int): Boolean {
+      val d = src.charCodeAt(p + 1)
+      if (c == 40) {
+        if (d == 45) {
+          push(S.ellipseText)
+          emit(T.ELLIPSE_START, p, p + 2)
+        } else if (d == 91) {
+          push(S.text)
+          emit(T.STADIUMSTART, p, p + 2)
+        } else if (d == 40 && src.charCodeAt(p + 2) == 40) {
+          push(S.text)
+          emit(T.DOUBLECIRCLESTART, p, p + 3)
+        } else {
+          push(S.text)
+          emit(T.PS, p, p + 1)
+        }
+        return true
       }
-      return true
-    }
-    if (c == 91) {
-      if (d == 91) {
-        push(S.text)
-        emit(T.SUBROUTINESTART, p, p + 2)
-      } else if (d == 40) {
-        push(S.text)
-        emit(T.CYLINDERSTART, p, p + 2)
-      } else if (d == 47) {
-        push(S.trapText)
-        emit(T.TRAPSTART, p, p + 2)
-      } else if (d == 92) {
-        push(S.trapText)
-        emit(T.INVTRAPSTART, p, p + 2)
-      } else {
-        push(S.text)
-        emit(T.SQS, p, p + 1)
+      if (c == 91) {
+        if (d == 91) {
+          push(S.text)
+          emit(T.SUBROUTINESTART, p, p + 2)
+        } else if (d == 40) {
+          push(S.text)
+          emit(T.CYLINDERSTART, p, p + 2)
+        } else if (d == 47) {
+          push(S.trapText)
+          emit(T.TRAPSTART, p, p + 2)
+        } else if (d == 92) {
+          push(S.trapText)
+          emit(T.INVTRAPSTART, p, p + 2)
+        } else {
+          push(S.text)
+          emit(T.SQS, p, p + 1)
+        }
+        return true
       }
-      return true
+      if (c == 124) {
+        push(S.text)
+        emit(T.PIPE, p, p + 1)
+        return true
+      }
+      if (c == 123) {
+        push(S.text)
+        emit(T.DIAMOND_START, p, p + 1)
+        return true
+      }
+      return false
     }
-    if (c == 124) {
-      push(S.text)
-      emit(T.PIPE, p, p + 1)
-      return true
-    }
-    if (c == 123) {
-      push(S.text)
-      emit(T.DIAMOND_START, p, p + 1)
-      return true
-    }
-    return false
-  }
 
   val graph = { len: Int ->
     if (firstGraph) {
@@ -212,393 +216,409 @@ fun tokenize(src: String): Tokens {
     emit(T.GRAPH, p, p + len)
   }
 
-  val nodeString = fun(): Boolean {
-    var q = p
-    while (q < n) {
-      val ch = src.charCodeAt(q)
-      if (ch < 128 && NODE_CHAR[ch]) {
-        q++
-      } else if (ch == 45 && q + 1 < n) {
-        val d = src.charCodeAt(q + 1)
-        if (d == 62 || d == 45 || d == 46) break
-        q++
-      } else {
-        break
-      }
-    }
-    if (q == p) return false
-    emit(T.NODE_STRING, p, q)
-    return true
-  }
-
-  val link = fun(c: Int): Boolean {
-    val d = linkChar(p)
-    var e: Int
-    if (d == 45) {
-      e = at(RE_LINK, p)
-      if (e >= 0) {
-        emit(T.LINK, p, e)
-        return true
-      }
-      e = at(RE_START_LINK, p)
-      if (e >= 0) {
-        push(S.edgeText)
-        emit(T.START_LINK, p, e)
-        return true
-      }
-      e = at(RE_DOTTED_LINK, p)
-      if (e >= 0) {
-        emit(T.LINK, p, e)
-        return true
-      }
-      e = at(RE_DOTTED_START, p)
-      if (e >= 0) {
-        push(S.dottedEdgeText)
-        emit(T.START_LINK, p, e)
-        return true
-      }
-    } else if (d == 61) {
-      e = at(RE_THICK_LINK, p)
-      if (e >= 0) {
-        emit(T.LINK, p, e)
-        return true
-      }
-      e = at(RE_THICK_START, p)
-      if (e >= 0) {
-        push(S.thickEdgeText)
-        emit(T.START_LINK, p, e)
-        return true
-      }
-    } else if (d == 46) {
-      e = at(RE_DOTTED_LINK, p)
-      if (e >= 0) {
-        emit(T.LINK, p, e)
-        return true
-      }
-    }
-    return c != 45 && c != 61 && c != 46 && invisLink()
-  }
-
-  val initial = fun(c: Int): Boolean {
-    var e: Int
-    when (c) {
-      97 -> if (src.startsWith("acc", p)) {
-        e = at(RE_ACC_TITLE, p)
-        if (e >= 0) {
-          push(S.acc_title)
-          emit(T.acc_title, p, e)
-          return true
-        }
-        e = at(RE_ACC_DESCR, p)
-        if (e >= 0) {
-          push(S.acc_descr)
-          emit(T.acc_descr, p, e)
-          return true
-        }
-        e = at(RE_ACC_DESCR_ML, p)
-        if (e >= 0) {
-          push(S.acc_descr_multiline)
-          p = e
-          return true
-        }
-      }
-      64 -> if (src.charCodeAt(p + 1) == 123) {
-        push(S.shapeData)
-        types.add(T.SHAPE_DATA)
-        texts.add("")
-        starts.add(p)
-        p += 2
-        return true
-      }
-      99 -> {
-        e = at(RE_CALL, p)
-        if (e >= 0) {
-          push(S.callbackname)
-          p = e
-          return true
-        }
-        if (kw("classDef")) {
-          emit(T.CLASSDEF, p, p + 8)
-          return true
-        }
-        if (kw("class")) {
-          emit(T.CLASS, p, p + 5)
-          return true
-        }
-        e = at(RE_CLICK, p)
-        if (e >= 0) {
-          push(S.click)
-          p = e
-          return true
-        }
-      }
-      34 -> {
-        quote()
-        return true
-      }
-      115 -> {
-        if (kw("style")) {
-          emit(T.STYLE, p, p + 5)
-          return true
-        }
-        if (kw("swimlane-beta")) {
-          graph(13)
-          return true
-        }
-        if (kw("subgraph")) {
-          emit(T.subgraph, p, p + 8)
-          return true
-        }
-      }
-      100 -> if (kw("default")) {
-        emit(T.DEFAULT, p, p + 7)
-        return true
-      }
-      108 -> if (kw("linkStyle")) {
-        emit(T.LINKSTYLE, p, p + 9)
-        return true
-      }
-      105 -> if (kw("interpolate")) {
-        emit(T.INTERPOLATE, p, p + 11)
-        return true
-      }
-      104 -> if (src.startsWith("href", p) && isSpace(src.charCodeAt(p + 4))) {
-        emit(T.HREF, p, p + 5)
-        return true
-      }
-      102 -> {
-        if (kw("flowchart-elk")) {
-          graph(13)
-          return true
-        }
-        if (kw("flowchart")) {
-          graph(9)
-          return true
-        }
-      }
-      103 -> if (kw("graph")) {
-        graph(5)
-        return true
-      }
-      101 -> if (kw("end")) {
-        e = p + 3
-        while (e < n && isSpace(src.charCodeAt(e))) e++
-        emit(T.end, p, e)
-        return true
-      }
-      95 -> {
-        if (kw("_self")) {
-          emit(T.LINK_TARGET, p, p + 5)
-          return true
-        }
-        if (kw("_blank")) {
-          emit(T.LINK_TARGET, p, p + 6)
-          return true
-        }
-        if (kw("_parent")) {
-          emit(T.LINK_TARGET, p, p + 7)
-          return true
-        }
-        if (kw("_top")) {
-          emit(T.LINK_TARGET, p, p + 4)
-          return true
-        }
-      }
-    }
-
-    if (dirNext != -1 && p >= dirFailed) {
-      if (dirNext < p) dirNext = src.indexOf("direction", p)
-      if (dirNext != -1) {
-        if (lineEnd < p) {
-          RE_LINE_END.lastIndex = p
-          lineEnd = if (RE_LINE_END.test(src)) RE_LINE_END.lastIndex - 1 else n
-        }
-        if (dirNext < lineEnd) {
-          for (i in 0 until 5) {
-            e = at(RE_DIRECTION[i], p)
-            if (e >= 0) {
-              emit(T.direction_tb + i, p, e)
-              return true
-            }
-          }
-          // No direction statement starts anywhere in the rest of this line either.
-          dirFailed = lineEnd
-        }
-      }
-    }
-
-    // A link id is a run of non-space characters up to its last `@` that is not followed by `{` or `"`.
-    if (atNext != -1 && c != 34 && !isSpace(c)) {
-      if (p >= runEnd) {
-        if (atNext < p) atNext = src.indexOf('@', p)
-        var q = p
-        while (q < n) {
-          val ch = src.charCodeAt(q)
-          if (ch == 34 || isSpace(ch)) break
-          q++
-        }
-        runEnd = q
-        runAt = -1
-        if (atNext != -1 && atNext < q) {
-          var k = minOf(q, n - 1) - 1
-          while (k >= atNext) {
-            if (src.charCodeAt(k) != 64) {
-              k--
-              continue
-            }
-            val after = src.charCodeAt(k + 1)
-            if (after != 123 && after != 34) {
-              runAt = k
-              break
-            }
-            k--
-          }
-        }
-      }
-      if (runAt > p) {
-        emit(T.LINK_ID, p, runAt + 1)
-        return true
-      }
-    }
-
-    if (c >= 48 && c <= 57) {
-      var q = p + 1
+  val nodeString =
+    fun(): Boolean {
+      var q = p
       while (q < n) {
         val ch = src.charCodeAt(q)
-        if (ch < 48 || ch > 57) break
-        q++
+        if (ch < 128 && NODE_CHAR[ch]) {
+          q++
+        } else if (ch == 45 && q + 1 < n) {
+          val d = src.charCodeAt(q + 1)
+          if (d == 62 || d == 45 || d == 46) break
+          q++
+        } else {
+          break
+        }
       }
-      emit(T.NUM, p, q)
+      if (q == p) return false
+      emit(T.NODE_STRING, p, q)
       return true
     }
 
-    when (c) {
-      35 -> {
-        emit(T.BRKT, p, p + 1)
-        return true
-      }
-      58 -> {
-        if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58) emit(T.STYLE_SEPARATOR, p, p + 3)
-        else emit(T.COLON, p, p + 1)
-        return true
-      }
-      38 -> {
-        emit(T.AMP, p, p + 1)
-        return true
-      }
-      59 -> {
-        emit(T.SEMI, p, p + 1)
-        return true
-      }
-      44 -> {
-        emit(T.COMMA, p, p + 1)
-        return true
-      }
-      42 -> {
-        emit(T.MULT, p, p + 1)
-        return true
-      }
-      120, 111 -> return link(c) || nodeString()
-      60 -> {
-        if (link(c)) return true
-        emit(T.TAGSTART, p, p + 1)
-        return true
-      }
-      45 -> {
-        if (link(c) || nodeString()) return true
-        emit(T.MINUS, p, p + 1)
-        return true
-      }
-      61 -> return link(c)
-      46 -> return link(c) || nodeString()
-      126 -> return invisLink()
-      40 -> return opener(c)
-      91 -> {
-        if (src.charCodeAt(p + 1) == 124) {
-          emit(T.VERTEX_WITH_PROPS_START, p, p + 2)
+  val link =
+    fun(c: Int): Boolean {
+      val d = linkChar(p)
+      var e: Int
+      if (d == 45) {
+        e = at(RE_LINK, p)
+        if (e >= 0) {
+          emit(T.LINK, p, e)
           return true
         }
-        return opener(c)
-      }
-      124, 123 -> return opener(c)
-      62 -> {
-        push(S.text)
-        emit(T.TAGEND, p, p + 1)
-        return true
-      }
-      94 -> {
-        emit(T.UP, p, p + 1)
-        return true
-      }
-      92 -> {
-        if (src.charCodeAt(p + 1) == 124) {
-          emit(T.SEP, p, p + 2)
+        e = at(RE_START_LINK, p)
+        if (e >= 0) {
+          push(S.edgeText)
+          emit(T.START_LINK, p, e)
           return true
         }
-        return nodeString()
-      }
-      118 -> {
-        if (!isWord(src.charCodeAt(p + 1))) {
-          emit(T.DOWN, p, p + 1)
+        e = at(RE_DOTTED_LINK, p)
+        if (e >= 0) {
+          emit(T.LINK, p, e)
           return true
         }
-        return nodeString()
+        e = at(RE_DOTTED_START, p)
+        if (e >= 0) {
+          push(S.dottedEdgeText)
+          emit(T.START_LINK, p, e)
+          return true
+        }
+      } else if (d == 61) {
+        e = at(RE_THICK_LINK, p)
+        if (e >= 0) {
+          emit(T.LINK, p, e)
+          return true
+        }
+        e = at(RE_THICK_START, p)
+        if (e >= 0) {
+          push(S.thickEdgeText)
+          emit(T.START_LINK, p, e)
+          return true
+        }
+      } else if (d == 46) {
+        e = at(RE_DOTTED_LINK, p)
+        if (e >= 0) {
+          emit(T.LINK, p, e)
+          return true
+        }
       }
+      return c != 45 && c != 61 && c != 46 && invisLink()
     }
 
-    if (isSpace(c)) {
-      if (link(c)) return true
-      e = at(RE_NEWLINE, p)
-      if (e >= 0) {
-        emit(T.NEWLINE, p, e)
+  val initial =
+    fun(c: Int): Boolean {
+      var e: Int
+      when (c) {
+        97 ->
+          if (src.startsWith("acc", p)) {
+            e = at(RE_ACC_TITLE, p)
+            if (e >= 0) {
+              push(S.acc_title)
+              emit(T.acc_title, p, e)
+              return true
+            }
+            e = at(RE_ACC_DESCR, p)
+            if (e >= 0) {
+              push(S.acc_descr)
+              emit(T.acc_descr, p, e)
+              return true
+            }
+            e = at(RE_ACC_DESCR_ML, p)
+            if (e >= 0) {
+              push(S.acc_descr_multiline)
+              p = e
+              return true
+            }
+          }
+        64 ->
+          if (src.charCodeAt(p + 1) == 123) {
+            push(S.shapeData)
+            types.add(T.SHAPE_DATA)
+            texts.add("")
+            starts.add(p)
+            p += 2
+            return true
+          }
+        99 -> {
+          e = at(RE_CALL, p)
+          if (e >= 0) {
+            push(S.callbackname)
+            p = e
+            return true
+          }
+          if (kw("classDef")) {
+            emit(T.CLASSDEF, p, p + 8)
+            return true
+          }
+          if (kw("class")) {
+            emit(T.CLASS, p, p + 5)
+            return true
+          }
+          e = at(RE_CLICK, p)
+          if (e >= 0) {
+            push(S.click)
+            p = e
+            return true
+          }
+        }
+        34 -> {
+          quote()
+          return true
+        }
+        115 -> {
+          if (kw("style")) {
+            emit(T.STYLE, p, p + 5)
+            return true
+          }
+          if (kw("swimlane-beta")) {
+            graph(13)
+            return true
+          }
+          if (kw("subgraph")) {
+            emit(T.subgraph, p, p + 8)
+            return true
+          }
+        }
+        100 ->
+          if (kw("default")) {
+            emit(T.DEFAULT, p, p + 7)
+            return true
+          }
+        108 ->
+          if (kw("linkStyle")) {
+            emit(T.LINKSTYLE, p, p + 9)
+            return true
+          }
+        105 ->
+          if (kw("interpolate")) {
+            emit(T.INTERPOLATE, p, p + 11)
+            return true
+          }
+        104 ->
+          if (src.startsWith("href", p) && isSpace(src.charCodeAt(p + 4))) {
+            emit(T.HREF, p, p + 5)
+            return true
+          }
+        102 -> {
+          if (kw("flowchart-elk")) {
+            graph(13)
+            return true
+          }
+          if (kw("flowchart")) {
+            graph(9)
+            return true
+          }
+        }
+        103 ->
+          if (kw("graph")) {
+            graph(5)
+            return true
+          }
+        101 ->
+          if (kw("end")) {
+            e = p + 3
+            while (e < n && isSpace(src.charCodeAt(e))) e++
+            emit(T.end, p, e)
+            return true
+          }
+        95 -> {
+          if (kw("_self")) {
+            emit(T.LINK_TARGET, p, p + 5)
+            return true
+          }
+          if (kw("_blank")) {
+            emit(T.LINK_TARGET, p, p + 6)
+            return true
+          }
+          if (kw("_parent")) {
+            emit(T.LINK_TARGET, p, p + 7)
+            return true
+          }
+          if (kw("_top")) {
+            emit(T.LINK_TARGET, p, p + 4)
+            return true
+          }
+        }
+      }
+
+      if (dirNext != -1 && p >= dirFailed) {
+        if (dirNext < p) dirNext = src.indexOf("direction", p)
+        if (dirNext != -1) {
+          if (lineEnd < p) {
+            RE_LINE_END.lastIndex = p
+            lineEnd = if (RE_LINE_END.test(src)) RE_LINE_END.lastIndex - 1 else n
+          }
+          if (dirNext < lineEnd) {
+            for (i in 0 until 5) {
+              e = at(RE_DIRECTION[i], p)
+              if (e >= 0) {
+                emit(T.direction_tb + i, p, e)
+                return true
+              }
+            }
+            // No direction statement starts anywhere in the rest of this line either.
+            dirFailed = lineEnd
+          }
+        }
+      }
+
+      // A link id is a run of non-space characters up to its last `@` that is not followed by `{`
+      // or `"`.
+      if (atNext != -1 && c != 34 && !isSpace(c)) {
+        if (p >= runEnd) {
+          if (atNext < p) atNext = src.indexOf('@', p)
+          var q = p
+          while (q < n) {
+            val ch = src.charCodeAt(q)
+            if (ch == 34 || isSpace(ch)) break
+            q++
+          }
+          runEnd = q
+          runAt = -1
+          if (atNext != -1 && atNext < q) {
+            var k = minOf(q, n - 1) - 1
+            while (k >= atNext) {
+              if (src.charCodeAt(k) != 64) {
+                k--
+                continue
+              }
+              val after = src.charCodeAt(k + 1)
+              if (after != 123 && after != 34) {
+                runAt = k
+                break
+              }
+              k--
+            }
+          }
+        }
+        if (runAt > p) {
+          emit(T.LINK_ID, p, runAt + 1)
+          return true
+        }
+      }
+
+      if (c >= 48 && c <= 57) {
+        var q = p + 1
+        while (q < n) {
+          val ch = src.charCodeAt(q)
+          if (ch < 48 || ch > 57) break
+          q++
+        }
+        emit(T.NUM, p, q)
         return true
       }
-      e = at(RE_SPACE, p)
-      if (e >= 0) {
-        emit(T.SPACE, p, e)
+
+      when (c) {
+        35 -> {
+          emit(T.BRKT, p, p + 1)
+          return true
+        }
+        58 -> {
+          if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58)
+            emit(T.STYLE_SEPARATOR, p, p + 3)
+          else emit(T.COLON, p, p + 1)
+          return true
+        }
+        38 -> {
+          emit(T.AMP, p, p + 1)
+          return true
+        }
+        59 -> {
+          emit(T.SEMI, p, p + 1)
+          return true
+        }
+        44 -> {
+          emit(T.COMMA, p, p + 1)
+          return true
+        }
+        42 -> {
+          emit(T.MULT, p, p + 1)
+          return true
+        }
+        120,
+        111 -> return link(c) || nodeString()
+        60 -> {
+          if (link(c)) return true
+          emit(T.TAGSTART, p, p + 1)
+          return true
+        }
+        45 -> {
+          if (link(c) || nodeString()) return true
+          emit(T.MINUS, p, p + 1)
+          return true
+        }
+        61 -> return link(c)
+        46 -> return link(c) || nodeString()
+        126 -> return invisLink()
+        40 -> return opener(c)
+        91 -> {
+          if (src.charCodeAt(p + 1) == 124) {
+            emit(T.VERTEX_WITH_PROPS_START, p, p + 2)
+            return true
+          }
+          return opener(c)
+        }
+        124,
+        123 -> return opener(c)
+        62 -> {
+          push(S.text)
+          emit(T.TAGEND, p, p + 1)
+          return true
+        }
+        94 -> {
+          emit(T.UP, p, p + 1)
+          return true
+        }
+        92 -> {
+          if (src.charCodeAt(p + 1) == 124) {
+            emit(T.SEP, p, p + 2)
+            return true
+          }
+          return nodeString()
+        }
+        118 -> {
+          if (!isWord(src.charCodeAt(p + 1))) {
+            emit(T.DOWN, p, p + 1)
+            return true
+          }
+          return nodeString()
+        }
+      }
+
+      if (isSpace(c)) {
+        if (link(c)) return true
+        e = at(RE_NEWLINE, p)
+        if (e >= 0) {
+          emit(T.NEWLINE, p, e)
+          return true
+        }
+        e = at(RE_SPACE, p)
+        if (e >= 0) {
+          emit(T.SPACE, p, e)
+          return true
+        }
+        return false
+      }
+
+      if (c < 128) return nodeString()
+      if (isUnicodeLetter(c)) {
+        emit(T.UNICODE_TEXT, p, p + 1)
         return true
       }
       return false
     }
 
-    if (c < 128) return nodeString()
-    if (isUnicodeLetter(c)) {
-      emit(T.UNICODE_TEXT, p, p + 1)
-      return true
-    }
-    return false
-  }
-
-  val edgeText = fun(c: Int, linkRe: JsRegExp, a: Int, b: Int): Boolean {
-    if (c == 34) {
-      quote()
-      return true
-    }
-    val d = linkChar(p)
-    if (d == a || d == b) {
-      val e = at(linkRe, p)
-      if (e >= 0) {
-        pop()
-        emit(T.LINK, p, e)
+  val edgeText =
+    fun(c: Int, linkRe: JsRegExp, a: Int, b: Int): Boolean {
+      if (c == 34) {
+        quote()
         return true
       }
-    }
-    if (c == a && (a != 45 || src.charCodeAt(p + 1) == 45)) return false
-    var q = p + 1
-    while (q < n) {
-      val ch = src.charCodeAt(q)
-      if (ch == 34) break
-      if (ch == a) {
-        if (a != 45 || src.charCodeAt(q + 1) == 45) break
-      } else if (ch == 120 || ch == 111 || ch == 60 || ch == b || isSpace(ch)) {
-        val dd = linkChar(q)
-        if ((dd == a || dd == b) && at(linkRe, q) >= 0) break
+      val d = linkChar(p)
+      if (d == a || d == b) {
+        val e = at(linkRe, p)
+        if (e >= 0) {
+          pop()
+          emit(T.LINK, p, e)
+          return true
+        }
       }
-      q++
+      if (c == a && (a != 45 || src.charCodeAt(p + 1) == 45)) return false
+      var q = p + 1
+      while (q < n) {
+        val ch = src.charCodeAt(q)
+        if (ch == 34) break
+        if (ch == a) {
+          if (a != 45 || src.charCodeAt(q + 1) == 45) break
+        } else if (ch == 120 || ch == 111 || ch == 60 || ch == b || isSpace(ch)) {
+          val dd = linkChar(q)
+          if ((dd == a || dd == b) && at(linkRe, q) >= 0) break
+        }
+        q++
+      }
+      emit(T.EDGE_TEXT, p, q)
+      return true
     }
-    emit(T.EDGE_TEXT, p, q)
-    return true
-  }
 
   while (true) {
     if (p >= n) {
@@ -622,39 +642,42 @@ fun tokenize(src: String): Tokens {
     when (state) {
       S.INITIAL -> ok = initial(c)
 
-      S.string -> if (c == 34) {
-        if (src.charCodeAt(p + 1) == 96) {
-          push(S.md_string)
-          p += 2
+      S.string ->
+        if (c == 34) {
+          if (src.charCodeAt(p + 1) == 96) {
+            push(S.md_string)
+            p += 2
+          } else {
+            pop()
+            p++
+          }
         } else {
-          pop()
-          p++
+          val e = src.indexOf('"', p)
+          emit(T.STR, p, if (e == -1) n else e)
         }
-      } else {
-        val e = src.indexOf('"', p)
-        emit(T.STR, p, if (e == -1) n else e)
-      }
 
-      S.md_string -> if (c == 96) {
-        if (src.charCodeAt(p + 1) == 34) {
-          pop()
-          p += 2
+      S.md_string ->
+        if (c == 96) {
+          if (src.charCodeAt(p + 1) == 34) {
+            pop()
+            p += 2
+          } else {
+            ok = false
+          }
+        } else if (c == 34) {
+          quote()
         } else {
-          ok = false
+          var q = p + 1
+          while (q < n) {
+            val ch = src.charCodeAt(q)
+            if (ch == 96 || ch == 34) break
+            q++
+          }
+          emit(T.MD_STR, p, q)
         }
-      } else if (c == 34) {
-        quote()
-      } else {
-        var q = p + 1
-        while (q < n) {
-          val ch = src.charCodeAt(q)
-          if (ch == 96 || ch == 34) break
-          q++
-        }
-        emit(T.MD_STR, p, q)
-      }
 
-      S.acc_title, S.acc_descr -> {
+      S.acc_title,
+      S.acc_descr -> {
         var e = src.indexOf('\n', p)
         if (e == -1) e = n
         val type = if (state == S.acc_title) T.acc_title_value else T.acc_descr_value
@@ -662,14 +685,15 @@ fun tokenize(src: String): Tokens {
         emit(type, p, e)
       }
 
-      S.acc_descr_multiline -> if (c == 125) {
-        pop()
-        p++
-      } else {
-        var e = src.indexOf('}', p)
-        if (e == -1) e = n
-        emit(T.acc_descr_multiline_value, p, e)
-      }
+      S.acc_descr_multiline ->
+        if (c == 125) {
+          pop()
+          p++
+        } else {
+          var e = src.indexOf('}', p)
+          if (e == -1) e = n
+          emit(T.acc_descr_multiline_value, p, e)
+        }
 
       S.dir -> {
         if (c == 34) {
@@ -697,12 +721,13 @@ fun tokenize(src: String): Tokens {
         val d = src.charCodeAt(p + 1)
         when (c) {
           34 -> quote()
-          40, 91, 123 -> opener(c)
+          40,
+          91,
+          123 -> opener(c)
           93 -> {
             pop()
             if (d == 41) emit(T.STADIUMEND, p, p + 2)
-            else if (d == 93) emit(T.SUBROUTINEEND, p, p + 2)
-            else emit(T.SQE, p, p + 1)
+            else if (d == 93) emit(T.SUBROUTINEEND, p, p + 2) else emit(T.SQE, p, p + 1)
           }
           41 -> {
             pop()
@@ -723,7 +748,17 @@ fun tokenize(src: String): Tokens {
               var q = p + 1
               while (q < n) {
                 val ch = src.charCodeAt(q)
-                if (ch == 91 || ch == 93 || ch == 40 || ch == 41 || ch == 123 || ch == 125 || ch == 124 || ch == 34) break
+                if (
+                  ch == 91 ||
+                    ch == 93 ||
+                    ch == 40 ||
+                    ch == 41 ||
+                    ch == 123 ||
+                    ch == 125 ||
+                    ch == 124 ||
+                    ch == 34
+                )
+                  break
                 q++
               }
               emit(T.TEXT, p, q)
@@ -749,7 +784,8 @@ fun tokenize(src: String): Tokens {
           var q = p + 1
           while (q < n) {
             val ch = src.charCodeAt(q)
-            if (ch == 34 || ch == 40 || ch == 41 || ch == 91 || ch == 93 || ch == 123 || ch == 125) break
+            if (ch == 34 || ch == 40 || ch == 41 || ch == 91 || ch == 93 || ch == 123 || ch == 125)
+              break
             if ((ch == 45 || ch == 47) && src.charCodeAt(q + 1) == 41) break
             if ((ch == 126 || isSpace(ch)) && invisAhead(q) && at(RE_INVIS_LINK, q) >= 0) break
             q++
@@ -758,127 +794,149 @@ fun tokenize(src: String): Tokens {
         }
       }
 
-      S.trapText -> run trap@{
-        val d = src.charCodeAt(p + 1)
-        if (c == 34) {
-          quote()
-          return@trap
-        }
-        if ((c == 126 || isSpace(c)) && invisLink()) return@trap
-        when (c) {
-          40 -> if (d == 45 || d == 91 || (d == 40 && src.charCodeAt(p + 2) == 40)) {
-            opener(c)
-          } else if (d == 93) {
-            pop()
-            emit(T.TRAPEND, p, p + 2)
-          } else {
-            opener(c)
+      S.trapText ->
+        run trap@{
+          val d = src.charCodeAt(p + 1)
+          if (c == 34) {
+            quote()
+            return@trap
           }
-          91, 123 -> opener(c)
-          92 -> if (d == 93) {
-            pop()
-            emit(T.TRAPEND, p, p + 2)
-          } else {
-            emit(T.TEXT, p, p + 1)
-          }
-          47 -> if (d == 93) {
-            pop()
-            emit(T.INVTRAPEND, p, p + 2)
-          } else {
-            emit(T.TEXT, p, p + 1)
-          }
-          93, 41 -> if (d == 93) {
-            pop()
-            emit(T.TRAPEND, p, p + 2)
-          } else {
-            ok = false
-          }
-          125 -> ok = false
-          else -> {
-            if ((c == 63 || c == 61) && d == 93) {
-              pop()
-              emit(T.TRAPEND, p, p + 2)
-              return@trap
+          if ((c == 126 || isSpace(c)) && invisLink()) return@trap
+          when (c) {
+            40 ->
+              if (d == 45 || d == 91 || (d == 40 && src.charCodeAt(p + 2) == 40)) {
+                opener(c)
+              } else if (d == 93) {
+                pop()
+                emit(T.TRAPEND, p, p + 2)
+              } else {
+                opener(c)
+              }
+            91,
+            123 -> opener(c)
+            92 ->
+              if (d == 93) {
+                pop()
+                emit(T.TRAPEND, p, p + 2)
+              } else {
+                emit(T.TEXT, p, p + 1)
+              }
+            47 ->
+              if (d == 93) {
+                pop()
+                emit(T.INVTRAPEND, p, p + 2)
+              } else {
+                emit(T.TEXT, p, p + 1)
+              }
+            93,
+            41 ->
+              if (d == 93) {
+                pop()
+                emit(T.TRAPEND, p, p + 2)
+              } else {
+                ok = false
+              }
+            125 -> ok = false
+            else -> {
+              if ((c == 63 || c == 61) && d == 93) {
+                pop()
+                emit(T.TRAPEND, p, p + 2)
+                return@trap
+              }
+              var q = p + 1
+              while (q < n) {
+                val ch = src.charCodeAt(q)
+                if (
+                  ch == 92 ||
+                    ch == 91 ||
+                    ch == 93 ||
+                    ch == 40 ||
+                    ch == 41 ||
+                    ch == 123 ||
+                    ch == 125 ||
+                    ch == 47
+                )
+                  break
+                q++
+              }
+              emit(T.TEXT, p, q)
             }
-            var q = p + 1
-            while (q < n) {
-              val ch = src.charCodeAt(q)
-              if (ch == 92 || ch == 91 || ch == 93 || ch == 40 || ch == 41 || ch == 123 || ch == 125 || ch == 47) break
-              q++
-            }
-            emit(T.TEXT, p, q)
           }
         }
-      }
 
       S.edgeText -> ok = edgeText(c, RE_LINK, 45, NONE)
       S.thickEdgeText -> ok = edgeText(c, RE_THICK_LINK, 61, NONE)
       S.dottedEdgeText -> ok = edgeText(c, RE_DOTTED_LINK, 46, 45)
 
-      S.click -> if (c == 34) {
-        quote()
-      } else if (isSpace(c)) {
-        pop()
-        p++
-      } else {
-        var q = p + 1
-        while (q < n && !isSpace(src.charCodeAt(q))) q++
-        emit(T.CLICK, p, q)
-      }
-
-      S.callbackname -> if (c == 40) {
-        val e = at(RE_EMPTY_CALL, p)
-        pop()
-        if (e >= 0) {
-          p = e
-        } else {
-          push(S.callbackargs)
+      S.click ->
+        if (c == 34) {
+          quote()
+        } else if (isSpace(c)) {
+          pop()
           p++
+        } else {
+          var q = p + 1
+          while (q < n && !isSpace(src.charCodeAt(q))) q++
+          emit(T.CLICK, p, q)
         }
-      } else {
-        var e = src.indexOf('(', p)
-        if (e == -1) e = n
-        emit(T.CALLBACKNAME, p, e)
-      }
 
-      S.callbackargs -> if (c == 41) {
-        pop()
-        p++
-      } else {
-        var e = src.indexOf(')', p)
-        if (e == -1) e = n
-        emit(T.CALLBACKARGS, p, e)
-      }
-
-      S.shapeData -> if (c == 34) {
-        push(S.shapeDataStr)
-        emit(T.SHAPE_DATA, p, p + 1)
-      } else if (c == 125) {
-        pop()
-        p++
-      } else if (c == 94) {
-        ok = false
-      } else {
-        var q = p + 1
-        while (q < n) {
-          val ch = src.charCodeAt(q)
-          if (ch == 125 || ch == 94 || ch == 34) break
-          q++
+      S.callbackname ->
+        if (c == 40) {
+          val e = at(RE_EMPTY_CALL, p)
+          pop()
+          if (e >= 0) {
+            p = e
+          } else {
+            push(S.callbackargs)
+            p++
+          }
+        } else {
+          var e = src.indexOf('(', p)
+          if (e == -1) e = n
+          emit(T.CALLBACKNAME, p, e)
         }
-        emit(T.SHAPE_DATA, p, q)
-      }
 
-      S.shapeDataStr -> if (c == 34) {
-        pop()
-        emit(T.SHAPE_DATA, p, p + 1)
-      } else {
-        var e = src.indexOf('"', p)
-        if (e == -1) e = n
-        types.add(T.SHAPE_DATA)
-        texts.add(src.jsSlice(p, e).jsReplace(RE_BR, "<br/>"))
-        starts.add(p)
-        p = e
-      }
+      S.callbackargs ->
+        if (c == 41) {
+          pop()
+          p++
+        } else {
+          var e = src.indexOf(')', p)
+          if (e == -1) e = n
+          emit(T.CALLBACKARGS, p, e)
+        }
+
+      S.shapeData ->
+        if (c == 34) {
+          push(S.shapeDataStr)
+          emit(T.SHAPE_DATA, p, p + 1)
+        } else if (c == 125) {
+          pop()
+          p++
+        } else if (c == 94) {
+          ok = false
+        } else {
+          var q = p + 1
+          while (q < n) {
+            val ch = src.charCodeAt(q)
+            if (ch == 125 || ch == 94 || ch == 34) break
+            q++
+          }
+          emit(T.SHAPE_DATA, p, q)
+        }
+
+      S.shapeDataStr ->
+        if (c == 34) {
+          pop()
+          emit(T.SHAPE_DATA, p, p + 1)
+        } else {
+          var e = src.indexOf('"', p)
+          if (e == -1) e = n
+          types.add(T.SHAPE_DATA)
+          texts.add(src.jsSlice(p, e).jsReplace(RE_BR, "<br/>"))
+          starts.add(p)
+          p = e
+        }
     }
 
     if (!ok) {

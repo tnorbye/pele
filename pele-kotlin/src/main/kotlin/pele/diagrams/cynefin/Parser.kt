@@ -34,22 +34,26 @@ private object T {
   const val newline = 9
 }
 
-val CYNEFIN_TOKENS: List<TokenType> = listOf(
-  TokenType(name = "cynefin-beta:", pattern = "cynefin-beta:"),
-  keyword("cynefin-beta"),
-  TokenType(name = "-->", pattern = "-->"),
-  TokenType(name = ":", pattern = ":"),
-  TokenType(name = "DOMAIN_NAME", pattern = JsRegExp("""complex|complicated|clear|chaotic|confusion""", "y")),
-  ACC_DESCR,
-  ACC_TITLE,
-  TITLE,
-  STRING,
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-)
+val CYNEFIN_TOKENS: List<TokenType> =
+  listOf(
+    TokenType(name = "cynefin-beta:", pattern = "cynefin-beta:"),
+    keyword("cynefin-beta"),
+    TokenType(name = "-->", pattern = "-->"),
+    TokenType(name = ":", pattern = ":"),
+    TokenType(
+      name = "DOMAIN_NAME",
+      pattern = JsRegExp("""complex|complicated|clear|chaotic|confusion""", "y"),
+    ),
+    ACC_DESCR,
+    ACC_TITLE,
+    TITLE,
+    STRING,
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+  )
 
 // DomainName is "complex" | "complicated" | "clear" | "chaotic" | "confusion".
 
@@ -78,9 +82,7 @@ fun parseCynefin(src: String): CynefinAst {
   val r = Reader(tokenize(src, CYNEFIN_TOKENS, "cynefin"), CYNEFIN_TOKENS, "cynefin")
   val ast = CynefinAst()
 
-  val skipLines = {
-    while (r.kinds.getOrNull(r.i) == T.newline) r.i++
-  }
+  val skipLines = { while (r.kinds.getOrNull(r.i) == T.newline) r.i++ }
   val endOfLine = {
     if (r.kind != -1) {
       if (r.kind != T.newline) r.fail("a line break or the end of input")

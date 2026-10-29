@@ -8,11 +8,12 @@ import pele.js.jsMatchAll
 import pele.js.jsStr
 
 // The weights of bold text, each set only in a diagram that has such text.
-private val WEIGHTS = listOf(
-  "tw" to "title",
-  "hw" to "heading",
-  "w" to "bold",
-)
+private val WEIGHTS =
+  listOf(
+    "tw" to "title",
+    "hw" to "heading",
+    "w" to "bold",
+  )
 
 private val RE_USED = JsRegExp("""var\(--_(r|tw|hw|w)\)""", "g")
 

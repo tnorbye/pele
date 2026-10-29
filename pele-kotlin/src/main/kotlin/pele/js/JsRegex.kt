@@ -12,8 +12,9 @@ private const val JS_NOT_WORD_BOUNDARY = "(?:(?<=$WORD)(?=$WORD)|(?<!$WORD)(?!$W
 private const val LINE_TERMINATORS = "\\n\\r\\u2028\\u2029"
 
 /**
- * Translates an ECMAScript pattern into a java.util.regex pattern with the same meaning.
- * Handles where java.util.regex and ECMAScript differ: \s, \b, ., $, ^ with /m, [ and && in classes, lone braces.
+ * Translates an ECMAScript pattern into a java.util.regex pattern with the same meaning. Handles
+ * where java.util.regex and ECMAScript differ: \s, \b, ., $, ^ with /m, [ and && in classes, lone
+ * braces.
  */
 fun translateJsPattern(
   source: String,
@@ -46,7 +47,8 @@ fun translateJsPattern(
           i++
         }
         else -> {
-          // Range endpoints are left alone; no case-insensitive pattern in Pele has a non-ASCII range.
+          // Range endpoints are left alone; no case-insensitive pattern in Pele has a non-ASCII
+          // range.
           val range = (i + 1 < n && source[i + 1] == '-') || (i > 0 && source[i - 1] == '-')
           out.append(if (fold != null && c.code >= 128 && !range) fold(c) else c)
           i++
@@ -138,7 +140,14 @@ private fun translateEscape(s: String, i: Int, out: StringBuilder, inClass: Bool
     'S' -> out.append(JS_NOT_SPACE)
     'b' -> out.append(if (inClass) "\\x08" else JS_WORD_BOUNDARY)
     'B' -> out.append(if (inClass) "B" else JS_NOT_WORD_BOUNDARY)
-    'd', 'D', 'w', 'W', 'f', 'n', 'r', 't' -> out.append('\\').append(e)
+    'd',
+    'D',
+    'w',
+    'W',
+    'f',
+    'n',
+    'r',
+    't' -> out.append('\\').append(e)
     'v' -> out.append("\\x0B")
     '0' -> {
       if (i + 2 < s.length && s[i + 2].isAsciiDigit()) {
@@ -174,7 +183,8 @@ private fun translateEscape(s: String, i: Int, out: StringBuilder, inClass: Bool
       }
       out.append("\\\\c")
     }
-    'p', 'P' -> {
+    'p',
+    'P' -> {
       if (i + 2 < s.length && s[i + 2] == '{') {
         val close = s.indexOf('}', i + 3)
         out.append('\\').append(e).append(s, i + 2, close + 1)
@@ -254,21 +264,35 @@ private fun compile(source: String, flags: String): Pattern {
   val key = "$flags/$source"
   if (compiled.size > 4096) compiled.clear()
   return compiled.getOrPut(key) {
-    Pattern.compile(translateJsPattern(source, dotAll = 's' in flags, multiline = 'm' in flags, fold = foldFor(flags)), flagsOf(flags))
+    Pattern.compile(
+      translateJsPattern(
+        source,
+        dotAll = 's' in flags,
+        multiline = 'm' in flags,
+        fold = foldFor(flags),
+      ),
+      flagsOf(flags),
+    )
   }
 }
 
 /** One match, as `RegExp.prototype.exec` returns it. */
 class JsMatch(val index: Int, val input: String, val groups: List<String?>) {
-  val value: String get() = groups[0]!!
-  val end: Int get() = index + value.length
+  val value: String
+    get() = groups[0]!!
+
+  val end: Int
+    get() = index + value.length
+
   operator fun get(i: Int): String? = groups.getOrNull(i)
-  val size: Int get() = groups.size
+
+  val size: Int
+    get() = groups.size
 }
 
 /**
- * An ECMAScript RegExp. `lastIndex` is kept per thread so that module-level `g`/`y` constants
- * are safe to share.
+ * An ECMAScript RegExp. `lastIndex` is kept per thread so that module-level `g`/`y` constants are
+ * safe to share.
  */
 class JsRegExp(val source: String, val flags: String = "") {
   val global = 'g' in flags
@@ -365,7 +389,9 @@ class JsRegExp(val source: String, val flags: String = "") {
     return out
   }
 
-  /** `replace` with a replacement that has no `$`: the matches are replaced without collecting them. */
+  /**
+   * `replace` with a replacement that has no `$`: the matches are replaced without collecting them.
+   */
   internal fun replaceLiteral(input: String, replacement: String): String {
     if (!global) {
       val start = if (sticky) lastIndex else 0
@@ -403,7 +429,13 @@ class JsRegExp(val source: String, val flags: String = "") {
   }
 
   private fun advance(input: String, at: Int): Int {
-    if (unicode && at + 1 < input.length && input[at].isHighSurrogate() && input[at + 1].isLowSurrogate()) return at + 2
+    if (
+      unicode &&
+        at + 1 < input.length &&
+        input[at].isHighSurrogate() &&
+        input[at + 1].isLowSurrogate()
+    )
+      return at + 2
     return at + 1
   }
 
@@ -412,7 +444,9 @@ class JsRegExp(val source: String, val flags: String = "") {
 
 private fun toMatch(m: Matcher, input: String): JsMatch {
   val groups = ArrayList<String?>(m.groupCount() + 1)
-  for (g in 0..m.groupCount()) groups.add(if (m.start(g) < 0) null else input.substring(m.start(g), m.end(g)))
+  for (g in 0..m.groupCount()) groups.add(
+    if (m.start(g) < 0) null else input.substring(m.start(g), m.end(g))
+  )
   return JsMatch(m.start(), input, groups)
 }
 
@@ -433,7 +467,8 @@ fun String.jsMatchGlobal(re: JsRegExp): List<String>? {
 }
 
 /** `String.prototype.matchAll`. */
-fun String.jsMatchAll(re: JsRegExp): List<JsMatch> = re.allMatches(this, if (re.global) re.lastIndex else 0)
+fun String.jsMatchAll(re: JsRegExp): List<JsMatch> =
+  re.allMatches(this, if (re.global) re.lastIndex else 0)
 
 /** `String.prototype.search`. */
 fun String.jsSearch(re: JsRegExp): Int = re.matchAt(this, 0)?.index ?: -1
@@ -523,7 +558,8 @@ fun String.jsSplit(re: JsRegExp, limit: Int = Int.MAX_VALUE): List<String?> {
 }
 
 /** [jsSplit] for patterns without capture groups, where every piece is defined. */
-fun String.jsSplitStrings(re: JsRegExp, limit: Int = Int.MAX_VALUE): List<String> = jsSplit(re, limit).map { it ?: "" }
+fun String.jsSplitStrings(re: JsRegExp, limit: Int = Int.MAX_VALUE): List<String> =
+  jsSplit(re, limit).map { it ?: "" }
 
 private fun JsRegExp.matchAtSticky(input: String, at: Int): JsMatch? = matchSticky(input, at)
 

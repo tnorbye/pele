@@ -2,14 +2,15 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.xychart
 
-import pele.js.jsRound
 import java.lang.StrictMath.log10
 import java.lang.StrictMath.pow
 import kotlin.math.floor
+import pele.js.jsRound
 
 // A step of 1, 2 or 5 times a power of ten that divides `span` into about `count` parts.
 // A step below one comes back as the negative of its inverse, which is a whole number, so that
-// tick values are found by division and print without rounding noise (0.3, not 0.30000000000000004).
+// tick values are found by division and print without rounding noise (0.3, not
+// 0.30000000000000004).
 fun tickStep(span: Double, count: Double): Double {
   val raw = span / maxOf(count, 1.0)
   val power = floor(log10(raw))

@@ -2,14 +2,14 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   kotlin("jvm") version "2.4.21"
+  id("com.ncorti.ktfmt.gradle") version "0.27.0"
 }
 
 group = "pele"
+
 version = "1.12.0"
 
-repositories {
-  mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
   testImplementation(kotlin("test"))
@@ -17,6 +17,10 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+
+// `./gradlew ktfmtFormat` formats the sources; `ktfmtCheck` (part of `check`) fails on unformatted
+// code.
+ktfmt { googleStyle() }
 
 kotlin {
   jvmToolchain(21)
@@ -26,9 +30,7 @@ kotlin {
   }
 }
 
-java {
-  withSourcesJar()
-}
+java { withSourcesJar() }
 
 // The jars carry upstream's MIT license and say which upstream commit they port.
 tasks.withType<Jar>().configureEach {
@@ -41,9 +43,7 @@ tasks.withType<Jar>().configureEach {
   }
 }
 
-tasks.withType<JavaCompile>().configureEach {
-  options.release.set(17)
-}
+tasks.withType<JavaCompile>().configureEach { options.release.set(17) }
 
 fun Test.configurePeleTests(stackSize: String = "4m") {
   useJUnitPlatform()
@@ -51,7 +51,8 @@ fun Test.configurePeleTests(stackSize: String = "4m") {
   jvmArgs("-Duser.timezone=UTC", "-Xss$stackSize")
   systemProperty(
     "pele.testData",
-    System.getProperty("pele.testData") ?: layout.projectDirectory.dir("testData").asFile.absolutePath,
+    System.getProperty("pele.testData")
+      ?: layout.projectDirectory.dir("testData").asFile.absolutePath,
   )
   System.getProperty("pele.type")?.let { systemProperty("pele.type", it) }
   System.getProperty("pele.svgOut")?.let { systemProperty("pele.svgOut", it) }
@@ -62,9 +63,7 @@ fun Test.configurePeleTests(stackSize: String = "4m") {
   }
 }
 
-tasks.test {
-  configurePeleTests()
-}
+tasks.test { configurePeleTests() }
 
 tasks.register<Test>("testSmallStack") {
   description = "Checks public API and large flat inputs with a 1 MB thread stack."
@@ -92,7 +91,9 @@ tasks.register<JavaExec>("fuzzRender") {
   args(providers.gradleProperty("inputs").getOrElse("inputs.txt"))
   jvmArgs("-Xss4m")
   providers.gradleProperty("jdk").orNull?.let { v ->
-    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(v.toInt())) })
+    javaLauncher.set(
+      javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(v.toInt())) }
+    )
   }
 }
 

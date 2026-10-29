@@ -48,7 +48,8 @@ private val RE_ENTITY = JsRegExp("""&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|(\w+));""", "
 private const val OPEN = "ﬂ°"
 private const val CLOSE = "¶ß"
 
-// Mermaid's placeholders run from `ﬂ°` to `¶ß`, with a second `°` marking a numeric code. Like Mermaid, turn them
+// Mermaid's placeholders run from `ﬂ°` to `¶ß`, with a second `°` marking a numeric code. Like
+// Mermaid, turn them
 // back into entities, so that each code is decoded once.
 private fun restorePlaceholders(text: String): String {
   val out = StringBuilder()
@@ -72,25 +73,28 @@ private fun restorePlaceholders(text: String): String {
 
 private val RE_PLACEHOLDER = JsRegExp("""ﬂ°°?(\w+)¶ß""", "g")
 
-fun writtenCodes(text: String): String = if (text.contains(CLOSE)) text.jsReplace(RE_PLACEHOLDER, "#$1;") else text
+fun writtenCodes(text: String): String =
+  if (text.contains(CLOSE)) text.jsReplace(RE_PLACEHOLDER, "#$1;") else text
 
-// Turns Mermaid's `#35;` / `#quot;` codes (as hidden by encodeEntities) and HTML entities into characters.
+// Turns Mermaid's `#35;` / `#quot;` codes (as hidden by encodeEntities) and HTML entities into
+// characters.
 fun decodeEntities(textIn: String): String {
   var text = textIn
   if (text.contains(CLOSE)) text = restorePlaceholders(text)
   if (text.contains('&')) {
-    text = text.jsReplace(RE_ENTITY) { m ->
-      val dec = m[1]
-      val hex = m[2]
-      val name = m[3]
-      if (!dec.isNullOrEmpty()) {
-        codePoint(jsNumber(dec), m.value)
-      } else if (!hex.isNullOrEmpty()) {
-        codePoint(jsParseInt(hex, 16), m.value)
-      } else {
-        lookup(name!!) ?: m.value
+    text =
+      text.jsReplace(RE_ENTITY) { m ->
+        val dec = m[1]
+        val hex = m[2]
+        val name = m[3]
+        if (!dec.isNullOrEmpty()) {
+          codePoint(jsNumber(dec), m.value)
+        } else if (!hex.isNullOrEmpty()) {
+          codePoint(jsParseInt(hex, 16), m.value)
+        } else {
+          lookup(name!!) ?: m.value
+        }
       }
-    }
   }
   return text
 }

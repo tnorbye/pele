@@ -2,12 +2,12 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.layout
 
-import pele.js.cmp
-import pele.js.jsOr
 import kotlin.math.abs
-import pele.js.jsHypot
 import kotlin.math.max
 import kotlin.math.min
+import pele.js.cmp
+import pele.js.jsHypot
+import pele.js.jsOr
 
 // Layered (Sugiyama-style) layout of one flat graph. Ranks run down the y axis; callers
 // rotate the result for other directions.
@@ -54,7 +54,8 @@ class LNode(
   var hint: Double,
   // Initial cross-flow position; NaN if unknown. Used only when every node in a rank has one.
   var key: Double,
-  // How much of the side that edges meet may be shared out between them; 0 keeps them all at its middle.
+  // How much of the side that edges meet may be shared out between them; 0 keeps them all at its
+  // middle.
   var span: Double,
   var x: Double,
   var y: Double,
@@ -112,9 +113,26 @@ class LayeredResult(
 )
 
 fun lnode(w: Double, h: Double, kind: Int = Kind.Node): LNode =
-  LNode(w, h, kind, pin = 0, hint = Double.NaN, key = Double.NaN, span = 0.0, x = 0.0, y = 0.0, rank = 0)
+  LNode(
+    w,
+    h,
+    kind,
+    pin = 0,
+    hint = Double.NaN,
+    key = Double.NaN,
+    span = 0.0,
+    x = 0.0,
+    y = 0.0,
+    rank = 0,
+  )
 
-fun ledge(tail: Int, head: Int, minlen: Double = 1.0, labelW: Double = 0.0, labelH: Double = 0.0): LEdge =
+fun ledge(
+  tail: Int,
+  head: Int,
+  minlen: Double = 1.0,
+  labelW: Double = 0.0,
+  labelH: Double = 0.0,
+): LEdge =
   LEdge(
     tail = tail,
     head = head,
@@ -137,7 +155,8 @@ private const val MAX_SWEEPS = 24
 // drawn as one direct curve instead, which keeps huge graphs from exhausting time and memory.
 private const val MAX_DUMMIES = 20000
 
-// The room between two edges that meet one side of a node, and the least that keeps their arrowheads apart.
+// The room between two edges that meet one side of a node, and the least that keeps their
+// arrowheads apart.
 private const val PORT_PITCH = 16.0
 private const val MIN_PITCH = 8.0
 
@@ -189,7 +208,9 @@ private const val LEAN_CLEAR = 40.0
 private const val MAX_WEIGHED = 400
 // Reuse curve-sampling buffers across layouts.
 private const val SAMPLES = 16
-// PORT: LINE_A and LINE_B are allocated per call in assignTracks, as module-level buffers would be shared between threads.
+
+// PORT: LINE_A and LINE_B are allocated per call in assignTracks, as module-level buffers would be
+// shared between threads.
 
 private object End {
   const val Held = 0
@@ -220,8 +241,17 @@ private fun sortSub(list: IntArray, from: Int, to: Int, compare: (Int, Int) -> I
 }
 
 // Avoid the comparator overhead of built-in sort.
-private fun sortByBary(list: IntArray, count: Int, bary: DoubleArray, pos: IntArray, right: Boolean, spare: IntArray) {
-  val before = { a: Int, b: Int -> bary[a] < bary[b] || (bary[a] == bary[b] && (if (right) pos[a] > pos[b] else pos[a] < pos[b])) }
+private fun sortByBary(
+  list: IntArray,
+  count: Int,
+  bary: DoubleArray,
+  pos: IntArray,
+  right: Boolean,
+  spare: IntArray,
+) {
+  val before = { a: Int, b: Int ->
+    bary[a] < bary[b] || (bary[a] == bary[b] && (if (right) pos[a] > pos[b] else pos[a] < pos[b]))
+  }
   val run = 8
   var s = 0
   while (s < count) {
@@ -341,7 +371,8 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
   val labelNode = IntArray(m) { -1 }
   var spans = false
   for (i in 0 until real) if (nodes[i].span > 0 && nodes[i].kind == Kind.Node) spans = true
-  // What each segment's end is to the node it meets, for the ends that may move along the node's side.
+  // What each segment's end is to the node it meets, for the ends that may move along the node's
+  // side.
   val EFK = if (spans) IntArray(segments) else null
   val ETK = if (spans) IntArray(segments) else null
   val firstSeg = IntArray(m) { -1 }
@@ -377,7 +408,8 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
       var prev = a
       if (rb - ra > 1) firstDummy[ei] = next
       firstSeg[ei] = ce
-      if (EFK != null && !(if (e.reversed) e.headFixed else e.tailFixed)) EFK[ce] = if (e.reversed) End.Arrives else End.Leaves
+      if (EFK != null && !(if (e.reversed) e.headFixed else e.tailFixed))
+        EFK[ce] = if (e.reversed) End.Arrives else End.Leaves
       for (r in ra + 1 until rb) {
         val d = next++
         RANK[d] = r
@@ -401,7 +433,8 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
       ET[ce] = b
       EFD[ce] = if (prev == a) aDx else 0.0
       ETD[ce] = bDx
-      if (ETK != null && !(if (e.reversed) e.tailFixed else e.headFixed)) ETK[ce] = if (e.reversed) End.Leaves else End.Arrives
+      if (ETK != null && !(if (e.reversed) e.tailFixed else e.headFixed))
+        ETK[ce] = if (e.reversed) End.Leaves else End.Arrives
       lastSeg[ei] = ce
       ce++
     }
@@ -505,18 +538,21 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
     }
   }
 
-  val sortRank = fun(r: Int, key: (Int) -> Double): Boolean {
-    val s = layerStart[r]
-    val e = layerStart[r + 1]
-    if (e - s < 2) return false
-    for (i in s until e) if (key(order[i]).isNaN()) return false
-    val layer = order.copyOfRange(s, e).toMutableList()
-    val index = HashMap<Int, Int>()
-    layer.forEachIndexed { i, v -> index[v] = i }
-    layer.sortWith { a, b -> cmp((key(a) - key(b)).jsOr { (index[a]!! - index[b]!!).toDouble() }) }
-    for (i in layer.indices) order[s + i] = layer[i]
-    return true
-  }
+  val sortRank =
+    fun(r: Int, key: (Int) -> Double): Boolean {
+      val s = layerStart[r]
+      val e = layerStart[r + 1]
+      if (e - s < 2) return false
+      for (i in s until e) if (key(order[i]).isNaN()) return false
+      val layer = order.copyOfRange(s, e).toMutableList()
+      val index = HashMap<Int, Int>()
+      layer.forEachIndexed { i, v -> index[v] = i }
+      layer.sortWith { a, b ->
+        cmp((key(a) - key(b)).jsOr { (index[a]!! - index[b]!!).toDouble() })
+      }
+      for (i in layer.indices) order[s + i] = layer[i]
+      return true
+    }
   for (r in 0..maxRank) sortRank(r) { v -> KEY[v] }
 
   var pinned = false
@@ -527,13 +563,19 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
       val index = HashMap<Int, Int>()
       layer.forEachIndexed { i, v -> index[v] = i }
       val pinOf = { v: Int -> if (v < real) nodes[v].pin else 0 }
-      layer.sortWith { a, b -> if (pinOf(a) - pinOf(b) != 0) pinOf(a) - pinOf(b) else index[a]!! - index[b]!! }
+      layer.sortWith { a, b ->
+        if (pinOf(a) - pinOf(b) != 0) pinOf(a) - pinOf(b) else index[a]!! - index[b]!!
+      }
       for (i in layer.indices) order[layerStart[r] + i] = layer[i]
     }
   }
   // Preserve port order to avoid crossings outside the group.
   val fixed = IntArray(maxRank + 1)
-  val hint = { v: Int -> if (v < real && (nodes[v].kind == Kind.StartPort || nodes[v].kind == Kind.EndPort)) nodes[v].hint else Double.NaN }
+  val hint = { v: Int ->
+    if (v < real && (nodes[v].kind == Kind.StartPort || nodes[v].kind == Kind.EndPort))
+      nodes[v].hint
+    else Double.NaN
+  }
   for (r in intArrayOf(0, maxRank)) if (sortRank(r, hint)) fixed[r] = 1
   val setPositions = {
     for (r in 0..maxRank) {
@@ -544,7 +586,30 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
   }
   setPositions()
 
-  val g = Graph(n, real, maxRank, W, KIND, RANK, EF, ET, EFD, ETD, succStart, succE, predStart, predE, layerStart, order, pos, offsets, fixed, GRP, opt.groups?.parent)
+  val g =
+    Graph(
+      n,
+      real,
+      maxRank,
+      W,
+      KIND,
+      RANK,
+      EF,
+      ET,
+      EFD,
+      ETD,
+      succStart,
+      succE,
+      predStart,
+      predE,
+      layerStart,
+      order,
+      pos,
+      offsets,
+      fixed,
+      GRP,
+      opt.groups?.parent,
+    )
 
   var crossings = 0
   var declared = 0
@@ -603,14 +668,16 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
   // label or a twin. Its bends move onto the straight line between the ends of their edges, and
   // one that gets there is left out of the route, so that the edge is drawn as a single curve.
   val onLine = IntArray(n)
-  if (empty != null && opt.tracks != true) straighten(g, xs, empty, firstDummy, span, if (opt.apart == true) 0.0 else opt.edgeSep, onLine)
+  if (empty != null && opt.tracks != true)
+    straighten(g, xs, empty, firstDummy, span, if (opt.apart == true) 0.0 else opt.edgeSep, onLine)
   if (opt.tracks != true) pastLabels(g, xs, firstDummy, span, opt.edgeSep, onLine)
   // An edge is cut where it passes a rank that holds something, and each piece crosses one gap.
   // With `tracks`, every piece that does not run straight gets a track to run across on at
   // right angles. Otherwise, where edges spread along their nodes, a piece gets one only if it
   // needs a level to turn onto. `pieceStart` gives every edge's run of pieces.
   val pieceStart = IntArray(m + 1)
-  val pieces: Pieces? = if (opt.tracks == true || (EFK != null && opt.straight != true)) Pieces() else null
+  val pieces: Pieces? =
+    if (opt.tracks == true || (EFK != null && opt.straight != true)) Pieces() else null
   val trackCount = IntArray(maxRank + 1)
   if (pieces != null) {
     for (ei in 0 until m) {
@@ -656,15 +723,15 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
   }
 
   // Ranks that hold only border ports or their pass-through dummies need little room of their own.
-  val portOnly = fun(r: Int, kind: Int): Boolean {
-    var found = false
-    for (i in layerStart[r] until layerStart[r + 1]) {
-      val k = KIND[order[i]]
-      if (k == kind) found = true
-      else if (k != Kind.Dummy) return false
+  val portOnly =
+    fun(r: Int, kind: Int): Boolean {
+      var found = false
+      for (i in layerStart[r] until layerStart[r + 1]) {
+        val k = KIND[order[i]]
+        if (k == kind) found = true else if (k != Kind.Dummy) return false
+      }
+      return found
     }
-    return found
-  }
   val startRanks = if (portOnly(0, Kind.StartPort)) step else 0
   val endRanks = if (portOnly(maxRank, Kind.EndPort)) step else 0
   // The longest way across that any edge travels in the gap below each rank.
@@ -675,11 +742,16 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
   }
   val bandTop = DoubleArray(maxRank + 1)
   val bandBottom = DoubleArray(maxRank + 1)
-  val usual = { r: Int -> (if (r < startRanks || r >= maxRank - endRanks) opt.portSep else opt.rankSep) / step }
-  // The room under each rank. Edges that are not cut into pieces need more where they run far across.
+  val usual = { r: Int ->
+    (if (r < startRanks || r >= maxRank - endRanks) opt.portSep else opt.rankSep) / step
+  }
+  // The room under each rank. Edges that are not cut into pieces need more where they run far
+  // across.
   val gapUnder = DoubleArray(maxRank + 1)
   for (r in 0 until maxRank) {
-    gapUnder[r] = if (pieces != null) usual(r) else max(usual(r), min((MAX_GAP * opt.rankSep) / step, run[r] * MIN_SLOPE))
+    gapUnder[r] =
+      if (pieces != null) usual(r)
+      else max(usual(r), min((MAX_GAP * opt.rankSep) / step, run[r] * MIN_SLOPE))
   }
   // A rank between two ranks of nodes, which holds labels and bends only.
   val between = IntArray(maxRank + 1) { 1 }
@@ -693,7 +765,11 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
   // The part of its rank that an edge runs straight through at a bend or label. A bare bend
   // beside labels keeps to the middle half, which leaves the curves either side of it more room
   // and still keeps them clear of the labels' corners.
-  val inset = { d: Int -> if (KIND[d] == Kind.Dummy && between[RANK[d]] != 0 && opt.tracks != true) (bandBottom[RANK[d]] - bandTop[RANK[d]]) / 4 else 0.0 }
+  val inset = { d: Int ->
+    if (KIND[d] == Kind.Dummy && between[RANK[d]] != 0 && opt.tracks != true)
+      (bandBottom[RANK[d]] - bandTop[RANK[d]]) / 4
+    else 0.0
+  }
   // The rank that the pieces leaving each rank arrive at, past any that hold only bends, and
   // the room between the two, which grows to hold the gap's tracks or levels: these keep
   // `margin` from the ranks, and between `leastPitch` and `mostPitch` from each other.
@@ -710,11 +786,14 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
       while (next < maxRank && empty != null && empty[next] != 0) room[r] += gapUnder[next++]
       below[r] = next
     }
-    for (k in 0 until pieces.from.size) pieces.wide.add(if (abs(pieces.from[k] - pieces.to[k]) > LEVEL_WIDE * room[pieces.rank[k]]) 1 else 0)
+    for (k in 0 until pieces.from.size) pieces.wide.add(
+      if (abs(pieces.from[k] - pieces.to[k]) > LEVEL_WIDE * room[pieces.rank[k]]) 1 else 0
+    )
     val tall = DoubleArray(maxRank + 1)
     assignTracks(pieces, trackCount, opt.tracks != true, room, tall)
     for (r in 0 until maxRank) {
-      if (trackCount[r] > 0) gapUnder[r] += max(0.0, 2 * margin + (trackCount[r] - 1) * leastPitch - room[r])
+      if (trackCount[r] > 0)
+        gapUnder[r] += max(0.0, 2 * margin + (trackCount[r] - 1) * leastPitch - room[r])
       else if (tall[r] > 0) gapUnder[r] += max(0.0, min(MAX_GAP * opt.rankSep, tall[r]) - room[r])
     }
   }
@@ -729,14 +808,15 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
   val height = y
   // Where a piece runs across its gap, or would on another track of its group: its tracks sit
   // in the middle of the gap, the first at the top.
-  val trackY = fun(piece: Int, onTrack: Int): Double {
-    val r = pieces!!.rank[piece]
-    val top = bandBottom[r]
-    val bottom = bandTop[below[r]]
-    val count = if (opt.tracks == true) trackCount[r] else pieces.levels[piece]
-    val pitch = if (count > 1) min(mostPitch, (bottom - top - 2 * margin) / (count - 1)) else 0.0
-    return (top + bottom) / 2 + (onTrack - (count - 1) / 2.0) * pitch
-  }
+  val trackY =
+    fun(piece: Int, onTrack: Int): Double {
+      val r = pieces!!.rank[piece]
+      val top = bandBottom[r]
+      val bottom = bandTop[below[r]]
+      val count = if (opt.tracks == true) trackCount[r] else pieces.levels[piece]
+      val pitch = if (count > 1) min(mostPitch, (bottom - top - 2 * margin) / (count - 1)) else 0.0
+      return (top + bottom) / 2 + (onTrack - (count - 1) / 2.0) * pitch
+    }
 
   var minX = Double.POSITIVE_INFINITY
   var maxX = Double.NEGATIVE_INFINITY
@@ -760,8 +840,10 @@ fun layered(nodes: List<LNode>, edges: List<LEdge>, opt: LayeredOptions): Layere
     val node = nodes[i]
     val r = node.rank
     node.x = xs[i] - minX
-    if (KIND[i] == Kind.Node && leaves[r] != 0 && arrives[r] == 0) node.y = bandBottom[r] - node.h / 2
-    else if (KIND[i] == Kind.Node && arrives[r] != 0 && leaves[r] == 0) node.y = bandTop[r] + node.h / 2
+    if (KIND[i] == Kind.Node && leaves[r] != 0 && arrives[r] == 0)
+      node.y = bandBottom[r] - node.h / 2
+    else if (KIND[i] == Kind.Node && arrives[r] != 0 && leaves[r] == 0)
+      node.y = bandTop[r] + node.h / 2
     else node.y = (bandTop[r] + bandBottom[r]) / 2
   }
 
@@ -1038,14 +1120,24 @@ private fun <T> setAt(list: MutableList<T>, i: Int, value: T) {
 // side move closer together, since they have no arrowheads to keep apart. With less room still,
 // neighbours that run the same way share a place, which keeps an arrowhead apart from an edge
 // that leaves beside it.
-private fun sideEnds(g: Graph, v: Int, side: Int, span: Double, kinds: IntArray, ids: MutableList<Int>, room: MutableList<Double>): Double {
+private fun sideEnds(
+  g: Graph,
+  v: Int,
+  side: Int,
+  span: Double,
+  kinds: IntArray,
+  ids: MutableList<Int>,
+  room: MutableList<Double>,
+): Double {
   val start = if (side == 0) g.predStart else g.succStart
   val list = if (side == 0) g.predE else g.succE
   val other = if (side == 0) g.EF else g.ET
   val pos = g.pos
   for (k in start[v] until start[v + 1]) if (kinds[list[k]] != End.Held) ids.add(list[k])
   if (ids.size < 2) return 0.0
-  ids.sortWith { a, b -> if (pos[other[a]] - pos[other[b]] != 0) pos[other[a]] - pos[other[b]] else a - b }
+  ids.sortWith { a, b ->
+    if (pos[other[a]] - pos[other[b]] != 0) pos[other[a]] - pos[other[b]] else a - b
+  }
   val fill = { share: (Boolean, Boolean) -> Double ->
     var total = 0.0
     setAt(room, 0, 0.0)
@@ -1115,8 +1207,19 @@ private fun alignPorts(g: Graph, xs: DoubleArray, empty: IntArray?) {
     for (i in s until end) {
       val v = g.order[i]
       val start = kind == Kind.StartPort
-      if (g.KIND[v] != kind || (if (start) g.succStart[v + 1] - g.succStart[v] else g.predStart[v + 1] - g.predStart[v]) != 1) break
-      val e = follow(g, empty, if (start) g.succE[g.succStart[v]] else g.predE[g.predStart[v]], if (start) 1 else 0)
+      if (
+        g.KIND[v] != kind ||
+          (if (start) g.succStart[v + 1] - g.succStart[v]
+          else g.predStart[v + 1] - g.predStart[v]) != 1
+      )
+        break
+      val e =
+        follow(
+          g,
+          empty,
+          if (start) g.succE[g.succStart[v]] else g.predE[g.predStart[v]],
+          if (start) 1 else 0,
+        )
       val at = if (start) xs[g.ET[e]] + g.ETD[e] else xs[g.EF[e]] + g.EFD[e]
       if (to.size > 0 && at < to[to.size - 1] + TWIN) break
       to.add(at)
@@ -1142,7 +1245,8 @@ private fun freeEnds(g: Graph, EFK: IntArray, ETK: IntArray): Array<IntArray> {
 // it. Half gives an even S. One that runs more than eight times as far across as along turns
 // sooner and crosses in a straighter line, down to a quarter at sixteen times. The layout uses
 // this to tell how near two curves will pass, and the drawing to draw them.
-fun ease(across: Double, along: Double): Double = max(0.25, min(0.5, (4 * abs(along)) / abs(across).jsOr { 1.0 }))
+fun ease(across: Double, along: Double): Double =
+  max(0.25, min(0.5, (4 * abs(along)) / abs(across).jsOr { 1.0 }))
 
 // Brings the labels and bends of each edge into line with an end of the edge, so that it runs
 // straight from that end and turns once, at the other: with the end that has fewer edges beside
@@ -1151,7 +1255,14 @@ fun ease(across: Double, along: Double): Double = max(0.25, min(0.5, (4 * abs(al
 // along its node to meet the line. Bends in ranks that hold nothing else are left to `straighten`.
 // An edge with no one line that all of its labels and bends have room on has each brought into
 // line with the nearest point above or below that is held in place.
-private fun alignLabels(g: Graph, nodes: List<LNode>, xs: DoubleArray, free: Array<IntArray>, opt: LayeredOptions, empty: IntArray?) {
+private fun alignLabels(
+  g: Graph,
+  nodes: List<LNode>,
+  xs: DoubleArray,
+  free: Array<IntArray>,
+  opt: LayeredOptions,
+  empty: IntArray?,
+) {
   val sep = opt.edgeSep
   val n = g.n
   val real = g.real
@@ -1170,26 +1281,38 @@ private fun alignLabels(g: Graph, nodes: List<LNode>, xs: DoubleArray, free: Arr
   val layerStart = g.layerStart
   val order = g.order
   val pos = g.pos
-  val placed = { v: Int -> KIND[v] == Kind.Label || (KIND[v] == Kind.Dummy && !(empty != null && empty[RANK[v]] == 1)) }
+  val placed = { v: Int ->
+    KIND[v] == Kind.Label || (KIND[v] == Kind.Dummy && !(empty != null && empty[RANK[v]] == 1))
+  }
   // Where segment `e` ends on the way up (side 0) or down, and how many ends share that side of
   // the node there: none for a point that is not on a node.
   val end = { e: Int, side: Int ->
     val u = if (side == 0) EF[e] else ET[e]
     val x = if (side == 0) xs[u] + EFD[e] else xs[u] + ETD[e]
-    doubleArrayOf(x, (if (u < real && nodes[u].kind == Kind.Node) free[1 - side][u] else 0).toDouble())
+    doubleArrayOf(
+      x,
+      (if (u < real && nodes[u].kind == Kind.Node) free[1 - side][u] else 0).toDouble(),
+    )
   }
   // The room the neighbours in its rank leave a label or bend: a full gap from a node or between
   // two labels, half of one between a label and a line that passes it.
   val room = { v: Int ->
     val s = layerStart[RANK[v]]
     val i = s + pos[v]
-    val clear = { other: Int -> W[other] / 2 + W[v] / 2 + (if (KIND[other] == Kind.Node) opt.nodeSep / 2 + sep / 2 else if (KIND[other] == KIND[v]) sep else sep / 2) }
+    val clear = { other: Int ->
+      W[other] / 2 +
+        W[v] / 2 +
+        (if (KIND[other] == Kind.Node) opt.nodeSep / 2 + sep / 2
+        else if (KIND[other] == KIND[v]) sep else sep / 2)
+    }
     doubleArrayOf(
       if (i > s) xs[order[i - 1]] + clear(order[i - 1]) else Double.NEGATIVE_INFINITY,
-      if (i + 1 < layerStart[RANK[v] + 1]) xs[order[i + 1]] - clear(order[i + 1]) else Double.POSITIVE_INFINITY,
+      if (i + 1 < layerStart[RANK[v] + 1]) xs[order[i + 1]] - clear(order[i + 1])
+      else Double.POSITIVE_INFINITY,
     )
   }
-  // The place between `lo` and `hi` that is in line with one of two ends, or else nearest the first choice.
+  // The place between `lo` and `hi` that is in line with one of two ends, or else nearest the first
+  // choice.
   val choose = { x: Double, up: DoubleArray, down: DoubleArray, lo: Double, hi: Double ->
     val upFirst = if (up[1] != down[1]) up[1] < down[1] else abs(up[0] - x) <= abs(down[0] - x)
     val choices = if (upFirst) doubleArrayOf(up[0], down[0]) else doubleArrayOf(down[0], up[0])
@@ -1220,7 +1343,14 @@ private fun alignLabels(g: Graph, nodes: List<LNode>, xs: DoubleArray, free: Arr
         d = ET[succE[succStart[d]]]
       }
       if (lo <= hi) {
-        val x = choose(xs[chain[0]], end(predE[predStart[top]], 0), end(succE[succStart[bottom]], 1), lo, hi)
+        val x =
+          choose(
+            xs[chain[0]],
+            end(predE[predStart[top]], 0),
+            end(succE[succStart[bottom]], 1),
+            lo,
+            hi,
+          )
         for (c in chain) xs[c] = x
         continue
       }
@@ -1229,20 +1359,42 @@ private fun alignLabels(g: Graph, nodes: List<LNode>, xs: DoubleArray, free: Arr
         val least = rm[0]
         val most = rm[1]
         if (least > most) continue
-        xs[c] = choose(xs[c], end(follow(g, empty, predE[predStart[c]], 0), 0), end(follow(g, empty, succE[succStart[c]], 1), 1), least, most)
+        xs[c] =
+          choose(
+            xs[c],
+            end(follow(g, empty, predE[predStart[c]], 0), 0),
+            end(follow(g, empty, succE[succStart[c]], 1), 1),
+            least,
+            most,
+          )
       }
     }
   }
 }
 
-private class SideEnds(val v: Int, val side: Int, val span: Double, val ids: MutableList<Int>, val room: MutableList<Double>, val all: MutableList<Int>)
+private class SideEnds(
+  val v: Int,
+  val side: Int,
+  val span: Double,
+  val ids: MutableList<Int>,
+  val room: MutableList<Double>,
+  val all: MutableList<Int>,
+)
 
 // Once the nodes have their places, moves an end along its side when that lets its edge run
 // straight: when the point the edge runs to, or some part of the side it runs to, is in line
 // with the end's own side. Any other end leans towards the point its edge runs to, where its
 // side is long enough, and an end with a side to itself stays in the middle. On a group, the
 // ends keep clear of the points where other edges pass through its border.
-private fun settle(g: Graph, nodes: List<LNode>, xs: DoubleArray, EFK: IntArray, ETK: IntArray, free: Array<IntArray>, empty: IntArray?) {
+private fun settle(
+  g: Graph,
+  nodes: List<LNode>,
+  xs: DoubleArray,
+  EFK: IntArray,
+  ETK: IntArray,
+  free: Array<IntArray>,
+  empty: IntArray?,
+) {
   val real = g.real
   val W = g.W
   val EF = g.EF
@@ -1257,31 +1409,40 @@ private fun settle(g: Graph, nodes: List<LNode>, xs: DoubleArray, EFK: IntArray,
   // Where the end of segment `e` on node `v` should be, from the middle of its side. The edge is
   // followed up from the segment (side 0) or down, past the bends in ranks that hold nothing
   // else, to where it next comes to a point that is held in place or to another node's side.
-  val wanted = fun(eIn: Int, side: Int, v: Int, span: Double, again: Boolean): Double {
-    if (free[side][v] < 2) return 0.0
-    val e = follow(g, empty, eIn, side)
-    val u = if (side == 0) EF[e] else ET[e]
-    val point = if (side == 0) xs[u] + EFD[e] else xs[u] + ETD[e]
-    // Once the other end has its place, this one comes into line with it if it can.
-    if (again && abs(point - xs[v]) <= span / 2 + IN_LINE) return max(-span / 2, min(span / 2, point - xs[v]))
-    // The part of the other side that its end may move along, if it may move.
-    var middle = point
-    var width = 0.0
-    if (u < real && nodes[u].kind == Kind.Node && (if (side == 0) EFK else ETK)[e] != End.Held && free[1 - side][u] >= 2) {
-      width = max(0.0, min(nodes[u].span, W[u]))
-      if (width > 0) middle = xs[u]
+  val wanted =
+    fun(eIn: Int, side: Int, v: Int, span: Double, again: Boolean): Double {
+      if (free[side][v] < 2) return 0.0
+      val e = follow(g, empty, eIn, side)
+      val u = if (side == 0) EF[e] else ET[e]
+      val point = if (side == 0) xs[u] + EFD[e] else xs[u] + ETD[e]
+      // Once the other end has its place, this one comes into line with it if it can.
+      if (again && abs(point - xs[v]) <= span / 2 + IN_LINE)
+        return max(-span / 2, min(span / 2, point - xs[v]))
+      // The part of the other side that its end may move along, if it may move.
+      var middle = point
+      var width = 0.0
+      if (
+        u < real &&
+          nodes[u].kind == Kind.Node &&
+          (if (side == 0) EFK else ETK)[e] != End.Held &&
+          free[1 - side][u] >= 2
+      ) {
+        width = max(0.0, min(nodes[u].span, W[u]))
+        if (width > 0) middle = xs[u]
+      }
+      val lo = max(xs[v] - span / 2, middle - width / 2)
+      val hi = min(xs[v] + span / 2, middle + width / 2)
+      // Two sides with no part in line: the end leans towards the other, if its side is long
+      // enough.
+      if (lo > hi + IN_LINE) {
+        val lean = max(0.0, span / 2 - LEAN_CLEAR)
+        return max(-lean, min(lean, point - xs[v]))
+      }
+      // Both ends settle on one place in the part the two sides share: nearer the middle of the
+      // narrower.
+      val place = (xs[v] * width + middle * span) / (width + span)
+      return max(lo, min(hi, place)) - xs[v]
     }
-    val lo = max(xs[v] - span / 2, middle - width / 2)
-    val hi = min(xs[v] + span / 2, middle + width / 2)
-    // Two sides with no part in line: the end leans towards the other, if its side is long enough.
-    if (lo > hi + IN_LINE) {
-      val lean = max(0.0, span / 2 - LEAN_CLEAR)
-      return max(-lean, min(lean, point - xs[v]))
-    }
-    // Both ends settle on one place in the part the two sides share: nearer the middle of the narrower.
-    val place = (xs[v] * width + middle * span) / (width + span)
-    return max(lo, min(hi, place)) - xs[v]
-  }
   // End order and spacing stay fixed across passes; held ends divide free ends into runs.
   val sides = ArrayList<SideEnds>()
   for (v in 0 until real) {
@@ -1298,7 +1459,9 @@ private fun settle(g: Graph, nodes: List<LNode>, xs: DoubleArray, EFK: IntArray,
       if (ids.size == 1) setAt(room, 0, 0.0)
       val all = ArrayList<Int>()
       for (k in start[v] until start[v + 1]) all.add(list[k])
-      all.sortWith { a, b -> if (pos[other[a]] - pos[other[b]] != 0) pos[other[a]] - pos[other[b]] else a - b }
+      all.sortWith { a, b ->
+        if (pos[other[a]] - pos[other[b]] != 0) pos[other[a]] - pos[other[b]] else a - b
+      }
       sides.add(SideEnds(v, side, span, ids, room, all))
     }
   }
@@ -1341,7 +1504,12 @@ private fun settle(g: Graph, nodes: List<LNode>, xs: DoubleArray, EFK: IntArray,
             count.add(1)
             // Keep ends together when spacing forced them to share a place.
             var together = j > 0 && room[k + j] == 0.0
-            while (sum.size > 1 && (together || sum[sum.size - 2] / count[count.size - 2] > sum[sum.size - 1] / count[count.size - 1])) {
+            while (
+              sum.size > 1 &&
+                (together ||
+                  sum[sum.size - 2] / count[count.size - 2] >
+                    sum[sum.size - 1] / count[count.size - 1])
+            ) {
               together = false
               val top = sum.removeAt(sum.size - 1)
               val pooled = count.removeAt(count.size - 1)
@@ -1354,7 +1522,9 @@ private fun settle(g: Graph, nodes: List<LNode>, xs: DoubleArray, EFK: IntArray,
           before = 0.0
           for (b in sum.indices) {
             // Center the run if it cannot fit between held ends.
-            val level = if (hi - total < lo) (lo + hi - total) / 2 else max(lo, min(hi - total, sum[b] / count[b]))
+            val level =
+              if (hi - total < lo) (lo + hi - total) / 2
+              else max(lo, min(hi - total, sum[b] / count[b]))
             for (c in 0 until count[b]) {
               if (j > 0) before += room[k + j]
               if (abs(dx[ids[k + j]] - level - before) > 0.01) moved = true
@@ -1386,7 +1556,8 @@ private fun snap(g: Graph, xs: DoubleArray, empty: IntArray?, opt: LayeredOption
   val order = g.order
   val pos = g.pos
   val passed = { u: Int -> empty != null && KIND[u] == Kind.Dummy && empty[RANK[u]] == 1 }
-  // Each edge from one point that is held in place to the next, past the bends in ranks that hold nothing else.
+  // Each edge from one point that is held in place to the next, past the bends in ranks that hold
+  // nothing else.
   val a = ArrayList<Int>()
   val b = ArrayList<Int>()
   val da = ArrayList<Double>()
@@ -1407,41 +1578,52 @@ private fun snap(g: Graph, xs: DoubleArray, empty: IntArray?, opt: LayeredOption
     block[i] = i
     members.add(arrayListOf(i))
   }
-  val join = fun(x: Int, y: Int) {
-    var keep = block[x]
-    var drop = block[y]
-    if (keep == drop) return
-    if (members[keep].size < members[drop].size) {
-      val t = keep
-      keep = drop
-      drop = t
+  val join =
+    fun(x: Int, y: Int) {
+      var keep = block[x]
+      var drop = block[y]
+      if (keep == drop) return
+      if (members[keep].size < members[drop].size) {
+        val t = keep
+        keep = drop
+        drop = t
+      }
+      for (v in members[drop]) {
+        block[v] = keep
+        members[keep].add(v)
+      }
+      members[drop] = ArrayList()
     }
-    for (v in members[drop]) {
-      block[v] = keep
-      members[keep].add(v)
-    }
-    members[drop] = ArrayList()
-  }
   val near = ArrayList<Int>()
   for (k in 0 until a.size) {
     val d = abs(off(k))
-    if (d < 0.01) join(a[k], b[k])
-    else if (d <= BEND_SNAP) near.add(k)
+    if (d < 0.01) join(a[k], b[k]) else if (d <= BEND_SNAP) near.add(k)
   }
   if (near.size == 0) return
   near.sortWith { x, y -> cmp((abs(off(x)) - abs(off(y))).jsOr { (x - y).toDouble() }) }
   val gap = { v: Int -> halfRoom(g, opt, v) }
   // Whether every node of a block can move by `shift` and keep its room from those beside it.
-  val free = fun(id: Int, shift: Double): Boolean {
-    for (v in members[id]) {
-      val s = layerStart[RANK[v]]
-      val end = layerStart[RANK[v] + 1]
-      val i = s + pos[v]
-      if (i > s && block[order[i - 1]] != id && xs[v] + shift - xs[order[i - 1]] < gap(v) + gap(order[i - 1]) - 0.01) return false
-      if (i + 1 < end && block[order[i + 1]] != id && xs[order[i + 1]] - xs[v] - shift < gap(v) + gap(order[i + 1]) - 0.01) return false
+  val free =
+    fun(id: Int, shift: Double): Boolean {
+      for (v in members[id]) {
+        val s = layerStart[RANK[v]]
+        val end = layerStart[RANK[v] + 1]
+        val i = s + pos[v]
+        if (
+          i > s &&
+            block[order[i - 1]] != id &&
+            xs[v] + shift - xs[order[i - 1]] < gap(v) + gap(order[i - 1]) - 0.01
+        )
+          return false
+        if (
+          i + 1 < end &&
+            block[order[i + 1]] != id &&
+            xs[order[i + 1]] - xs[v] - shift < gap(v) + gap(order[i + 1]) - 0.01
+        )
+          return false
+      }
+      return true
     }
-    return true
-  }
   for (k in near) {
     val d = off(k)
     if (abs(d) < 0.01) {
@@ -1491,8 +1673,15 @@ private fun emptyRanks(g: Graph): IntArray? {
 // them cross less. With `curved`, the tracks are levels for curves to turn onto, and only the
 // pieces that would run along or too near another get one: each group of those counts its
 // tracks from its own first. `room` is the height of the gap under each rank, and `tall`
-// receives the height that a gap whose curves mostly cross each other should have instead of levels.
-private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, room: DoubleArray, tall: DoubleArray) {
+// receives the height that a gap whose curves mostly cross each other should have instead of
+// levels.
+private fun assignTracks(
+  pieces: Pieces,
+  trackCount: IntArray,
+  curved: Boolean,
+  room: DoubleArray,
+  tall: DoubleArray,
+) {
   val from = pieces.from
   val to = pieces.to
   val rank = pieces.rank
@@ -1506,11 +1695,11 @@ private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, 
     levels.add(0)
     if (abs(from[k] - to[k]) < IN_LINE) continue
     val list = byRank[rank[k]]
-    if (list != null) list.add(k)
-    else byRank[rank[k]] = arrayListOf(k)
+    if (list != null) list.add(k) else byRank[rank[k]] = arrayListOf(k)
   }
   if (byRank.size == 0) return
-  // The pieces are compared pair by pair, so where each begins and ends across the flow is worked out once.
+  // The pieces are compared pair by pair, so where each begins and ends across the flow is worked
+  // out once.
   val LO = DoubleArray(total)
   val HI = DoubleArray(total)
   for (k in 0 until total) {
@@ -1523,8 +1712,12 @@ private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, 
   // Whether a and b need tracks of their own.
   val clash = { a: Int, b: Int -> overlap(a, b) && !mates(a, b) }
   // Whether one of a and b could cross the other, depending on which is above.
-  val meet = { a: Int, b: Int -> overlap(a, b) || within(to[a], b) + within(from[b], a) + within(to[b], a) + within(from[a], b) > 0 }
-  // How often a and b cross with a on the higher track: a's way down through b, and b's way down to itself through a.
+  val meet = { a: Int, b: Int ->
+    overlap(a, b) ||
+      within(to[a], b) + within(from[b], a) + within(to[b], a) + within(from[a], b) > 0
+  }
+  // How often a and b cross with a on the higher track: a's way down through b, and b's way down to
+  // itself through a.
   val crossings = { a: Int, b: Int -> within(to[a], b) + within(from[b], a) }
   // Returns pairs of list indices, smaller first. Omitted pairs cannot meet or clash.
   val nearPairs = { list: List<Int> ->
@@ -1548,109 +1741,114 @@ private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, 
   // Gives the pieces of one gap in `list` their tracks, and each the number of tracks that the
   // pieces it has to do with take between them, counting its own from the first of those.
   // Returns the number of tracks. The pieces come without tracks.
-  val lay = fun(list: MutableList<Int>): Int {
-    // A plain order to start from, and to keep where nothing says otherwise: the pieces that
-    // reach furthest go first, so that those of one fan nest.
-    list.sortWith { a, b -> cmp((HI[b] - LO[b] - (HI[a] - LO[a])).jsOr { LO[a] - LO[b] }.jsOr { (a - b).toDouble() }) }
-    val count = list.size
-    val above = ArrayList<MutableList<Int>>()
-    val group = IntArray(count) { it }
-    val find = { iIn: Int ->
-      var i = iIn
-      while (group[i] != i) {
-        group[i] = group[group[i]]
-        i = group[i]
+  val lay =
+    fun(list: MutableList<Int>): Int {
+      // A plain order to start from, and to keep where nothing says otherwise: the pieces that
+      // reach furthest go first, so that those of one fan nest.
+      list.sortWith { a, b ->
+        cmp((HI[b] - LO[b] - (HI[a] - LO[a])).jsOr { LO[a] - LO[b] }.jsOr { (a - b).toDouble() })
       }
-      i
-    }
-    val weighed = count <= MAX_WEIGHED
-    // Avoid storing quadratically many pairs in dense gaps.
-    val pairs = if (weighed) nearPairs(list) else ArrayList()
-    val clashes: List<MutableList<Int>> = if (weighed) list.map { ArrayList<Int>() } else emptyList()
-    var p = 0
-    while (p < pairs.size) {
-      val i = pairs[p]
-      val j = pairs[p + 1]
-      p += 2
-      if (!clash(list[i], list[j])) continue
-      clashes[i].add(j)
-      clashes[j].add(i)
-    }
-    var sequence: MutableList<Int> = list.indices.toMutableList()
-    if (weighed) {
-      // above[j] lists the pieces that should be above list[j]. The order follows as many of
-      // these as it can: a piece is placed once all that should be above it are, and when
-      // none is free, the one with the fewest still waiting.
-      val waiting = IntArray(count)
-      val after = ArrayList<MutableList<Int>>()
-      for (i in 0 until count) {
-        above.add(ArrayList())
-        after.add(ArrayList())
+      val count = list.size
+      val above = ArrayList<MutableList<Int>>()
+      val group = IntArray(count) { it }
+      val find = { iIn: Int ->
+        var i = iIn
+        while (group[i] != i) {
+          group[i] = group[group[i]]
+          i = group[i]
+        }
+        i
       }
-      p = 0
+      val weighed = count <= MAX_WEIGHED
+      // Avoid storing quadratically many pairs in dense gaps.
+      val pairs = if (weighed) nearPairs(list) else ArrayList()
+      val clashes: List<MutableList<Int>> =
+        if (weighed) list.map { ArrayList<Int>() } else emptyList()
+      var p = 0
       while (p < pairs.size) {
         val i = pairs[p]
         val j = pairs[p + 1]
         p += 2
-        val a = list[i]
-        val b = list[j]
-        if (!meet(a, b)) continue
-        group[find(i)] = find(j)
-        val ab = crossings(a, b)
-        val ba = crossings(b, a)
-        if (ab == ba) continue
-        val first = if (ab < ba) i else j
-        val second = if (ab < ba) j else i
-        above[second].add(first)
-        after[first].add(second)
-        waiting[second]++
+        if (!clash(list[i], list[j])) continue
+        clashes[i].add(j)
+        clashes[j].add(i)
       }
-      val placed = IntArray(count)
-      sequence = ArrayList()
-      for (done in 0 until count) {
-        var pick = -1
-        for (i in 0 until count) {
-          if (placed[i] != 0) continue
-          if (pick < 0 || waiting[i] < waiting[pick]) pick = i
-          if (waiting[i] == 0) break
-        }
-        placed[pick] = 1
-        sequence.add(pick)
-        for (j in after[pick]) waiting[j]--
-      }
-    }
-    val taken = HashSet<Int>()
-    val onTrack = HashMap<Int, MutableList<Int>>()
-    var rows = 0
-    for (at in sequence) {
-      val k = list[at]
-      var t = 0
-      for (i in above.getOrNull(at) ?: emptyList()) if (track[list[i]] >= t) t = track[list[i]] + 1
+      var sequence: MutableList<Int> = list.indices.toMutableList()
       if (weighed) {
-        taken.clear()
-        for (i in clashes[at]) taken.add(track[list[i]])
-        while (taken.contains(t)) t++
-      } else {
-        while (onTrack[t]?.any { other -> clash(k, other) } == true) t++
-        onTrack.getOrPut(t) { ArrayList() }.add(k)
+        // above[j] lists the pieces that should be above list[j]. The order follows as many of
+        // these as it can: a piece is placed once all that should be above it are, and when
+        // none is free, the one with the fewest still waiting.
+        val waiting = IntArray(count)
+        val after = ArrayList<MutableList<Int>>()
+        for (i in 0 until count) {
+          above.add(ArrayList())
+          after.add(ArrayList())
+        }
+        p = 0
+        while (p < pairs.size) {
+          val i = pairs[p]
+          val j = pairs[p + 1]
+          p += 2
+          val a = list[i]
+          val b = list[j]
+          if (!meet(a, b)) continue
+          group[find(i)] = find(j)
+          val ab = crossings(a, b)
+          val ba = crossings(b, a)
+          if (ab == ba) continue
+          val first = if (ab < ba) i else j
+          val second = if (ab < ba) j else i
+          above[second].add(first)
+          after[first].add(second)
+          waiting[second]++
+        }
+        val placed = IntArray(count)
+        sequence = ArrayList()
+        for (done in 0 until count) {
+          var pick = -1
+          for (i in 0 until count) {
+            if (placed[i] != 0) continue
+            if (pick < 0 || waiting[i] < waiting[pick]) pick = i
+            if (waiting[i] == 0) break
+          }
+          placed[pick] = 1
+          sequence.add(pick)
+          for (j in after[pick]) waiting[j]--
+        }
       }
-      track[k] = t
-      if (t >= rows) rows = t + 1
+      val taken = HashSet<Int>()
+      val onTrack = HashMap<Int, MutableList<Int>>()
+      var rows = 0
+      for (at in sequence) {
+        val k = list[at]
+        var t = 0
+        for (i in above.getOrNull(at) ?: emptyList()) if (track[list[i]] >= t)
+          t = track[list[i]] + 1
+        if (weighed) {
+          taken.clear()
+          for (i in clashes[at]) taken.add(track[list[i]])
+          while (taken.contains(t)) t++
+        } else {
+          while (onTrack[t]?.any { other -> clash(k, other) } == true) t++
+          onTrack.getOrPut(t) { ArrayList() }.add(k)
+        }
+        track[k] = t
+        if (t >= rows) rows = t + 1
+      }
+      val first = IntArray(count) { rows }
+      val last = IntArray(count) { -1 }
+      for (i in 0 until count) {
+        val root = find(i)
+        first[root] = min(first[root], track[list[i]])
+        last[root] = max(last[root], track[list[i]])
+      }
+      for (i in 0 until count) {
+        val root = find(i)
+        levels[list[i]] = last[root] - first[root] + 1
+        if (curved) track[list[i]] -= first[root]
+      }
+      return rows
     }
-    val first = IntArray(count) { rows }
-    val last = IntArray(count) { -1 }
-    for (i in 0 until count) {
-      val root = find(i)
-      first[root] = min(first[root], track[list[i]])
-      last[root] = max(last[root], track[list[i]])
-    }
-    for (i in 0 until count) {
-      val root = find(i)
-      levels[list[i]] = last[root] - first[root] + 1
-      if (curved) track[list[i]] -= first[root]
-    }
-    return rows
-  }
 
   // PORT: per-call buffers in place of upstream's module-level LINE_A and LINE_B.
   val lineA = DoubleArray(2 * SAMPLES + 2)
@@ -1664,23 +1862,32 @@ private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, 
       out[2 * i + 1] = h * (3 * c * t * u * u + 3 * (1 - c) * t * t * u + t * t * t)
     }
   }
-  val reaches = fun(points: DoubleArray, line: DoubleArray, limit: Double): Boolean {
-    // Allow rounding error in the cheap distance check before calling Math.hypot.
-    val bound = limit * limit * (1 + 1e-9)
-    for (i in 0..SAMPLES) {
-      val px = points[2 * i]
-      val py = points[2 * i + 1]
-      for (j in 0 until SAMPLES) {
-        val dx = line[2 * j + 2] - line[2 * j]
-        val dy = line[2 * j + 3] - line[2 * j + 1]
-        val t = max(0.0, min(1.0, ((px - line[2 * j]) * dx + (py - line[2 * j + 1]) * dy) / (dx * dx + dy * dy).jsOr { 1.0 }))
-        val ex = px - line[2 * j] - t * dx
-        val ey = py - line[2 * j + 1] - t * dy
-        if (ex * ex + ey * ey < bound && jsHypot(ex, ey) < limit) return true
+  val reaches =
+    fun(points: DoubleArray, line: DoubleArray, limit: Double): Boolean {
+      // Allow rounding error in the cheap distance check before calling Math.hypot.
+      val bound = limit * limit * (1 + 1e-9)
+      for (i in 0..SAMPLES) {
+        val px = points[2 * i]
+        val py = points[2 * i + 1]
+        for (j in 0 until SAMPLES) {
+          val dx = line[2 * j + 2] - line[2 * j]
+          val dy = line[2 * j + 3] - line[2 * j + 1]
+          val t =
+            max(
+              0.0,
+              min(
+                1.0,
+                ((px - line[2 * j]) * dx + (py - line[2 * j + 1]) * dy) /
+                  (dx * dx + dy * dy).jsOr { 1.0 },
+              ),
+            )
+          val ex = px - line[2 * j] - t * dx
+          val ey = py - line[2 * j + 1] - t * dy
+          if (ex * ex + ey * ey < bound && jsHypot(ex, ey) < limit) return true
+        }
       }
+      return false
     }
-    return false
-  }
   val near = { a: Int, b: Int, height: Double, limit: Double ->
     val h = max(height / 2, height - 2 * LEVEL_LEAD)
     sample(a, h, lineA)
@@ -1706,7 +1913,12 @@ private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, 
       val a = all[pairs[p]]
       val b = all[pairs[p + 1]]
       p += 2
-      if ((level.contains(a) && level.contains(b)) || !clash(a, b) || (from[a] < to[a]) != (from[b] < to[b])) continue
+      if (
+        (level.contains(a) && level.contains(b)) ||
+          !clash(a, b) ||
+          (from[a] < to[a]) != (from[b] < to[b])
+      )
+        continue
       if (near(a, b, room[r], if (wide[a] == 1 || wide[b] == 1) LEVEL_CLEAR else LEVEL_TOUCH)) {
         level.add(a)
         level.add(b)
@@ -1727,20 +1939,21 @@ private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, 
       p += 2
       if (level.contains(a) && level.contains(b)) {
         if (!overlap(a, b)) continue
-        if ((from[a] < to[a]) != (from[b] < to[b])) crossing++
-        else if (!mates(a, b)) alongside++
+        if ((from[a] < to[a]) != (from[b] < to[b])) crossing++ else if (!mates(a, b)) alongside++
       } else if ((level.contains(a) || level.contains(b)) && meet(a, b)) {
         beside.add(a)
         beside.add(b)
       }
     }
     if (crossing > alongside) {
-      for (k in all) if ((HI[k] - LO[k]) * CROSSED_SLOPE > tall[r]) tall[r] = (HI[k] - LO[k]) * CROSSED_SLOPE
+      for (k in all) if ((HI[k] - LO[k]) * CROSSED_SLOPE > tall[r])
+        tall[r] = (HI[k] - LO[k]) * CROSSED_SLOPE
       continue
     }
     // With them go the short pieces that could cross one of them, so that each has its place
     // among the levels and crosses none.
-    val members = all.filter { k -> level.contains(k) || (wide[k] != 1 && beside.contains(k)) }.toMutableList()
+    val members =
+      all.filter { k -> level.contains(k) || (wide[k] != 1 && beside.contains(k)) }.toMutableList()
     lay(members)
     var most = 0
     for (k in members) if (levels[k] > most) most = levels[k]
@@ -1752,7 +1965,15 @@ private fun assignTracks(pieces: Pieces, trackCount: IntArray, curved: Boolean, 
 // of their edges that are held in place, and marks the ones that can be left out of the route.
 // `firstDummy` and `span` give each edge's run of bends, one in every rank. `sep` is the room
 // kept between the bends of twin edges, or 0 to leave those out as well.
-private fun straighten(g: Graph, xs: DoubleArray, empty: IntArray, firstDummy: IntArray, span: IntArray, sep: Double, onLine: IntArray) {
+private fun straighten(
+  g: Graph,
+  xs: DoubleArray,
+  empty: IntArray,
+  firstDummy: IntArray,
+  span: IntArray,
+  sep: Double,
+  onLine: IntArray,
+) {
   val maxRank = g.maxRank
   val EF = g.EF
   val ET = g.ET
@@ -1807,16 +2028,23 @@ private fun straighten(g: Graph, xs: DoubleArray, empty: IntArray, firstDummy: I
     val s = layerStart[r]
     val end = layerStart[r + 1]
     val row = order.copyOfRange(s, end).toMutableList()
-    row.sortWith { a, b -> cmp((from[a] - from[b]).jsOr { to[a] - to[b] }.jsOr { (a - b).toDouble() }) }
+    row.sortWith { a, b ->
+      cmp((from[a] - from[b]).jsOr { to[a] - to[b] }.jsOr { (a - b).toDouble() })
+    }
     var i = 0
     while (i < row.size) {
       twins.clear()
       var j = i
-      while (j < row.size && abs(from[row[j]] - from[row[i]]) < TWIN && abs(to[row[j]] - to[row[i]]) < TWIN) {
+      while (
+        j < row.size &&
+          abs(from[row[j]] - from[row[i]]) < TWIN &&
+          abs(to[row[j]] - to[row[i]]) < TWIN
+      ) {
         twins.add(row[j])
         j++
       }
-      // The twins keep the order the rank gave them, so that two edges do not swap sides on the way.
+      // The twins keep the order the rank gave them, so that two edges do not swap sides on the
+      // way.
       twins.sortWith { a, b -> g.pos[a] - g.pos[b] }
       for (k in twins.indices) {
         val d = twins[k]
@@ -1831,7 +2059,14 @@ private fun straighten(g: Graph, xs: DoubleArray, empty: IntArray, firstDummy: I
 // In a rank that holds labels and bends but no nodes, a bend is there to take its edge straight
 // through between the labels. Where the edge would pass clear of every label anyway, the bend
 // is left out, and the edge turns in the whole height between the ranks on either side.
-private fun pastLabels(g: Graph, xs: DoubleArray, firstDummy: IntArray, span: IntArray, clear: Double, onLine: IntArray) {
+private fun pastLabels(
+  g: Graph,
+  xs: DoubleArray,
+  firstDummy: IntArray,
+  span: IntArray,
+  clear: Double,
+  onLine: IntArray,
+) {
   val maxRank = g.maxRank
   val W = g.W
   val KIND = g.KIND
@@ -1853,8 +2088,7 @@ private fun pastLabels(g: Graph, xs: DoubleArray, firstDummy: IntArray, span: In
     var others = false
     for (i in layerStart[r] until layerStart[r + 1]) {
       val kind = KIND[order[i]]
-      if (kind == Kind.Label) labels = true
-      else if (kind != Kind.Dummy) others = true
+      if (kind == Kind.Label) labels = true else if (kind != Kind.Dummy) others = true
     }
     if (labels && !others) {
       labelled[r] = 1
@@ -1884,7 +2118,12 @@ private fun pastLabels(g: Graph, xs: DoubleArray, firstDummy: IntArray, span: In
       var i = layerStart[r]
       while (free && i < layerStart[r + 1]) {
         val label = order[i]
-        if (KIND[label] == Kind.Label && xs[label] + W[label] / 2 > lo && xs[label] - W[label] / 2 < hi) free = false
+        if (
+          KIND[label] == Kind.Label &&
+            xs[label] + W[label] / 2 > lo &&
+            xs[label] - W[label] / 2 < hi
+        )
+          free = false
         i++
       }
       if (!free) continue
@@ -1929,14 +2168,15 @@ private fun reduceCrossings(g: Graph, nodes: List<LNode>): IntArray {
   val mixed = IntArray(if (place != null) n else 0)
   if (place != null) {
     val arriving = predE.copyOf()
-    val byOffset = fun(list: IntArray, from: Int, to: Int, dx: DoubleArray): Boolean {
-      for (k in from + 1 until to) {
-        if (dx[list[k]] == dx[list[from]]) continue
-        sortSub(list, from, to) { a, b -> cmp(dx[a] - dx[b]) }
-        return true
+    val byOffset =
+      fun(list: IntArray, from: Int, to: Int, dx: DoubleArray): Boolean {
+        for (k in from + 1 until to) {
+          if (dx[list[k]] == dx[list[from]]) continue
+          sortSub(list, from, to) { a, b -> cmp(dx[a] - dx[b]) }
+          return true
+        }
+        return false
       }
-      return false
-    }
     for (v in 0 until n) {
       places[v] = 1
       if (byOffset(arriving, predStart[v], predStart[v + 1], ETD)) {
@@ -1953,71 +2193,75 @@ private fun reduceCrossings(g: Graph, nodes: List<LNode>): IntArray {
   val tree = IntArray(2 * size)
   val targets = IntArray(EF.size)
 
-  val count = fun(): Int {
-    var total = 0
-    for (r in 0 until maxRank) {
-      var southLen = layerStart[r + 2] - layerStart[r + 1]
-      if (place != null) {
-        var next = 0
-        for (i in layerStart[r + 1] until layerStart[r + 2]) {
+  val count =
+    fun(): Int {
+      var total = 0
+      for (r in 0 until maxRank) {
+        var southLen = layerStart[r + 2] - layerStart[r + 1]
+        if (place != null) {
+          var next = 0
+          for (i in layerStart[r + 1] until layerStart[r + 2]) {
+            val v = order[i]
+            for (k in predStart[v] until predStart[v + 1]) place[predE[k]] =
+              next + placeIn[predE[k]]
+            next += places[v]
+          }
+          southLen = next
+        }
+        if (southLen < 2) continue
+        var t = 0
+        for (i in layerStart[r] until layerStart[r + 1]) {
           val v = order[i]
-          for (k in predStart[v] until predStart[v + 1]) place[predE[k]] = next + placeIn[predE[k]]
-          next += places[v]
-        }
-        southLen = next
-      }
-      if (southLen < 2) continue
-      var t = 0
-      for (i in layerStart[r] until layerStart[r + 1]) {
-        val v = order[i]
-        val from = succStart[v]
-        val to = succStart[v + 1]
-        val t0 = t
-        for (k in from until to) targets[t++] = if (place != null) place[leaving[k]] else pos[ET[succE[k]]]
-        val d = t - t0
-        if (d < 2) continue
-        if (place != null && mixed[v] != 0) {
-          // Sort equal-offset edges by destination to avoid counting shared endpoints as crossings.
-          for (a in t0 + 1 until t) {
-            val item = targets[a]
-            val dx = EFD[leaving[from + a - t0]]
-            var b = a - 1
-            while (b >= t0 && EFD[leaving[from + b - t0]] == dx && targets[b] > item) {
-              targets[b + 1] = targets[b]
-              b--
+          val from = succStart[v]
+          val to = succStart[v + 1]
+          val t0 = t
+          for (k in from until to) targets[t++] =
+            if (place != null) place[leaving[k]] else pos[ET[succE[k]]]
+          val d = t - t0
+          if (d < 2) continue
+          if (place != null && mixed[v] != 0) {
+            // Sort equal-offset edges by destination to avoid counting shared endpoints as
+            // crossings.
+            for (a in t0 + 1 until t) {
+              val item = targets[a]
+              val dx = EFD[leaving[from + a - t0]]
+              var b = a - 1
+              while (b >= t0 && EFD[leaving[from + b - t0]] == dx && targets[b] > item) {
+                targets[b + 1] = targets[b]
+                b--
+              }
+              targets[b + 1] = item
             }
-            targets[b + 1] = item
-          }
-        } else if (d <= 12) {
-          for (a in t0 + 1 until t) {
-            val item = targets[a]
-            var b = a - 1
-            while (b >= t0 && targets[b] > item) {
-              targets[b + 1] = targets[b]
-              b--
+          } else if (d <= 12) {
+            for (a in t0 + 1 until t) {
+              val item = targets[a]
+              var b = a - 1
+              while (b >= t0 && targets[b] > item) {
+                targets[b + 1] = targets[b]
+                b--
+              }
+              targets[b + 1] = item
             }
-            targets[b + 1] = item
+          } else {
+            targets.sort(t0, t)
           }
-        } else {
-          targets.sort(t0, t)
         }
-      }
-      if (t < 2) continue
-      var leaves = 1
-      while (leaves < southLen) leaves = leaves shl 1
-      tree.fill(0, 0, 2 * leaves)
-      for (k in 0 until t) {
-        var i = targets[k] + leaves
-        tree[i]++
-        while (i > 1) {
-          if ((i and 1) == 0) total += tree[i + 1]
-          i = i shr 1
+        if (t < 2) continue
+        var leaves = 1
+        while (leaves < southLen) leaves = leaves shl 1
+        tree.fill(0, 0, 2 * leaves)
+        for (k in 0 until t) {
+          var i = targets[k] + leaves
           tree[i]++
+          while (i > 1) {
+            if ((i and 1) == 0) total += tree[i + 1]
+            i = i shr 1
+            tree[i]++
+          }
         }
       }
+      return total
     }
-    return total
-  }
 
   val declared = count()
   val bary = DoubleArray(n)
@@ -2061,7 +2305,9 @@ private fun reduceCrossings(g: Graph, nodes: List<LNode>): IntArray {
       }
     }
     // Compare siblings in their nearest common group; group items use n + group ID.
-    val value = { item: Int -> if (item >= n) groupSum[item - n] / groupCount[item - n] else key[item] }
+    val value = { item: Int ->
+      if (item >= n) groupSum[item - n] / groupCount[item - n] else key[item]
+    }
     val first = { item: Int -> if (item >= n) groupFirst[item - n] else s + pos[item] }
     val compare = { a: Int, b: Int ->
       var ia = a
@@ -2106,71 +2352,76 @@ private fun reduceCrossings(g: Graph, nodes: List<LNode>): IntArray {
   // Require improvements over both the grouped and ungrouped starting orders.
   val startCount = min(best, declared)
 
-  val sweep = fun(down: Boolean, biasRight: Boolean) {
-    val start = if (down) predStart else succStart
-    val list = if (down) predE else succE
-    val other = if (down) EF else ET
-    val otherDx = if (down) EFD else ETD
-    for (step in 1..maxRank) {
-      val r = if (down) step else maxRank - step
-      if (fixed[r] != 0) continue
-      val s = layerStart[r]
-      val e = layerStart[r + 1]
-      var movable = 0
-      for (i in s until e) {
-        val v = order[i]
-        val pin = if (v < real) nodes[v].pin else 0
-        if (pin != 0) {
-          bary[v] = pin * 1e9
-          moving[movable++] = v
-          continue
-        }
-        val from = start[v]
-        val to = start[v + 1]
-        if (from == to) {
-          if (GRP != null) {
-            // Preserve relative position when there are no neighbours in the adjacent rank.
-            val across = if (down) layerStart[r] - layerStart[r - 1] else layerStart[r + 2] - layerStart[r + 1]
-            bary[v] = ((i - s).toDouble() * across) / (e - s)
+  val sweep =
+    fun(down: Boolean, biasRight: Boolean) {
+      val start = if (down) predStart else succStart
+      val list = if (down) predE else succE
+      val other = if (down) EF else ET
+      val otherDx = if (down) EFD else ETD
+      for (step in 1..maxRank) {
+        val r = if (down) step else maxRank - step
+        if (fixed[r] != 0) continue
+        val s = layerStart[r]
+        val e = layerStart[r + 1]
+        var movable = 0
+        for (i in s until e) {
+          val v = order[i]
+          val pin = if (v < real) nodes[v].pin else 0
+          if (pin != 0) {
+            bary[v] = pin * 1e9
+            moving[movable++] = v
             continue
           }
-          bary[v] = -1.0
+          val from = start[v]
+          val to = start[v + 1]
+          if (from == to) {
+            if (GRP != null) {
+              // Preserve relative position when there are no neighbours in the adjacent rank.
+              val across =
+                if (down) layerStart[r] - layerStart[r - 1]
+                else layerStart[r + 2] - layerStart[r + 1]
+              bary[v] = ((i - s).toDouble() * across) / (e - s)
+              continue
+            }
+            bary[v] = -1.0
+            continue
+          }
+          var sum = 0.0
+          for (k in from until to) {
+            val u = other[list[k]]
+            sum += pos[u]
+            if (offsets && W[u] > 0) sum += otherDx[list[k]] / W[u]
+          }
+          bary[v] = sum / (to - from)
+          moving[movable++] = v
+        }
+        if (GRP != null) {
+          arrange(r, bary)
           continue
         }
-        var sum = 0.0
-        for (k in from until to) {
-          val u = other[list[k]]
-          sum += pos[u]
-          if (offsets && W[u] > 0) sum += otherDx[list[k]] / W[u]
-        }
-        bary[v] = sum / (to - from)
-        moving[movable++] = v
+        if (movable < 2) continue
+        sortByBary(moving, movable, bary, pos, biasRight, spare)
+        var k = 0
+        for (i in s until e) if (bary[order[i]] != -1.0) order[i] = moving[k++]
+        for (i in s until e) pos[order[i]] = i - s
       }
-      if (GRP != null) {
-        arrange(r, bary)
-        continue
-      }
-      if (movable < 2) continue
-      sortByBary(moving, movable, bary, pos, biasRight, spare)
-      var k = 0
-      for (i in s until e) if (bary[order[i]] != -1.0) order[i] = moving[k++]
-      for (i in s until e) pos[order[i]] = i - s
     }
-  }
 
   // How many pairs of nodes in one rank are not in the order they were given.
-  val outOfOrder = fun(): Int {
-    var total = 0
-    for (r in 0..maxRank) {
-      for (i in layerStart[r] until layerStart[r + 1]) {
-        if (order[i] >= real) continue
-        for (j in i + 1 until layerStart[r + 1]) if (order[j] < order[i]) total++
+  val outOfOrder =
+    fun(): Int {
+      var total = 0
+      for (r in 0..maxRank) {
+        for (i in layerStart[r] until layerStart[r + 1]) {
+          if (order[i] >= real) continue
+          for (j in i + 1 until layerStart[r + 1]) if (order[j] < order[i]) total++
+        }
       }
+      return total
     }
-    return total
-  }
   val settlePositions = {
-    for (r in 0..maxRank) for (i in layerStart[r] until layerStart[r + 1]) pos[order[i]] = i - layerStart[r]
+    for (r in 0..maxRank) for (i in layerStart[r] until layerStart[r + 1]) pos[order[i]] =
+      i - layerStart[r]
   }
 
   // Adjacent swaps can remove crossings missed by barycenter sweeps.
@@ -2313,9 +2564,11 @@ private fun position(g: Graph, opt: LayeredOptions): DoubleArray {
   // Neighbours in left-to-right order, so the medians can be read off directly.
   val key = IntArray(segments)
   for (e in 0 until segments) key[e] = pos[ET[e]]
-  for (v in 0 until n) if (succStart[v + 1] - succStart[v] > 1) sortRange(succE, succStart[v], succStart[v + 1], key)
+  for (v in 0 until n) if (succStart[v + 1] - succStart[v] > 1)
+    sortRange(succE, succStart[v], succStart[v + 1], key)
   for (e in 0 until segments) key[e] = pos[EF[e]]
-  for (v in 0 until n) if (predStart[v + 1] - predStart[v] > 1) sortRange(predE, predStart[v], predStart[v + 1], key)
+  for (v in 0 until n) if (predStart[v + 1] - predStart[v] > 1)
+    sortRange(predE, predStart[v], predStart[v + 1], key)
 
   // An edge between two real nodes may not cross a dummy-to-dummy segment; mark those that would.
   val conflict = IntArray(segments)
@@ -2352,7 +2605,8 @@ private fun position(g: Graph, opt: LayeredOptions): DoubleArray {
   val results = ArrayList<DoubleArray>()
   val root = IntArray(n)
   val align = IntArray(n)
-  // Offset of each node from its block's root, so that aligned edges meet at their attachment points.
+  // Offset of each node from its block's root, so that aligned edges meet at their attachment
+  // points.
   val shift = DoubleArray(n)
   val eFrom = IntArray(n)
   val eTo = IntArray(n)
@@ -2386,7 +2640,10 @@ private fun position(g: Graph, opt: LayeredOptions): DoubleArray {
       val s = layerStart[r]
       val end = layerStart[r + 1]
       val adjacent = if (up) r - 1 else r + 1
-      val adjacentLast = if (adjacent >= 0 && adjacent <= maxRank) layerStart[adjacent + 1] - layerStart[adjacent] - 1 else 0
+      val adjacentLast =
+        if (adjacent >= 0 && adjacent <= maxRank)
+          layerStart[adjacent + 1] - layerStart[adjacent] - 1
+        else 0
       var prevIdx = -1
       var i = if (right) end - 1 else s
       while (if (right) i >= s else i < end) {
@@ -2498,19 +2755,29 @@ private fun position(g: Graph, opt: LayeredOptions): DoubleArray {
     var d = results[3][i]
     var t: Double
     if (a > b) {
-      t = a; a = b; b = t
+      t = a
+      a = b
+      b = t
     }
     if (c > d) {
-      t = c; c = d; d = t
+      t = c
+      c = d
+      d = t
     }
     if (a > c) {
-      t = a; a = c; c = t
+      t = a
+      a = c
+      c = t
     }
     if (b > d) {
-      t = b; b = d; d = t
+      t = b
+      b = d
+      d = t
     }
     if (b > c) {
-      t = b; b = c; c = t
+      t = b
+      b = c
+      c = t
     }
     out[i] = (b + c) / 2
   }

@@ -18,19 +18,20 @@ class WardleyModel(
   override val accTitle: String?,
   override val accDescr: String?,
   build: WardleyBuildResult,
-) : WardleyBuildResult(
-  build.nodes,
-  build.links,
-  build.trends,
-  build.pipelines,
-  build.annotations,
-  build.notes,
-  build.accelerators,
-  build.deaccelerators,
-  build.annotationsBox,
-  build.axes,
-  build.size,
-),
+) :
+  WardleyBuildResult(
+    build.nodes,
+    build.links,
+    build.trends,
+    build.pipelines,
+    build.annotations,
+    build.notes,
+    build.accelerators,
+    build.deaccelerators,
+    build.annotationsBox,
+    build.axes,
+    build.size,
+  ),
   Accessible
 
 // Values up to 1 are fractions; larger ones are already percentages.
@@ -47,10 +48,14 @@ private fun toPercent(value: Double, context: String): Double {
 }
 
 private fun toCoordinates(visibility: Double, evolution: Double, context: String): WardleyPoint =
-  WardleyPoint(toPercent(evolution, "$context evolution"), toPercent(visibility, "$context visibility"))
+  WardleyPoint(
+    toPercent(evolution, "$context evolution"),
+    toPercent(visibility, "$context visibility"),
+  )
 
 private fun flowFromPort(port: String?): String? =
-  if (port == "+<>") "bidirectional" else if (port == "+<") "backward" else if (port == "+>") "forward" else null
+  if (port == "+<>") "bidirectional"
+  else if (port == "+<") "backward" else if (port == "+>") "forward" else null
 
 private class ArrowFlow(val flow: String? = null, val label: String? = null)
 
@@ -65,7 +70,12 @@ private fun flowFromArrow(arrow: String?): ArrowFlow {
 }
 
 private fun offsets(label: LabelAst?): Pair<Double?, Double?> =
-  if (label != null) Pair((if (label.negX) -1.0 else 1.0) * label.offsetX, (if (label.negY) -1.0 else 1.0) * label.offsetY) else Pair(null, null)
+  if (label != null)
+    Pair(
+      (if (label.negX) -1.0 else 1.0) * label.offsetX,
+      (if (label.negY) -1.0 else 1.0) * label.offsetY,
+    )
+  else Pair(null, null)
 
 // Mermaid's populateDb: fills the builder from the syntax tree, in Mermaid's order.
 fun populate(ast: WardleyAst, db: WardleyBuilder) {
@@ -76,21 +86,31 @@ fun populate(ast: WardleyAst, db: WardleyBuilder) {
   if (evolution != null) {
     db.setAxes(
       WardleyAxesConfig(
-        stages = evolution.stages.map { stage ->
-          if (!stage.secondName.isNullOrEmpty()) "${stage.name.jsTrim()} / ${stage.secondName!!.jsTrim()}" else stage.name.jsTrim()
-        },
-        stageBoundaries = evolution.stages.filter { stage -> stage.boundary != null }.map { stage -> stage.boundary!! },
-      ),
+        stages =
+          evolution.stages.map { stage ->
+            if (!stage.secondName.isNullOrEmpty())
+              "${stage.name.jsTrim()} / ${stage.secondName!!.jsTrim()}"
+            else stage.name.jsTrim()
+          },
+        stageBoundaries =
+          evolution.stages
+            .filter { stage -> stage.boundary != null }
+            .map { stage -> stage.boundary!! },
+      )
     )
   }
 
   for (anchor in ast.anchors) {
     val at = toCoordinates(anchor.visibility, anchor.evolution, "Anchor \"${anchor.name}\"")
-    db.addNode(WardleyNode(id = anchor.name, label = anchor.name, x = at.x, y = at.y, className = "anchor"), false)
+    db.addNode(
+      WardleyNode(id = anchor.name, label = anchor.name, x = at.x, y = at.y, className = "anchor"),
+      false,
+    )
   }
 
   for (component in ast.components) {
-    val at = toCoordinates(component.visibility, component.evolution, "Component \"${component.name}\"")
+    val at =
+      toCoordinates(component.visibility, component.evolution, "Component \"${component.name}\"")
     val (labelOffsetX, labelOffsetY) = offsets(component.label)
     db.addNode(
       WardleyNode(
@@ -103,7 +123,7 @@ fun populate(ast: WardleyAst, db: WardleyBuilder) {
         labelOffsetY = labelOffsetY,
         inertia = component.inertia,
         sourceStrategy = component.decorator?.strategy,
-      ),
+      )
     )
   }
 
@@ -138,14 +158,15 @@ fun populate(ast: WardleyAst, db: WardleyBuilder) {
           labelOffsetY = labelOffsetY,
           inertia = null,
           sourceStrategy = null,
-        ),
+        )
       )
       db.addPipelineComponent(pipeline.parent, id)
     }
   }
 
   for (link in ast.links) {
-    val dashed = !link.arrow.isNullOrEmpty() && (link.arrow!!.contains("-.->") || link.arrow!!.contains(".-."))
+    val dashed =
+      !link.arrow.isNullOrEmpty() && (link.arrow!!.contains("-.->") || link.arrow!!.contains(".-."))
     val fromArrow = flowFromArrow(link.arrow)
     val flow = flowFromPort(link.fromPort) ?: flowFromPort(link.toPort) ?: fromArrow.flow
     db.addLink(
@@ -155,14 +176,20 @@ fun populate(ast: WardleyAst, db: WardleyBuilder) {
         dashed = dashed,
         label = fromArrow.label ?: link.linkLabel,
         flow = flow,
-      ),
+      )
     )
   }
 
   for (evolve in ast.evolves) {
     val node = db.getNode(evolve.component)
     if (node?.y != null) {
-      db.addTrend(WardleyTrend(evolve.component, toPercent(evolve.target, "Evolve target for \"${evolve.component}\""), node.y!!))
+      db.addTrend(
+        WardleyTrend(
+          evolve.component,
+          toPercent(evolve.target, "Evolve target for \"${evolve.component}\""),
+          node.y!!,
+        )
+      )
     }
   }
 
@@ -173,7 +200,9 @@ fun populate(ast: WardleyAst, db: WardleyBuilder) {
 
   for (annotation in ast.annotation) {
     val at = toCoordinates(annotation.x, annotation.y, "Annotation ${jsStr(annotation.number)}")
-    db.addAnnotation(WardleyAnnotation(annotation.number, listOf(WardleyPoint(at.x, at.y)), annotation.text))
+    db.addAnnotation(
+      WardleyAnnotation(annotation.number, listOf(WardleyPoint(at.x, at.y)), annotation.text)
+    )
   }
 
   for (accelerator in ast.accelerators) {
@@ -182,7 +211,8 @@ fun populate(ast: WardleyAst, db: WardleyBuilder) {
   }
 
   for (deaccelerator in ast.deaccelerators) {
-    val at = toCoordinates(deaccelerator.x, deaccelerator.y, "Deaccelerator \"${deaccelerator.name}\"")
+    val at =
+      toCoordinates(deaccelerator.x, deaccelerator.y, "Deaccelerator \"${deaccelerator.name}\"")
     db.addDeaccelerator(WardleyForce(deaccelerator.name, at.x, at.y))
   }
 }
@@ -196,8 +226,10 @@ fun buildWardley(ast: WardleyAst, title: String?): WardleyModel {
   return WardleyModel(
     type = "wardley",
     title = if (!ast.title.isNullOrEmpty()) ast.title else title,
-    accTitle = if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
-    accDescr = if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
+    accTitle =
+      if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
+    accDescr =
+      if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
     build = db.build(),
   )
 }

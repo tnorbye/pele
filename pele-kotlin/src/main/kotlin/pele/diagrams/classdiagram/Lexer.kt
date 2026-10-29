@@ -32,28 +32,30 @@ private object S {
 }
 
 // The token each state gives at the end of input, before the parser sees the end itself.
-private val AT_END = intArrayOf(
-  T.EOF,
-  T.STR,
-  T.EOF,
-  T.GENERICTYPE,
-  T.CALLBACK_NAME,
-  T.CALLBACK_ARGS,
-  T.acc_title_value,
-  T.acc_descr_value,
-  T.acc_descr_multiline_value,
-  T.EOF,
-  T.EOF_IN_STRUCT,
-  T.EOF,
-  T.EOF_IN_STRUCT,
-)
+private val AT_END =
+  intArrayOf(
+    T.EOF,
+    T.STR,
+    T.EOF,
+    T.GENERICTYPE,
+    T.CALLBACK_NAME,
+    T.CALLBACK_ARGS,
+    T.acc_title_value,
+    T.acc_descr_value,
+    T.acc_descr_multiline_value,
+    T.EOF,
+    T.EOF_IN_STRUCT,
+    T.EOF,
+    T.EOF_IN_STRUCT,
+  )
 
-private val RE_DIRECTION = listOf(
-  JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
-)
+private val RE_DIRECTION =
+  listOf(
+    JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
+  )
 private val RE_LINE_END = JsRegExp("""[\n\r  ]""", "g")
 
 fun tokenize(src: String): Tokens {
@@ -82,7 +84,8 @@ fun tokenize(src: String): Tokens {
   fun pop() {
     if (stack.size > 0) state = stack.removeAt(stack.size - 1)
   }
-  fun kw(word: String): Boolean = src.startsWith(word, p) && !isWord(src.charCodeAt(p + word.length))
+  fun kw(word: String): Boolean =
+    src.startsWith(word, p) && !isWord(src.charCodeAt(p + word.length))
   fun skipWs(q0: Int): Int {
     var q = q0
     while (q < n && isSpace(src.charCodeAt(q))) q++
@@ -188,7 +191,15 @@ fun tokenize(src: String): Tokens {
       61 -> return emit(T.EQUALS, p, p + 1)
       91 -> return emit(T.SQS, p, p + 1)
       93 -> return emit(T.SQE, p, p + 1)
-      33, 35, 36, 38, 39, 44, 63, 92, 47 -> return emit(T.PUNCTUATION, p, p + 1)
+      33,
+      35,
+      36,
+      38,
+      39,
+      44,
+      63,
+      92,
+      47 -> return emit(T.PUNCTUATION, p, p + 1)
     }
     if (isWord(c)) {
       var q = p + 1
@@ -423,7 +434,8 @@ fun tokenize(src: String): Tokens {
           emit(T.CALLBACK_ARGS, p, until(')'))
         }
 
-      S.accTitle, S.accDescr -> {
+      S.accTitle,
+      S.accDescr -> {
         emit(if (state == S.accTitle) T.acc_title_value else T.acc_descr_value, p, until('\n'))
         pop()
       }

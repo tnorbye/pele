@@ -37,7 +37,8 @@ private object EbnfT {
   const val special = 21
 }
 
-// A question mark, text with something other than blanks in it and no `?` or `;`, and a question mark.
+// A question mark, text with something other than blanks in it and no `?` or `;`, and a question
+// mark.
 // Mermaid's pattern looks ahead with two nested runs, which rescans; this reads the text once.
 private fun specialSequence(src: String, at: Int, previous: Int): Int {
   if (src.charCodeAt(at) != 63) return -1
@@ -52,54 +53,59 @@ private fun specialSequence(src: String, at: Int, previous: Int): Int {
 }
 
 private val ID = identifier("EBNF_ID")
-private val SPECIAL = TokenType(
-  name = "EBNF_SPECIAL_SEQUENCE",
-  pattern = JsRegExp("""\?(?=[^?;]*[^?\s;][^?;]*\?)[^?;]*\?""", "y"),
-  first = "?",
-  scanner = { ::specialSequence },
-)
-private val HIDDEN = hiddenTokens("EBNF")
-private val ISO_COMMENT = TokenType(
-  name = "EBNF_ISO_COMMENT",
-  pattern = JsRegExp("""\(\*[\s\S]*?\*\)""", "y"),
-  hidden = true,
-  first = "(",
-  opener = JsRegExp("""\(\*""", "y"),
-)
-
-val EBNF_TOKENS: List<TokenType> = listOf(
-  opening("railroad-ebnf-beta", ID),
-  literal("::="),
-  literal("="),
-  literal(";"),
-  literal("|"),
-  literal(","),
-  literal("(", listOf(ISO_COMMENT)),
-  literal(")"),
-  literal("["),
-  literal("]"),
-  literal("{"),
-  literal("}"),
-  literal("?", listOf(SPECIAL)),
-  literal("*"),
-  literal("+"),
-  literal("-", listOf(HIDDEN[1])),
-  title("""[\w-]"""),
-  ACC_TITLE,
-  ACC_DESCR,
-  ID,
-  quoted("EBNF_STRING"),
-  SPECIAL,
-) + HIDDEN + listOf(
+private val SPECIAL =
   TokenType(
-    name = "EBNF_BLOCK_COMMENT",
-    pattern = JsRegExp("""\/\*[\s\S]*?\*\/""", "y"),
+    name = "EBNF_SPECIAL_SEQUENCE",
+    pattern = JsRegExp("""\?(?=[^?;]*[^?\s;][^?;]*\?)[^?;]*\?""", "y"),
+    first = "?",
+    scanner = { ::specialSequence },
+  )
+private val HIDDEN = hiddenTokens("EBNF")
+private val ISO_COMMENT =
+  TokenType(
+    name = "EBNF_ISO_COMMENT",
+    pattern = JsRegExp("""\(\*[\s\S]*?\*\)""", "y"),
     hidden = true,
-    first = "/",
-    opener = JsRegExp("""\/\*""", "y"),
-  ),
-  ISO_COMMENT,
-)
+    first = "(",
+    opener = JsRegExp("""\(\*""", "y"),
+  )
+
+val EBNF_TOKENS: List<TokenType> =
+  listOf(
+    opening("railroad-ebnf-beta", ID),
+    literal("::="),
+    literal("="),
+    literal(";"),
+    literal("|"),
+    literal(","),
+    literal("(", listOf(ISO_COMMENT)),
+    literal(")"),
+    literal("["),
+    literal("]"),
+    literal("{"),
+    literal("}"),
+    literal("?", listOf(SPECIAL)),
+    literal("*"),
+    literal("+"),
+    literal("-", listOf(HIDDEN[1])),
+    title("""[\w-]"""),
+    ACC_TITLE,
+    ACC_DESCR,
+    ID,
+    quoted("EBNF_STRING"),
+    SPECIAL,
+  ) +
+    HIDDEN +
+    listOf(
+      TokenType(
+        name = "EBNF_BLOCK_COMMENT",
+        pattern = JsRegExp("""\/\*[\s\S]*?\*\/""", "y"),
+        hidden = true,
+        first = "/",
+        opener = JsRegExp("""\/\*""", "y"),
+      ),
+      ISO_COMMENT,
+    )
 
 sealed class EbnfPrimary : Parent {
   class Terminal(val value: String) : EbnfPrimary()
@@ -165,11 +171,19 @@ private fun definition(r: Reader): EbnfChoice {
       EbnfT.string -> primary = EbnfPrimary.Terminal(unescape(r.take()))
       EbnfT.id -> primary = EbnfPrimary.NonTerminal(r.take())
       EbnfT.special -> primary = EbnfPrimary.Special(r.take().jsSlice(1, -1).jsTrim())
-      EbnfT.group, EbnfT.option, EbnfT.repeat -> {
+      EbnfT.group,
+      EbnfT.option,
+      EbnfT.repeat -> {
         r.i++
         val element = EbnfChoice()
         stack.add(top)
-        top = frame(EbnfPrimary.Bracket(BRACKETS[(kind - EbnfT.group) shr 1], element), element, kind + 1, except)
+        top =
+          frame(
+            EbnfPrimary.Bracket(BRACKETS[(kind - EbnfT.group) shr 1], element),
+            element,
+            kind + 1,
+            except,
+          )
         except = false
         continue@outer
       }
@@ -186,9 +200,12 @@ private fun definition(r: Reader): EbnfChoice {
       val postfixes = top.term!!.postfixes
       while (true) {
         val k = r.kind
-        if (k == EbnfT.question) postfixes.add(EbnfPostfix.Operator("EbnfOptionalPostfix", r.take()))
-        else if (k == EbnfT.star) postfixes.add(EbnfPostfix.Operator("EbnfZeroOrMorePostfix", r.take()))
-        else if (k == EbnfT.plus) postfixes.add(EbnfPostfix.Operator("EbnfOneOrMorePostfix", r.take()))
+        if (k == EbnfT.question)
+          postfixes.add(EbnfPostfix.Operator("EbnfOptionalPostfix", r.take()))
+        else if (k == EbnfT.star)
+          postfixes.add(EbnfPostfix.Operator("EbnfZeroOrMorePostfix", r.take()))
+        else if (k == EbnfT.plus)
+          postfixes.add(EbnfPostfix.Operator("EbnfOneOrMorePostfix", r.take()))
         else break
       }
       val k = r.kind
@@ -208,7 +225,14 @@ private fun definition(r: Reader): EbnfChoice {
         r.i++
         top.sequence = EbnfSequence()
         top.choice.alternatives.add(top.sequence)
-      } else if (k != EbnfT.string && k != EbnfT.id && k != EbnfT.special && k != EbnfT.group && k != EbnfT.option && k != EbnfT.repeat) {
+      } else if (
+        k != EbnfT.string &&
+          k != EbnfT.id &&
+          k != EbnfT.special &&
+          k != EbnfT.group &&
+          k != EbnfT.option &&
+          k != EbnfT.repeat
+      ) {
         if (stack.size == 0) return top.choice
         r.fail("token of type '${EBNF_TOKENS[top.close].name}'")
       }
@@ -241,7 +265,11 @@ private fun node(part: Parent, kids: List<RailroadNode>): RailroadNode {
         } else if (postfix is EbnfPostfix.Exception) {
           result = RailroadNode.Sequence(listOf(result, terminal("-"), kids[next++]))
         } else {
-          result = repetition(result, if ((postfix as EbnfPostfix.Operator).`$type` == "EbnfOneOrMorePostfix") 1.0 else 0.0)
+          result =
+            repetition(
+              result,
+              if ((postfix as EbnfPostfix.Operator).`$type` == "EbnfOneOrMorePostfix") 1.0 else 0.0,
+            )
         }
       }
       result
@@ -249,11 +277,12 @@ private fun node(part: Parent, kids: List<RailroadNode>): RailroadNode {
     is EbnfPrimary.Terminal -> terminal(part.value)
     is EbnfPrimary.NonTerminal -> nonterminal(part.name)
     is EbnfPrimary.Special -> special(part.text)
-    is EbnfPrimary.Bracket -> when (part.`$type`) {
-      "EbnfGroup" -> kids[0]
-      "EbnfOptional" -> optional(kids[0])
-      else -> repetition(kids[0], 0.0)
-    }
+    is EbnfPrimary.Bracket ->
+      when (part.`$type`) {
+        "EbnfGroup" -> kids[0]
+        "EbnfOptional" -> optional(kids[0])
+        else -> repetition(kids[0], 0.0)
+      }
     else -> throw IllegalStateException("unexpected part")
   }
 }

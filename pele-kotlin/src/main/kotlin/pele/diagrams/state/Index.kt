@@ -8,16 +8,24 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val state: Diagram<StateDb> = object : Diagram<StateDb> {
-  override val type = "state"
-  override val math = true
+val state: Diagram<StateDb> =
+  object : Diagram<StateDb> {
+    override val type = "state"
+    override val math = true
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): StateDb {
-    val db = StateDb()
-    if (!title.isNullOrEmpty()) db.title = title
-    parseState(source, db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): StateDb {
+      val db = StateDb()
+      if (!title.isNullOrEmpty()) db.title = title
+      parseState(source, db)
+      return db
+    }
+
+    override fun render(model: StateDb, config: Config, options: RenderOptions): Rendered =
+      renderState(model, config, options)
   }
-
-  override fun render(model: StateDb, config: Config, options: RenderOptions): Rendered = renderState(model, config, options)
-}

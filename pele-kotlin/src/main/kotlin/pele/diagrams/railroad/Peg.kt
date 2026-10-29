@@ -31,27 +31,35 @@ private object PegT {
 
 private val ID = identifier("PEG_ID")
 
-val PEG_TOKENS: List<TokenType> = listOf(
-  opening("railroad-peg-beta", ID),
-  literal("<-"),
-  literal(";"),
-  literal("/"),
-  literal("&"),
-  literal("!"),
-  literal("?"),
-  literal("*"),
-  literal("+"),
-  literal("("),
-  literal(")"),
-  literal("."),
-  title("""[\w-]"""),
-  ACC_TITLE,
-  ACC_DESCR,
-  ID,
-  quoted("PEG_STRING"),
-) + hiddenTokens("PEG") + listOf(
-  TokenType(name = "PEG_LINE_COMMENT", pattern = JsRegExp("""#[^\n\r]*""", "y"), hidden = true, first = "#"),
-)
+val PEG_TOKENS: List<TokenType> =
+  listOf(
+    opening("railroad-peg-beta", ID),
+    literal("<-"),
+    literal(";"),
+    literal("/"),
+    literal("&"),
+    literal("!"),
+    literal("?"),
+    literal("*"),
+    literal("+"),
+    literal("("),
+    literal(")"),
+    literal("."),
+    title("""[\w-]"""),
+    ACC_TITLE,
+    ACC_DESCR,
+    ID,
+    quoted("PEG_STRING"),
+  ) +
+    hiddenTokens("PEG") +
+    listOf(
+      TokenType(
+        name = "PEG_LINE_COMMENT",
+        pattern = JsRegExp("""#[^\n\r]*""", "y"),
+        hidden = true,
+        first = "#",
+      )
+    )
 
 sealed class PegPrimary : Parent {
   class Literal(val value: String) : PegPrimary()
@@ -121,7 +129,8 @@ private fun definition(r: Reader): PegChoice {
     }
     inner@ while (true) {
       val suffix = PegSuffix(primary)
-      if (r.kind == PegT.question || r.kind == PegT.star || r.kind == PegT.plus) suffix.operator = r.take()
+      if (r.kind == PegT.question || r.kind == PegT.star || r.kind == PegT.plus)
+        suffix.operator = r.take()
       top.sequence.elements.add(PegPrefix(operator, suffix))
       val k = r.kind
       if (k == PegT.groupEnd && stack.size > 0) {
@@ -135,7 +144,14 @@ private fun definition(r: Reader): PegChoice {
         r.i++
         top.sequence = PegSequence()
         top.choice.alternatives.add(top.sequence)
-      } else if (k != PegT.and && k != PegT.not && k != PegT.string && k != PegT.id && k != PegT.dot && k != PegT.group) {
+      } else if (
+        k != PegT.and &&
+          k != PegT.not &&
+          k != PegT.string &&
+          k != PegT.id &&
+          k != PegT.dot &&
+          k != PegT.group
+      ) {
         if (stack.size == 0) return top.choice
         r.fail("token of type ')'")
       }
@@ -169,7 +185,8 @@ private fun node(part: Parent, kids: List<RailroadNode>): RailroadNode {
   return when (part) {
     is PegChoice -> choice(kids)
     is PegSequence -> sequence(kids)
-    is PegPrefix -> if (!part.operator.isNullOrEmpty()) special(part.operator + label(kid!!)) else kid!!
+    is PegPrefix ->
+      if (!part.operator.isNullOrEmpty()) special(part.operator + label(kid!!)) else kid!!
     is PegSuffix -> {
       val operator = part.operator
       if (operator.isNullOrEmpty()) {

@@ -2,18 +2,20 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.gantt
 
+import java.lang.StrictMath.log10
+import java.lang.StrictMath.pow
+import kotlin.math.floor
+import kotlin.math.sqrt
 import pele.js.JsRegExp
 import pele.js.jsParseInt
 import pele.js.jsSlice
 import pele.js.jsStr
 import pele.js.truthy
-import kotlin.math.floor
-import java.lang.StrictMath.log10
-import java.lang.StrictMath.pow
-import kotlin.math.sqrt
 
-// Time axis support, following d3-time and d3-time-format (English locale, local time), which Mermaid uses:
-// the `axisFormat` specifiers, tick intervals with d3's `every` rule, and its choice of automatic ticks.
+// Time axis support, following d3-time and d3-time-format (English locale, local time), which
+// Mermaid uses:
+// the `axisFormat` specifiers, tick intervals with d3's `every` rule, and its choice of automatic
+// ticks.
 
 private const val SECOND = 1000.0
 private const val MINUTE = 60 * SECOND
@@ -27,7 +29,8 @@ private const val YEAR = 365 * DAY
 typealias TickUnit = String
 
 // floor and offset change the date in place. `field` is the value d3 tests against a step: a tick
-// falls where it is a multiple of the step. `cycle` is how many values `field` cycles through, which
+// falls where it is a multiple of the step. `cycle` is how many values `field` cycles through,
+// which
 // bounds how far apart filtered ticks can be.
 private data class Calendar(
   val floor: (JsDate) -> Unit,
@@ -41,72 +44,95 @@ private fun startOfDay(d: JsDate) {
   d.setHours(0.0, 0.0, 0.0, 0.0)
 }
 
-private fun weekCalendar(weekStart: Double): Calendar = Calendar(
-  floor = { d ->
-    d.setDate(d.getDate() - ((d.getDay() + 7 - weekStart) % 7))
-    startOfDay(d)
-  },
-  offset = { d, step -> d.setDate(d.getDate() + step * 7) },
-  field = null,
-  cycle = Double.POSITIVE_INFINITY,
-  ms = WEEK,
-)
+private fun weekCalendar(weekStart: Double): Calendar =
+  Calendar(
+    floor = { d ->
+      d.setDate(d.getDate() - ((d.getDay() + 7 - weekStart) % 7))
+      startOfDay(d)
+    },
+    offset = { d, step -> d.setDate(d.getDate() + step * 7) },
+    field = null,
+    cycle = Double.POSITIVE_INFINITY,
+    ms = WEEK,
+  )
 
-private val CALENDARS: Map<String, Calendar> = mapOf(
-  "millisecond" to Calendar({ }, { d, step -> d.setTime(d.getTime() + step) }, null, Double.POSITIVE_INFINITY, 1.0),
-  "second" to Calendar(
-    { d -> d.setTime(d.getTime() - d.getMilliseconds()) },
-    { d, step -> d.setTime(d.getTime() + step * SECOND) },
-    { d -> d.getUTCSeconds() },
-    60.0,
-    SECOND,
-  ),
-  "minute" to Calendar(
-    { d -> d.setTime(d.getTime() - d.getMilliseconds() - d.getSeconds() * SECOND) },
-    { d, step -> d.setTime(d.getTime() + step * MINUTE) },
-    { d -> d.getMinutes() },
-    60.0,
-    MINUTE,
-  ),
-  "hour" to Calendar(
-    { d -> d.setTime(d.getTime() - d.getMilliseconds() - d.getSeconds() * SECOND - d.getMinutes() * MINUTE) },
-    { d, step -> d.setTime(d.getTime() + step * HOUR) },
-    { d -> d.getHours() },
-    24.0,
-    HOUR,
-  ),
-  "day" to Calendar(
-    ::startOfDay,
-    { d, step -> d.setDate(d.getDate() + step) },
-    { d -> d.getDate() - 1 },
-    31.0,
-    DAY,
-  ),
-  "month" to Calendar(
-    { d ->
-      d.setDate(1.0)
-      startOfDay(d)
-    },
-    { d, step -> d.setMonth(d.getMonth() + step) },
-    { d -> d.getMonth() },
-    12.0,
-    MONTH,
-  ),
-  "year" to Calendar(
-    { d ->
-      d.setMonth(0.0, 1.0)
-      startOfDay(d)
-    },
-    { d, step -> d.setFullYear(d.getFullYear() + step) },
-    null,
-    Double.POSITIVE_INFINITY,
-    YEAR,
-  ),
-)
+private val CALENDARS: Map<String, Calendar> =
+  mapOf(
+    "millisecond" to
+      Calendar(
+        {},
+        { d, step -> d.setTime(d.getTime() + step) },
+        null,
+        Double.POSITIVE_INFINITY,
+        1.0,
+      ),
+    "second" to
+      Calendar(
+        { d -> d.setTime(d.getTime() - d.getMilliseconds()) },
+        { d, step -> d.setTime(d.getTime() + step * SECOND) },
+        { d -> d.getUTCSeconds() },
+        60.0,
+        SECOND,
+      ),
+    "minute" to
+      Calendar(
+        { d -> d.setTime(d.getTime() - d.getMilliseconds() - d.getSeconds() * SECOND) },
+        { d, step -> d.setTime(d.getTime() + step * MINUTE) },
+        { d -> d.getMinutes() },
+        60.0,
+        MINUTE,
+      ),
+    "hour" to
+      Calendar(
+        { d ->
+          d.setTime(
+            d.getTime() - d.getMilliseconds() - d.getSeconds() * SECOND - d.getMinutes() * MINUTE
+          )
+        },
+        { d, step -> d.setTime(d.getTime() + step * HOUR) },
+        { d -> d.getHours() },
+        24.0,
+        HOUR,
+      ),
+    "day" to
+      Calendar(
+        ::startOfDay,
+        { d, step -> d.setDate(d.getDate() + step) },
+        { d -> d.getDate() - 1 },
+        31.0,
+        DAY,
+      ),
+    "month" to
+      Calendar(
+        { d ->
+          d.setDate(1.0)
+          startOfDay(d)
+        },
+        { d, step -> d.setMonth(d.getMonth() + step) },
+        { d -> d.getMonth() },
+        12.0,
+        MONTH,
+      ),
+    "year" to
+      Calendar(
+        { d ->
+          d.setMonth(0.0, 1.0)
+          startOfDay(d)
+        },
+        { d, step -> d.setFullYear(d.getFullYear() + step) },
+        null,
+        Double.POSITIVE_INFINITY,
+        YEAR,
+      ),
+  )
 
 // Whole units between two floored dates, discounting a change of UTC offset between them.
 private fun span(start: JsDate, end: JsDate, unit: Double): Double =
-  floor((end.getTime() - start.getTime() - (end.getTimezoneOffset() - start.getTimezoneOffset()) * MINUTE) / unit)
+  floor(
+    (end.getTime() -
+      start.getTime() -
+      (end.getTimezoneOffset() - start.getTimezoneOffset()) * MINUTE) / unit
+  )
 
 private fun mod(a: Double, b: Double): Double = ((a % b) + b) % b
 
@@ -185,32 +211,35 @@ private fun tickStep(start: Double, stop: Double, count: Double): Double {
   val step = (stop - start) / maxOf(0.0, count)
   val power = floor(log10(step))
   val error = step / pow(10.0, power)
-  val factor = if (error >= sqrt(50.0)) 10 else if (error >= sqrt(10.0)) 5 else if (error >= 1.4142135623730951) 2 else 1
+  val factor =
+    if (error >= sqrt(50.0)) 10
+    else if (error >= sqrt(10.0)) 5 else if (error >= 1.4142135623730951) 2 else 1
   return pow(10.0, power) * factor
 }
 
 private class Auto(val unit: TickUnit, val step: Double, val ms: Double)
 
-private val AUTO = listOf(
-  Auto("second", 1.0, SECOND),
-  Auto("second", 5.0, 5 * SECOND),
-  Auto("second", 15.0, 15 * SECOND),
-  Auto("second", 30.0, 30 * SECOND),
-  Auto("minute", 1.0, MINUTE),
-  Auto("minute", 5.0, 5 * MINUTE),
-  Auto("minute", 15.0, 15 * MINUTE),
-  Auto("minute", 30.0, 30 * MINUTE),
-  Auto("hour", 1.0, HOUR),
-  Auto("hour", 3.0, 3 * HOUR),
-  Auto("hour", 6.0, 6 * HOUR),
-  Auto("hour", 12.0, 12 * HOUR),
-  Auto("day", 1.0, DAY),
-  Auto("day", 2.0, 2 * DAY),
-  Auto("week", 1.0, WEEK),
-  Auto("month", 1.0, MONTH),
-  Auto("month", 3.0, 3 * MONTH),
-  Auto("year", 1.0, YEAR),
-)
+private val AUTO =
+  listOf(
+    Auto("second", 1.0, SECOND),
+    Auto("second", 5.0, 5 * SECOND),
+    Auto("second", 15.0, 15 * SECOND),
+    Auto("second", 30.0, 30 * SECOND),
+    Auto("minute", 1.0, MINUTE),
+    Auto("minute", 5.0, 5 * MINUTE),
+    Auto("minute", 15.0, 15 * MINUTE),
+    Auto("minute", 30.0, 30 * MINUTE),
+    Auto("hour", 1.0, HOUR),
+    Auto("hour", 3.0, 3 * HOUR),
+    Auto("hour", 6.0, 6 * HOUR),
+    Auto("hour", 12.0, 12 * HOUR),
+    Auto("day", 1.0, DAY),
+    Auto("day", 2.0, 2 * DAY),
+    Auto("week", 1.0, WEEK),
+    Auto("month", 1.0, MONTH),
+    Auto("month", 3.0, 3 * MONTH),
+    Auto("year", 1.0, YEAR),
+  )
 
 // About `count` ticks at round times, chosen the way d3's time scale chooses them.
 fun autoTicks(start: Double, stop: Double, count: Double): List<Double> {
@@ -229,11 +258,20 @@ fun autoTicks(start: Double, stop: Double, count: Double): List<Double> {
   return range(calendar, start, stop, 4 * count + 8) ?: emptyList()
 }
 
-private val RE_INTERVAL = JsRegExp("""^([1-9]\d*)(millisecond|second|minute|hour|day|week|month)$""")
-private val WEEK_STARTS = listOf("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
+private val RE_INTERVAL =
+  JsRegExp("""^([1-9]\d*)(millisecond|second|minute|hour|day|week|month)$""")
+private val WEEK_STARTS =
+  listOf("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
 
-// Ticks for a `tickInterval` such as `1week`, or null when it is not one or asks for more than `limit`.
-fun intervalTicks(interval: String, weekday: String, start: Double, stop: Double, limit: Double): List<Double>? {
+// Ticks for a `tickInterval` such as `1week`, or null when it is not one or asks for more than
+// `limit`.
+fun intervalTicks(
+  interval: String,
+  weekday: String,
+  start: Double,
+  stop: Double,
+  limit: Double,
+): List<Double>? {
   val m = RE_INTERVAL.exec(interval) ?: return null
   val step = jsParseInt(m[1]!!, 10)
   val unit: TickUnit = m[2]!!
@@ -308,7 +346,8 @@ private fun directive(c: String, d: JsDate, p: String): String {
     "b" -> return MONTHS[d.getMonth().toInt()].jsSlice(0, 3)
     "B" -> return MONTHS[d.getMonth().toInt()]
     "c" -> return timeFormat("%x, %X", d)
-    "d", "e" -> return pad(d.getDate(), p, 2)
+    "d",
+    "e" -> return pad(d.getDate(), p, 2)
     "f" -> return pad(d.getMilliseconds(), p, 3) + "000"
     "g" -> return pad(isoThursday(d).getFullYear() % 100, p, 2)
     "G" -> return pad(isoThursday(d).getFullYear() % 10000, p, 4)
@@ -317,7 +356,12 @@ private fun directive(c: String, d: JsDate, p: String): String {
       val h = d.getHours() % 12
       return pad(if (truthy(h)) h else 12.0, p, 2)
     }
-    "j" -> return pad(1 + span(floored(d, CALENDARS["year"]!!), floored(d, CALENDARS["day"]!!), DAY), p, 3)
+    "j" ->
+      return pad(
+        1 + span(floored(d, CALENDARS["year"]!!), floored(d, CALENDARS["day"]!!), DAY),
+        p,
+        3,
+      )
     "L" -> return pad(d.getMilliseconds(), p, 3)
     "m" -> return pad(d.getMonth() + 1, p, 2)
     "M" -> return pad(d.getMinutes(), p, 2)

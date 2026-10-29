@@ -2,10 +2,10 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.sankey
 
+import java.lang.StrictMath.pow
 import pele.PeleError
 import pele.PeleErrorCode
 import pele.PeleErrorInfo
-import java.lang.StrictMath.pow
 
 // 'justify' | 'left' | 'right' | 'center'
 typealias Alignment = String
@@ -70,16 +70,17 @@ private fun orElse(a: Double, b: Double): Double = if (a != 0.0 && !a.isNaN()) a
 // then lets each column settle next to its neighbours so that the bands cross less.
 fun layoutSankey(model: SankeyModel, options: LayoutOptions): SankeyLayout {
   val n = model.nodes.size
-  val links: List<PlacedLink> = model.links.map { link ->
-    PlacedLink(
-      source = link.source.index,
-      target = link.target.index,
-      value = if (link.value.isFinite() && link.value > 0) link.value else 0.0,
-      thickness = 0.0,
-      sourceY = 0.0,
-      targetY = 0.0,
-    )
-  }
+  val links: List<PlacedLink> =
+    model.links.map { link ->
+      PlacedLink(
+        source = link.source.index,
+        target = link.target.index,
+        value = if (link.value.isFinite() && link.value > 0) link.value else 0.0,
+        thickness = 0.0,
+        sourceY = 0.0,
+        targetY = 0.0,
+      )
+    }
   val outgoing = ArrayList<MutableList<Int>>()
   val incoming = ArrayList<MutableList<Int>>()
   for (i in 0 until n) {
@@ -134,7 +135,8 @@ fun layoutSankey(model: SankeyModel, options: LayoutOptions): SankeyLayout {
   val reach = IntArray(n)
   for (qq in n - 1 downTo 0) {
     val i = order[qq]
-    for (k in outgoing[i]) if (reach[i] < reach[links[k].target] + 1) reach[i] = reach[links[k].target] + 1
+    for (k in outgoing[i]) if (reach[i] < reach[links[k].target] + 1)
+      reach[i] = reach[links[k].target] + 1
   }
 
   // Flows are scaled to the largest one, so that sums of huge values stay finite.
@@ -157,7 +159,8 @@ fun layoutSankey(model: SankeyModel, options: LayoutOptions): SankeyLayout {
       layer = depth[i]
       if (incoming[i].size == 0 && outgoing[i].size > 0) {
         layer = layers
-        for (k in outgoing[i]) if (depth[links[k].target] - 1 < layer) layer = depth[links[k].target] - 1
+        for (k in outgoing[i]) if (depth[links[k].target] - 1 < layer)
+          layer = depth[links[k].target] - 1
       }
     } else {
       layer = if (outgoing[i].size > 0) depth[i] else layers - 1
@@ -181,7 +184,9 @@ fun layoutSankey(model: SankeyModel, options: LayoutOptions): SankeyLayout {
 
   var tallest = 1
   for (column in columns) if (column.size > tallest) tallest = column.size
-  val gap = if (tallest > 1) minOf(options.nodePadding, options.height / (tallest - 1)) else options.nodePadding
+  val gap =
+    if (tallest > 1) minOf(options.nodePadding, options.height / (tallest - 1))
+    else options.nodePadding
   var scale = Double.POSITIVE_INFINITY
   for (column in columns) {
     var sum = 0.0
@@ -210,8 +215,7 @@ fun layoutSankey(model: SankeyModel, options: LayoutOptions): SankeyLayout {
       var low = 0.0
       for (k in 0 until 40) {
         val mid = (low + scale) / 2
-        if (fits(mid)) low = mid
-        else scale = mid
+        if (fits(mid)) low = mid else scale = mid
       }
       scale = low
     } else {
@@ -241,8 +245,12 @@ fun layoutSankey(model: SankeyModel, options: LayoutOptions): SankeyLayout {
   // These are the offsets of each band's middle from the top of the node at either end.
   val sourceOffset = DoubleArray(links.size)
   val targetOffset = DoubleArray(links.size)
-  val byTarget = { a: Int, b: Int -> orElse(center(links[a].target) - center(links[b].target), (a - b).toDouble()) }
-  val bySource = { a: Int, b: Int -> orElse(center(links[a].source) - center(links[b].source), (a - b).toDouble()) }
+  val byTarget = { a: Int, b: Int ->
+    orElse(center(links[a].target) - center(links[b].target), (a - b).toDouble())
+  }
+  val bySource = { a: Int, b: Int ->
+    orElse(center(links[a].source) - center(links[b].source), (a - b).toDouble())
+  }
   val byCenter = { a: Int, b: Int -> orElse(center(a) - center(b), (a - b).toDouble()) }
   val stackOut = { i: Int ->
     var y = 0.0
@@ -273,8 +281,7 @@ fun layoutSankey(model: SankeyModel, options: LayoutOptions): SankeyLayout {
     for (i in column) {
       val list = if (forward) incoming[i] else outgoing[i]
       if (list.size == 0) continue
-      if (forward) stackIn(i)
-      else stackOut(i)
+      if (forward) stackIn(i) else stackOut(i)
       var weighted = 0.0
       var weight = 0.0
       var plain = 0.0

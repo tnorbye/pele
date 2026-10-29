@@ -23,9 +23,17 @@ open class KanbanNode(
   var cssClasses: String? = null,
 )
 
-class KanbanSection(node: KanbanNode) : KanbanNode(
-  node.id, node.level, node.label, node.icon, node.assigned, node.ticket, node.priority, node.cssClasses,
-) {
+class KanbanSection(node: KanbanNode) :
+  KanbanNode(
+    node.id,
+    node.level,
+    node.label,
+    node.icon,
+    node.assigned,
+    node.ticket,
+    node.priority,
+    node.cssClasses,
+  ) {
   val items: MutableList<KanbanNode> = ArrayList()
 }
 
@@ -55,13 +63,21 @@ class KanbanDb : KanbanModel, OutlineDb {
       try {
         doc = parseYaml(yaml)
       } catch (error: Exception) {
-        throw PeleError("Metadata of \"${node.id}\" is not valid YAML. ${error.message}", PeleErrorCode.SYNTAX, PeleErrorInfo(type = "kanban"))
+        throw PeleError(
+          "Metadata of \"${node.id}\" is not valid YAML. ${error.message}",
+          PeleErrorCode.SYNTAX,
+          PeleErrorInfo(type = "kanban"),
+        )
       }
       // Mermaid throws a TypeError on metadata that is empty or not a mapping. Here it is ignored.
       if (doc is Map<*, *>) {
         val shape = if (isTruthy(doc["shape"])) jsString(doc["shape"]) else ""
         if (shape != shape.lowercase() || shape.contains('_')) {
-          throw PeleError("No such shape: $shape. Shape names should be lowercase.", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "kanban"))
+          throw PeleError(
+            "No such shape: $shape. Shape names should be lowercase.",
+            PeleErrorCode.SEMANTIC,
+            PeleErrorInfo(type = "kanban"),
+          )
         }
         if (isTruthy(doc["label"])) node.label = jsString(doc["label"])
         if (isTruthy(doc["icon"])) node.icon = jsString(doc["icon"])
@@ -71,10 +87,15 @@ class KanbanDb : KanbanModel, OutlineDb {
       }
     }
 
-    // A node indented less than the first column becomes a card, and Mermaid rejects whatever follows it.
+    // A node indented less than the first column becomes a card, and Mermaid rejects whatever
+    // follows it.
     val m = misplaced
     if (m != null) {
-      throw PeleError("Items without section detected, found section (\"${m.label}\")", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "kanban"))
+      throw PeleError(
+        "Items without section detected, found section (\"${m.label}\")",
+        PeleErrorCode.SEMANTIC,
+        PeleErrorInfo(type = "kanban"),
+      )
     }
     val sections = this.sections
     if (sections.size == 0) this.sectionLevel = level

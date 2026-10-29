@@ -6,29 +6,30 @@ import pele.js.jsTrim
 import pele.syntaxError
 
 // What the keyword tokens stand for, from REQUIREMENT to TRACES in token order.
-private val VALUES: List<String> = listOf(
-  RequirementType.REQUIREMENT,
-  RequirementType.FUNCTIONAL_REQUIREMENT,
-  RequirementType.INTERFACE_REQUIREMENT,
-  RequirementType.PERFORMANCE_REQUIREMENT,
-  RequirementType.PHYSICAL_REQUIREMENT,
-  RequirementType.DESIGN_CONSTRAINT,
-  RiskLevel.LOW_RISK,
-  RiskLevel.MED_RISK,
-  RiskLevel.HIGH_RISK,
-  VerifyType.VERIFY_ANALYSIS,
-  VerifyType.VERIFY_DEMONSTRATION,
-  VerifyType.VERIFY_INSPECTION,
-  VerifyType.VERIFY_TEST,
-  "",
-  Relationships.CONTAINS,
-  Relationships.COPIES,
-  Relationships.DERIVES,
-  Relationships.SATISFIES,
-  Relationships.VERIFIES,
-  Relationships.REFINES,
-  Relationships.TRACES,
-)
+private val VALUES: List<String> =
+  listOf(
+    RequirementType.REQUIREMENT,
+    RequirementType.FUNCTIONAL_REQUIREMENT,
+    RequirementType.INTERFACE_REQUIREMENT,
+    RequirementType.PERFORMANCE_REQUIREMENT,
+    RequirementType.PHYSICAL_REQUIREMENT,
+    RequirementType.DESIGN_CONSTRAINT,
+    RiskLevel.LOW_RISK,
+    RiskLevel.MED_RISK,
+    RiskLevel.HIGH_RISK,
+    VerifyType.VERIFY_ANALYSIS,
+    VerifyType.VERIFY_DEMONSTRATION,
+    VerifyType.VERIFY_INSPECTION,
+    VerifyType.VERIFY_TEST,
+    "",
+    Relationships.CONTAINS,
+    Relationships.COPIES,
+    Relationships.DERIVES,
+    Relationships.SATISFIES,
+    Relationships.VERIFIES,
+    Relationships.REFINES,
+    Relationships.TRACES,
+  )
 
 private fun isStylePart(t: Int): Boolean =
   t == T.ALPHA || t == T.COLON || t == T.BRKT || t == T.MINUS || t == T.SEMICOLON
@@ -148,7 +149,8 @@ fun parseRequirement(src: String, db: RequirementDb) {
       i++
       expect(T.COLONSEP)
       values.add(
-        if (t == T.RISK) keyword(T.LOW_RISK, T.HIGH_RISK) else if (t == T.VERIFYMTHD) keyword(T.VERIFY_ANALYSIS, T.VERIFY_TEST) else string(),
+        if (t == T.RISK) keyword(T.LOW_RISK, T.HIGH_RISK)
+        else if (t == T.VERIFYMTHD) keyword(T.VERIFY_ANALYSIS, T.VERIFY_TEST) else string()
       )
       fields.add(t)
       expect(T.NEWLINE)
@@ -182,7 +184,10 @@ fun parseRequirement(src: String, db: RequirementDb) {
       continue
     } else if (t >= T.direction_tb && t <= T.direction_lr) {
       i++
-      db.setDirection(if (t == T.direction_tb) "TB" else if (t == T.direction_bt) "BT" else if (t == T.direction_rl) "RL" else "LR")
+      db.setDirection(
+        if (t == T.direction_tb) "TB"
+        else if (t == T.direction_bt) "BT" else if (t == T.direction_rl) "RL" else "LR"
+      )
     } else if (t >= T.REQUIREMENT && t <= T.DESIGN_CONSTRAINT) {
       val type = keyword(T.REQUIREMENT, T.DESIGN_CONSTRAINT)
       val name = string()

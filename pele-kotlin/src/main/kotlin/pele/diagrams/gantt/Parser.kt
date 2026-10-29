@@ -2,9 +2,9 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.gantt
 
-import pele.syntaxError
 import pele.js.jsSlice
 import pele.js.jsTrim
+import pele.syntaxError
 
 // The calls the grammar's actions make, under Mermaid's names.
 interface GanttBuilder {
@@ -44,7 +44,8 @@ interface GanttBuilder {
 }
 
 // PORT: renamed because dates.ts's WEEKDAYS is a package-level name here.
-private val WEEKDAY_NAMES = listOf("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+private val WEEKDAY_NAMES =
+  listOf("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 
 private const val LINE =
   "'EOF', 'SPACE', 'NL', 'weekday_monday', 'weekday_tuesday', 'weekday_wednesday', 'weekday_thursday', " +
@@ -53,29 +54,31 @@ private const val LINE =
     "'acc_title', 'acc_descr', 'acc_descr_multiline_value', 'section', 'taskTxt', 'click'"
 
 // Tokens that can start a line, which are also the only ones that can follow a complete statement.
-private val STARTS_LINE: BooleanArray = BooleanArray(T.EOF + 1).also { starts ->
-  for (t in T.weekday_monday..T.weekend_saturday) starts[t] = true
-  val others = listOf(
-    T.EOF,
-    T.NL,
-    T.dateFormat,
-    T.inclusiveEndDates,
-    T.topAxis,
-    T.axisFormat,
-    T.tickInterval,
-    T.excludes,
-    T.includes,
-    T.todayMarker,
-    T.title,
-    T.acc_title,
-    T.acc_descr,
-    T.acc_descr_multiline_value,
-    T.section,
-    T.taskTxt,
-    T.click,
-  )
-  for (t in others) starts[t] = true
-}
+private val STARTS_LINE: BooleanArray =
+  BooleanArray(T.EOF + 1).also { starts ->
+    for (t in T.weekday_monday..T.weekend_saturday) starts[t] = true
+    val others =
+      listOf(
+        T.EOF,
+        T.NL,
+        T.dateFormat,
+        T.inclusiveEndDates,
+        T.topAxis,
+        T.axisFormat,
+        T.tickInterval,
+        T.excludes,
+        T.includes,
+        T.todayMarker,
+        T.title,
+        T.acc_title,
+        T.acc_descr,
+        T.acc_descr_multiline_value,
+        T.section,
+        T.taskTxt,
+        T.click,
+      )
+    for (t in others) starts[t] = true
+  }
 
 fun parseGantt(src: String, db: GanttBuilder) {
   val tokens = tokenize(src)
@@ -86,7 +89,12 @@ fun parseGantt(src: String, db: GanttBuilder) {
 
   fun fail(expected: String): Nothing {
     val t = types[i]
-    throw syntaxError("gantt", src, starts[i], "Expecting $expected, got '${if (t == T.END) "1" else TOKEN_NAMES[t]}'")
+    throw syntaxError(
+      "gantt",
+      src,
+      starts[i],
+      "Expecting $expected, got '${if (t == T.END) "1" else TOKEN_NAMES[t]}'",
+    )
   }
 
   // Mermaid's parser runs a statement's action only after seeing that the next token can follow it.

@@ -2,12 +2,12 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.block
 
+import kotlin.math.floor
 import pele.PeleError
 import pele.PeleErrorCode
 import pele.PeleErrorInfo
 import pele.js.isInteger
 import pele.js.jsStr
-import kotlin.math.floor
 
 open class Cell(
   val children: MutableList<Cell> = ArrayList(),
@@ -42,10 +42,18 @@ class BlockPosition(val px: Double, val py: Double)
 
 fun calculateBlockPosition(columns: Double, position: Double): BlockPosition {
   if (columns == 0.0 || !isInteger(columns)) {
-    throw PeleError("Columns must be an integer !== 0.", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "block"))
+    throw PeleError(
+      "Columns must be an integer !== 0.",
+      PeleErrorCode.SEMANTIC,
+      PeleErrorInfo(type = "block"),
+    )
   }
   if (position < 0 || !isInteger(position)) {
-    throw PeleError("Position must be a non-negative integer." + jsStr(position), PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "block"))
+    throw PeleError(
+      "Position must be a non-negative integer." + jsStr(position),
+      PeleErrorCode.SEMANTIC,
+      PeleErrorInfo(type = "block"),
+    )
   }
   if (columns < 0) return BlockPosition(position, 0.0)
   return BlockPosition(position % columns, floor(position / columns))
@@ -65,7 +73,8 @@ private fun measure(box: Cell, gap: Double, inset: Double) {
     val pos = calculateBlockPosition(columns, position)
     val px = pos.px
     val py = pos.py
-    // Mermaid lets a block wider than the rest of its row stick out of the grid. Here it stops at the last column.
+    // Mermaid lets a block wider than the rest of its row stick out of the grid. Here it stops at
+    // the last column.
     var span = if (child.span >= 1) minOf(child.span, MAX_SPAN) else 1.0
     if (columns > 0 && span > columns - px) span = columns - px
     child.span = span
@@ -125,7 +134,10 @@ private fun arrange(box: Cell, gap: Double, inset: Double) {
       row++
     }
     val before = gapAtOffsets(offsets, child.col) ?: 0.0
-    child.w = cw * child.span + gap * (child.span - 1) + (gapAtOffsets(offsets, child.col + child.span - 1) ?: 0.0) - before
+    child.w =
+      cw * child.span +
+        gap * (child.span - 1) +
+        (gapAtOffsets(offsets, child.col + child.span - 1) ?: 0.0) - before
     child.h = heights[row] * scale + share
     child.x = left + child.col * (cw + gap) + before + child.w / 2
     child.y = top + child.h / 2

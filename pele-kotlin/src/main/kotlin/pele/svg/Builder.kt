@@ -48,13 +48,14 @@ fun esc(text: String): String {
   var sb: StringBuilder? = null
   var last = 0
   for (i in text.indices) {
-    val replacement = when (text[i]) {
-      '&' -> "&amp;"
-      '<' -> "&lt;"
-      '>' -> "&gt;"
-      '"' -> "&quot;"
-      else -> if (isInvalidXmlUnit(text, i)) "" else continue
-    }
+    val replacement =
+      when (text[i]) {
+        '&' -> "&amp;"
+        '<' -> "&lt;"
+        '>' -> "&gt;"
+        '"' -> "&quot;"
+        else -> if (isInvalidXmlUnit(text, i)) "" else continue
+      }
     if (sb == null) sb = StringBuilder(text.length + 16)
     sb.append(text, last, i).append(replacement)
     last = i + 1
@@ -71,14 +72,15 @@ fun escText(text: String): String = esc(decodeEntities(text))
 
 // The two decimals of a coordinate, by hundredths. Building the string from integers is much
 // faster than converting a double.
-private val FRACTION = Array(100) { i ->
-  when {
-    i == 0 -> ""
-    i % 10 == 0 -> "." + (i / 10)
-    i < 10 -> ".0$i"
-    else -> ".$i"
+private val FRACTION =
+  Array(100) { i ->
+    when {
+      i == 0 -> ""
+      i % 10 == 0 -> "." + (i / 10)
+      i < 10 -> ".0$i"
+      else -> ".$i"
+    }
   }
-}
 
 fun num(value: Double): String {
   // PORT: the rounded value stays a Double, so NaN, infinities and huge values print as in JS.
@@ -102,7 +104,13 @@ fun num(value: Double): String {
 fun num(value: Int): String = value.toString()
 
 // Writes a measured label as SVG text centered on (cx, cy).
-fun labelSvg(label: Label, cx: Double, cy: Double, attrsIn: String, icons: IconResolver? = null): String {
+fun labelSvg(
+  label: Label,
+  cx: Double,
+  cy: Double,
+  attrsIn: String,
+  icons: IconResolver? = null,
+): String {
   var attrs = attrsIn
   val lines = label.lines
   if (lines.isEmpty()) return ""
@@ -134,19 +142,23 @@ fun labelSvg(label: Label, cx: Double, cy: Double, attrsIn: String, icons: IconR
       for (span in line) {
         val spanMath = span.math
         if (spanMath != null) {
-          val box = "x=\"${num(x)}\" y=\"${num(mid - spanMath.height / 2)}\" width=\"${num(spanMath.width)}\" height=\"${num(spanMath.height)}\""
+          val box =
+            "x=\"${num(x)}\" y=\"${num(mid - spanMath.height / 2)}\" width=\"${num(spanMath.width)}\" height=\"${num(spanMath.height)}\""
           if (math == null) math = mathLook(given)
           extra.append(
-            if (math.halo == null) mathSvg(spanMath, box, label.size, math.attrs) else "<rect $box rx=\"2\" fill=\"${math.halo}\"/>",
+            if (math.halo == null) mathSvg(spanMath, box, label.size, math.attrs)
+            else "<rect $box rx=\"2\" fill=\"${math.halo}\"/>"
           )
         } else if (span.icon != null) {
           val side = label.size * 1.1
           val inner = icons?.invoke(span.icon) ?: ""
           extra.append(
-            "<svg class=\"pele-icon\" data-icon=\"${escText(span.icon)}\" x=\"${num(x)}\" y=\"${num(mid - side / 2)}\" width=\"${num(side)}\" height=\"${num(side)}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">$inner</svg>",
+            "<svg class=\"pele-icon\" data-icon=\"${escText(span.icon)}\" x=\"${num(x)}\" y=\"${num(mid - side / 2)}\" width=\"${num(side)}\" height=\"${num(side)}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">$inner</svg>"
           )
         } else if (span.text != "") {
-          body.append("<tspan x=\"${num(x)}\" y=\"${num(y)}\" text-anchor=\"start\"${spanStyle(span.style and shared.inv())}>${esc(span.text)}</tspan>")
+          body.append(
+            "<tspan x=\"${num(x)}\" y=\"${num(y)}\" text-anchor=\"start\"${spanStyle(span.style and shared.inv())}>${esc(span.text)}</tspan>"
+          )
         }
         x += span.width
       }
@@ -178,12 +190,16 @@ private fun mathLook(attrs: String): MathLook {
   val fill = (RE_STYLE_FILL.exec(style)?.get(1) ?: RE_FILL.exec(attrs)?.get(1) ?: "").jsTrim()
   if (fill == "none") return MathLook("", RE_STROKE.exec(attrs)?.get(1) ?: "none")
   val opacity = RE_STYLE_OPACITY.exec(style)?.get(1)?.jsTrim()
-  return MathLook((if (fill == "") "" else " color=\"$fill\"") + (if (!opacity.isNullOrEmpty()) " opacity=\"$opacity\"" else ""))
+  return MathLook(
+    (if (fill == "") "" else " color=\"$fill\"") +
+      (if (!opacity.isNullOrEmpty()) " opacity=\"$opacity\"" else "")
+  )
 }
 
 // Resolver markup is trusted.
 private fun mathSvg(math: MathMarkup, box: String, size: Double, attrs: String): String {
-  if (math is MathMarkup.Svg) return "<svg class=\"pele-math\" $box overflow=\"visible\"$attrs>${math.svg}</svg>"
+  if (math is MathMarkup.Svg)
+    return "<svg class=\"pele-math\" $box overflow=\"visible\"$attrs>${math.svg}</svg>"
   math as MathMarkup.Html
   return "<foreignObject class=\"pele-math\" $box overflow=\"visible\"$attrs>" +
     "<div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:${num(size)}px;line-height:normal;white-space:nowrap\">${math.html}</div>" +

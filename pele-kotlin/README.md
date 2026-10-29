@@ -50,6 +50,7 @@ rendered by upstream's JS bundle; they are checked in, so Node is needed only to
 ./gradlew testSmallStack           # API and large flat inputs with a 1 MB thread stack
 ./gradlew benchmarkJourney         # rendering time and cumulative allocation by task count
 ./gradlew test --tests pele.GoldenSvgTest -Dpele.type=flowchart -Dpele.svgOut=/tmp/out
+./gradlew ktfmtFormat              # format the Kotlin sources (ktfmt, Google style); ktfmtCheck verifies
 scripts/check_port_rules.sh        # porting rules lint and 1:1 file mapping
 
 # Regenerate goldens / fuzz against upstream (Node 24, from the repo root):

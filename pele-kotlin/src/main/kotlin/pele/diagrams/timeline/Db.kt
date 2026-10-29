@@ -39,6 +39,7 @@ class TimelineDb : TimelineModel {
   override var accDescr: String? = null
   override var direction: String = "LR"
     private set
+
   override val sections: MutableList<String> = ArrayList()
   override val periods: MutableList<TimelinePeriod> = ArrayList()
 
@@ -77,14 +78,19 @@ class TimelineDb : TimelineModel {
         if (!event.isNullOrEmpty()) mutableListOf(event) else ArrayList(),
         currentSection,
         this.sections.size - 1,
-      ),
+      )
     )
   }
 
   fun addEvent(event: String) {
     val period = this.periods.getOrNull(this.periods.size - 1)
     // Mermaid fails here too, with a TypeError.
-    if (period == null) throw PeleError("An event needs a time period before it.", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "timeline"))
+    if (period == null)
+      throw PeleError(
+        "An event needs a time period before it.",
+        PeleErrorCode.SEMANTIC,
+        PeleErrorInfo(type = "timeline"),
+      )
     period.events.add(event)
   }
 }

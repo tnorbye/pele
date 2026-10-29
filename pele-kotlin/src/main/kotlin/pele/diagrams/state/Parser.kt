@@ -13,10 +13,15 @@ import pele.syntaxError
 // The calls Mermaid's grammar makes on its `yy` object.
 interface StateBuilder {
   fun setRootDoc(doc: MutableList<Any>)
+
   fun trimColon(text: String): String
+
   fun getDividerId(): String
+
   fun setDirection(dir: String)
+
   fun setAccTitle(text: String)
+
   fun setAccDescription(text: String)
 }
 
@@ -39,7 +44,16 @@ fun parseState(src: String, db: StateBuilder): MutableList<Any> {
     if (t == T.ERROR) {
       if (error != null) {
         val loc = locate(src, starts[i])
-        throw PeleError(error, PeleErrorCode.SYNTAX, PeleErrorInfo(type = "state", line = loc.line, column = loc.column, snippet = loc.snippet))
+        throw PeleError(
+          error,
+          PeleErrorCode.SYNTAX,
+          PeleErrorInfo(
+            type = "state",
+            line = loc.line,
+            column = loc.column,
+            snippet = loc.snippet,
+          ),
+        )
       }
       throw syntaxError("state", src, starts[i], "", true)
     }
@@ -55,7 +69,12 @@ fun parseState(src: String, db: StateBuilder): MutableList<Any> {
     val id = texts[i++].jsTrim()
     if (types[i] != T.STYLE_SEPARATOR) return StateStmt(id = id, type = "default", description = "")
     i++
-    return StateStmt(id = id, classes = arrayListOf(expect(T.ID).jsTrim()), type = "default", description = "")
+    return StateStmt(
+      id = id,
+      classes = arrayListOf(expect(T.ID).jsTrim()),
+      type = "default",
+      description = "",
+    )
   }
 
   while (types[i] == T.NL) i++
@@ -80,7 +99,8 @@ fun parseState(src: String, db: StateBuilder): MutableList<Any> {
     val t = types[i]
     when (t) {
       T.NL -> i++
-      T.ID, T.EDGE_STATE -> {
+      T.ID,
+      T.EDGE_STATE -> {
         val first = idStatement()
         if (types[i] == T.DESCR) {
           first.description = db.trimColon(texts[i++])
@@ -103,7 +123,8 @@ fun parseState(src: String, db: StateBuilder): MutableList<Any> {
         expect(T.WIDTH)
         add(texts[i - 2])
       }
-      T.COMPOSIT_STATE -> if (types[i + 1] == T.STRUCT_START) open(texts[i++], "") else add(texts[i++])
+      T.COMPOSIT_STATE ->
+        if (types[i + 1] == T.STRUCT_START) open(texts[i++], "") else add(texts[i++])
       T.STATE_DESCR -> {
         val description = texts[i++]
         expect(T.AS)
@@ -112,7 +133,13 @@ fun parseState(src: String, db: StateBuilder): MutableList<Any> {
           open(id, description)
         } else if (id.contains(':')) {
           val parts = id.jsSplit(":")
-          add(StateStmt(id = parts[0], type = "default", description = arrayListOf(description.jsTrim(), parts[1])))
+          add(
+            StateStmt(
+              id = parts[0],
+              type = "default",
+              description = arrayListOf(description.jsTrim(), parts[1]),
+            )
+          )
         } else {
           add(StateStmt(id = id, type = "default", description = description.jsTrim()))
         }
@@ -138,7 +165,10 @@ fun parseState(src: String, db: StateBuilder): MutableList<Any> {
           add(keyword)
         }
       }
-      T.direction_tb, T.direction_bt, T.direction_rl, T.direction_lr -> {
+      T.direction_tb,
+      T.direction_bt,
+      T.direction_rl,
+      T.direction_lr -> {
         val value = DIRECTIONS[t - T.direction_tb]
         i++
         db.setDirection(value)

@@ -2,10 +2,10 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.block
 
-import pele.js.jsTrim
-import pele.svg.num
 import kotlin.math.max
 import kotlin.math.min
+import pele.js.jsTrim
+import pele.svg.num
 
 const val RIGHT = 1
 const val LEFT = 2
@@ -60,12 +60,22 @@ fun arrowSize(mask: Int, tw: Double, th: Double): ArrowSize {
   if (axis == "x") {
     val h = max(th + 8, 14.0) + 2 * OVERHANG
     val depth = min(h / 2, MAX_DEPTH)
-    return ArrowSize(max(tw + 12, 16.0) + depth * (if (mask == (RIGHT or LEFT)) 2 else 1), h, (across * depth) / 2, 0.0)
+    return ArrowSize(
+      max(tw + 12, 16.0) + depth * (if (mask == (RIGHT or LEFT)) 2 else 1),
+      h,
+      (across * depth) / 2,
+      0.0,
+    )
   }
   if (axis == "y") {
     val w = max(tw + 16, 14.0) + 2 * OVERHANG
     val depth = min(w / 2, MAX_DEPTH)
-    return ArrowSize(w, max(th + 8, 16.0) + depth * (if (mask == (UP or DOWN)) 2 else 1), 0.0, (along * depth) / 2)
+    return ArrowSize(
+      w,
+      max(th + 8, 16.0) + depth * (if (mask == (UP or DOWN)) 2 else 1),
+      0.0,
+      (along * depth) / 2,
+    )
   }
   return ArrowSize(
     max(tw + 16, 24.0) + NUB * (bit(mask, LEFT) + bit(mask, RIGHT)),

@@ -70,7 +70,10 @@ private fun keyValue(style: String): Pair<String, String> {
   if (colon == -1) return Pair(s, "undefined")
   val rest = s.jsSlice(colon + 1).jsTrimStart()
   val next = rest.indexOf(':')
-  return Pair(s.jsSlice(0, colon).jsTrimEnd(), if (next == -1) rest else rest.jsSlice(0, next).jsTrimEnd())
+  return Pair(
+    s.jsSlice(0, colon).jsTrimEnd(),
+    if (next == -1) rest else rest.jsSlice(0, next).jsTrimEnd(),
+  )
 }
 
 fun parseStyles(styles: List<String>): PointStyle {
@@ -90,13 +93,18 @@ fun parseStyles(styles: List<String>): PointStyle {
       if (!RE_PIXELS.test(value)) throw invalid(key, value, "number of pixels (eg. 10px)")
       out.strokeWidth = value
     } else {
-      throw PeleError("style named $key is not supported.", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "quadrantChart"))
+      throw PeleError(
+        "style named $key is not supported.",
+        PeleErrorCode.SEMANTIC,
+        PeleErrorInfo(type = "quadrantChart"),
+      )
     }
   }
   return out
 }
 
-private fun trimmed(label: QuadrantText): QuadrantText = QuadrantText(label.text.jsTrim(), label.type)
+private fun trimmed(label: QuadrantText): QuadrantText =
+  QuadrantText(label.text.jsTrim(), label.type)
 
 private val RE_LEADING = JsRegExp("""^\s+""", "g")
 private val RE_INDENT = JsRegExp("""\n\s+""", "g")
@@ -149,7 +157,16 @@ class QuadrantDb : QuadrantModel {
   fun addPoint(label: QuadrantText, className: String, x: String, y: String, styles: List<String>) {
     val style = parseStyles(styles)
     this.points.add(
-      QuadrantPoint(jsNumber(x), jsNumber(y), trimmed(label), className, style.radius, style.color, style.strokeColor, style.strokeWidth),
+      QuadrantPoint(
+        jsNumber(x),
+        jsNumber(y),
+        trimmed(label),
+        className,
+        style.radius,
+        style.color,
+        style.strokeColor,
+        style.strokeWidth,
+      )
     )
   }
 

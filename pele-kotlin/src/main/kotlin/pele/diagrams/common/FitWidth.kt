@@ -33,7 +33,9 @@ fun fitWidth(
 // The width a title may take before it wraps.
 fun titleRoom(options: RenderOptions): Double {
   val available = options.maxWidth
-  return if (available != null && available > 0) maxOf(80.0, available - 2 * (options.padding ?: 8.0)) else 4000.0
+  return if (available != null && available > 0)
+    maxOf(80.0, available - 2 * (options.padding ?: 8.0))
+  else 4000.0
 }
 
 // For a chart that is drawn to a set width: its own, or the host's when that is smaller.
@@ -51,9 +53,16 @@ private const val BREAKPOINT = 640.0
 fun turnToFit(options: RenderOptions, draw: (down: Boolean) -> Rendered): Rendered {
   val across = draw(false)
   val available = options.maxWidth
-  if (options.autoDirection == false || available == null || !(available > 0) || across.width <= available) return across
+  if (
+    options.autoDirection == false ||
+      available == null ||
+      !(available > 0) ||
+      across.width <= available
+  )
+    return across
   val breakpoint = options.directionBreakpoint
-  if (available >= (if (breakpoint != null && breakpoint > 0) breakpoint else BREAKPOINT)) return across
+  if (available >= (if (breakpoint != null && breakpoint > 0) breakpoint else BREAKPOINT))
+    return across
   val down = draw(true)
   return if (down.width < across.width) down else across
 }

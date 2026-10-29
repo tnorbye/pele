@@ -48,7 +48,8 @@ private fun annotationAt(src: String, at: Int): Boolean {
 private fun matchBareName(src: String, at: Int, previous: Int): Int {
   val first = src.charCodeAt(at)
   if (isBlank(first) || first == 10 || first == 13 || first == 34 || first == 39) return -1
-  if (src.startsWith(":::", at) || src.startsWith("icon(", at) || src.startsWith("##", at)) return -1
+  if (src.startsWith(":::", at) || src.startsWith("icon(", at) || src.startsWith("##", at))
+    return -1
   val n = src.length
   var i = at + 1
   while (i < n) {
@@ -66,27 +67,39 @@ private fun matchBareName(src: String, at: Int, previous: Int): Int {
   return i
 }
 
-private val BARE_NAME = TokenType(
-  name = "BARE_NAME",
-  pattern = JsRegExp("""(?!:::|icon\(|##)[^ \t\n\r"'](?:(?![ \t]+:::[ \t]*[A-Za-z_]|[ \t]+icon\(|[ \t]+##)[^\n\r])*""", "y"),
-  match = ::matchBareName,
-)
+private val BARE_NAME =
+  TokenType(
+    name = "BARE_NAME",
+    pattern =
+      JsRegExp(
+        """(?!:::|icon\(|##)[^ \t\n\r"'](?:(?![ \t]+:::[ \t]*[A-Za-z_]|[ \t]+icon\(|[ \t]+##)[^\n\r])*""",
+        "y",
+      ),
+    match = ::matchBareName,
+  )
 
-val TREEVIEW_TOKENS: List<TokenType> = listOf(
-  keyword("treeView-beta").copy(longer = listOf(BARE_NAME)),
-  accDescr(),
-  ACC_TITLE,
-  titleBefore("""(?!%%)[^\n\r]"""),
-  TokenType(name = "CLASS_ANNOTATION", pattern = JsRegExp("""[ \t]+:::[ \t]*[A-Za-z_][\w-]*""", "y")),
-  TokenType(name = "ICON_ANNOTATION", pattern = JsRegExp("""[ \t]+icon\([\w-]*(?::[\w-]+)?\)""", "y")),
-  TokenType(name = "DESC_ANNOTATION", pattern = JsRegExp("""[ \t]+##[^\n\r]*""", "y")),
-  TokenType(name = "INDENTATION", pattern = JsRegExp("""[ \t]{1,}""", "y")),
-  TokenType(name = "QUOTED_NAME", pattern = JsRegExp(""""[^"]*"|'[^']*'""", "y")),
-  TokenType(name = "WS", pattern = JsRegExp("""[ \t]+""", "y"), hidden = true),
-  TokenType(name = "ML_COMMENT", pattern = JsRegExp("""\%\%[^\n]*""", "y"), hidden = true),
-  TokenType(name = "NL", pattern = JsRegExp("""\r?\n""", "y"), hidden = true),
-  BARE_NAME,
-)
+val TREEVIEW_TOKENS: List<TokenType> =
+  listOf(
+    keyword("treeView-beta").copy(longer = listOf(BARE_NAME)),
+    accDescr(),
+    ACC_TITLE,
+    titleBefore("""(?!%%)[^\n\r]"""),
+    TokenType(
+      name = "CLASS_ANNOTATION",
+      pattern = JsRegExp("""[ \t]+:::[ \t]*[A-Za-z_][\w-]*""", "y"),
+    ),
+    TokenType(
+      name = "ICON_ANNOTATION",
+      pattern = JsRegExp("""[ \t]+icon\([\w-]*(?::[\w-]+)?\)""", "y"),
+    ),
+    TokenType(name = "DESC_ANNOTATION", pattern = JsRegExp("""[ \t]+##[^\n\r]*""", "y")),
+    TokenType(name = "INDENTATION", pattern = JsRegExp("""[ \t]{1,}""", "y")),
+    TokenType(name = "QUOTED_NAME", pattern = JsRegExp(""""[^"]*"|'[^']*'""", "y")),
+    TokenType(name = "WS", pattern = JsRegExp("""[ \t]+""", "y"), hidden = true),
+    TokenType(name = "ML_COMMENT", pattern = JsRegExp("""\%\%[^\n]*""", "y"), hidden = true),
+    TokenType(name = "NL", pattern = JsRegExp("""\r?\n""", "y"), hidden = true),
+    BARE_NAME,
+  )
 
 class TreeNodeAst(
   var indent: Double? = null,
@@ -132,8 +145,7 @@ fun parseTreeView(src: String): TreeViewAst {
   while (true) {
     if (r.kind == T.accDescr) ast.accDescr = accDescrValue(r.take())
     else if (r.kind == T.accTitle) ast.accTitle = accTitleValue(r.take())
-    else if (r.kind == T.title) ast.title = titleValue(r.take())
-    else break
+    else if (r.kind == T.title) ast.title = titleValue(r.take()) else break
   }
   while (r.kind != -1) {
     val node = TreeNodeAst(name = "")
@@ -147,9 +159,12 @@ fun parseTreeView(src: String): TreeViewAst {
       r.fail("a name")
     }
     while (true) {
-      if (r.kind == T.classAnnotation) node.classAnnotation = convertValue("CLASS_ANNOTATION", r.take()) as String
-      else if (r.kind == T.iconAnnotation) node.iconAnnotation = convertValue("ICON_ANNOTATION", r.take()) as String
-      else if (r.kind == T.descAnnotation) node.descAnnotation = convertValue("DESC_ANNOTATION", r.take()) as String
+      if (r.kind == T.classAnnotation)
+        node.classAnnotation = convertValue("CLASS_ANNOTATION", r.take()) as String
+      else if (r.kind == T.iconAnnotation)
+        node.iconAnnotation = convertValue("ICON_ANNOTATION", r.take()) as String
+      else if (r.kind == T.descAnnotation)
+        node.descAnnotation = convertValue("DESC_ANNOTATION", r.take()) as String
       else break
     }
     ast.nodes.add(node)

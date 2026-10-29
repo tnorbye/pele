@@ -12,23 +12,26 @@ private fun flags(vararg tokens: Int): ByteArray {
 }
 
 // PORT: an index outside the array reads as undefined in JS, which is neither 0 nor 1.
-private fun flag(array: ByteArray, t: Int): Int = if (t >= 0 && t < array.size) array[t].toInt() else -1
+private fun flag(array: ByteArray, t: Int): Int =
+  if (t >= 0 && t < array.size) array[t].toInt() else -1
 
-private val WORD = flags(
-  T.PUNCTUATION,
-  T.AMP,
-  T.NUM,
-  T.ALPHA,
-  T.COMMA,
-  T.PLUS,
-  T.EQUALS,
-  T.MULT,
-  T.DOT,
-  T.BRKT,
-  T.UNDERSCORE,
-  T.UNICODE_TEXT,
-)
-private val ID = flags(T.ALPHA, T.NUM, T.MINUS, T.COMMA, T.COLON, T.AMP, T.BRKT, T.MULT, T.UNICODE_TEXT)
+private val WORD =
+  flags(
+    T.PUNCTUATION,
+    T.AMP,
+    T.NUM,
+    T.ALPHA,
+    T.COMMA,
+    T.PLUS,
+    T.EQUALS,
+    T.MULT,
+    T.DOT,
+    T.BRKT,
+    T.UNDERSCORE,
+    T.UNICODE_TEXT,
+  )
+private val ID =
+  flags(T.ALPHA, T.NUM, T.MINUS, T.COMMA, T.COLON, T.AMP, T.BRKT, T.MULT, T.UNICODE_TEXT)
 private val STYLE = flags(T.ALPHA, T.NUM, T.COLON, T.SPACE, T.BRKT, T.MINUS)
 private val EOL = flags(T.NEWLINE, T.SEMI, T.EOF)
 
@@ -47,7 +50,12 @@ fun parseQuadrant(src: String, db: QuadrantDb) {
   fun fail(expected: String): Nothing {
     val t = typeAt(i)
     if (t == T.ERROR) throw syntaxError("quadrantChart", src, starts[i], "", true)
-    throw syntaxError("quadrantChart", src, starts[i], "Expecting $expected, got '${TOKEN_NAMES[t]}'")
+    throw syntaxError(
+      "quadrantChart",
+      src,
+      starts[i],
+      "Expecting $expected, got '${TOKEN_NAMES[t]}'",
+    )
   }
 
   fun expect(type: Int): String {
@@ -61,7 +69,8 @@ fun parseQuadrant(src: String, db: QuadrantDb) {
     val first = typeAt(i)
     if (!isText(first)) fail(TEXT_TOKENS)
     var s = texts[i++]
-    while (flag(WORD, typeAt(i)) == 1 || typeAt(i) == T.SPACE || typeAt(i) == T.MINUS) s += texts[i++]
+    while (flag(WORD, typeAt(i)) == 1 || typeAt(i) == T.SPACE || typeAt(i) == T.MINUS) s +=
+      texts[i++]
     return QuadrantText(s, if (first == T.MD_STR) "markdown" else "text")
   }
 
@@ -93,14 +102,14 @@ fun parseQuadrant(src: String, db: QuadrantDb) {
         expect(T.SPACE)
         db.addClass(id, styles())
       }
-      T.X_AXIS, T.Y_AXIS -> {
+      T.X_AXIS,
+      T.Y_AXIS -> {
         i++
         val from = text()
         var to: QuadrantText? = null
         if (typeAt(i) == T.DELIMITER) {
           i++
-          if (isText(typeAt(i))) to = text()
-          else from.text += " ⟶ "
+          if (isText(typeAt(i))) to = text() else from.text += " ⟶ "
         }
         if (t == T.X_AXIS) {
           db.setXAxisLeftText(from)
@@ -110,7 +119,10 @@ fun parseQuadrant(src: String, db: QuadrantDb) {
           if (to != null) db.setYAxisTopText(to)
         }
       }
-      T.QUADRANT_1, T.QUADRANT_2, T.QUADRANT_3, T.QUADRANT_4 -> {
+      T.QUADRANT_1,
+      T.QUADRANT_2,
+      T.QUADRANT_3,
+      T.QUADRANT_4 -> {
         i++
         when (t - T.QUADRANT_1) {
           0 -> db.setQuadrant1Text(text())
@@ -139,7 +151,13 @@ fun parseQuadrant(src: String, db: QuadrantDb) {
           expect(T.point_start)
           val x = expect(T.point_x)
           val y = expect(T.point_y)
-          db.addPoint(label, className, x, y, if (flag(STYLE, typeAt(i)) == 1) styles() else emptyList())
+          db.addPoint(
+            label,
+            className,
+            x,
+            y,
+            if (flag(STYLE, typeAt(i)) == 1) styles() else emptyList(),
+          )
         }
       }
     }

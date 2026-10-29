@@ -2,6 +2,9 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.packet
 
+import java.util.IdentityHashMap
+import kotlin.math.ceil
+import kotlin.math.floor
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -23,17 +26,21 @@ import pele.text.Style
 import pele.text.decodeEntities
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import java.util.IdentityHashMap
-import kotlin.math.ceil
-import kotlin.math.floor
 
 fun renderPacket(model: PacketModel, config: Config, options: RenderOptions): Rendered =
   turnToFit(options) { down -> draw(model, config, options, down) }
 
-// PORT: Math.log2 is exact for powers of two; count is a whole number >= 1, so floor(log2) is its exponent.
-private fun floorLog2(count: Double): Double = if (count.isInfinite()) count else Math.getExponent(count).toDouble()
+// PORT: Math.log2 is exact for powers of two; count is a whole number >= 1, so floor(log2) is its
+// exponent.
+private fun floorLog2(count: Double): Double =
+  if (count.isInfinite()) count else Math.getExponent(count).toDouble()
 
-private fun draw(model: PacketModel, config: Config, options: RenderOptions, down: Boolean): Rendered {
+private fun draw(
+  model: PacketModel,
+  config: Config,
+  options: RenderOptions,
+  down: Boolean,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val labelSize = jsRound(size * 0.875)
   val bitSize = jsRound(size * 0.625)
@@ -64,7 +71,14 @@ private fun draw(model: PacketModel, config: Config, options: RenderOptions, dow
     val whole = ArrayList<PacketBlock>()
     for (row in model.rows) for (block in row) {
       val prev = whole.lastOrNull()
-      if (prev != null && piece(prev) && piece(block) && prev.label == block.label && block.start == prev.end + 1 && block.start % model.bitsPerRow == 0.0) {
+      if (
+        prev != null &&
+          piece(prev) &&
+          piece(block) &&
+          prev.label == block.label &&
+          block.start == prev.end + 1 &&
+          block.start % model.bitsPerRow == 0.0
+      ) {
         prev.end = block.end
         prev.bits = prev.end - prev.start
       } else {
@@ -86,11 +100,13 @@ private fun draw(model: PacketModel, config: Config, options: RenderOptions, dow
     rows = built
   }
   val labels = IdentityHashMap<PacketBlock, Label>()
-  if (down) for (row in rows) for (block in row) {
-    val room = maxOf(1.0, (block.end - block.start + 1) * bitWidth - minOf(paddingX, bitWidth - 1) - 6)
-    val label = literalLabel(decodeEntities(block.label).jsTrim(), measurer, labelSize, room)
-    labels[block] = label
-  }
+  if (down)
+    for (row in rows) for (block in row) {
+      val room =
+        maxOf(1.0, (block.end - block.start + 1) * bitWidth - minOf(paddingX, bitWidth - 1) - 6)
+      val label = literalLabel(decodeEntities(block.label).jsTrim(), measurer, labelSize, room)
+      labels[block] = label
+    }
   // Bit numbers sit above each row and need room of their own.
   val numbers = if (showBits) bitSize + 4 else 0.0
   val rowHeights = rows.map { row ->
@@ -108,7 +124,15 @@ private fun draw(model: PacketModel, config: Config, options: RenderOptions, dow
 
   val gap = minOf(paddingX, bitWidth - 1)
   val width = if (rows.isNotEmpty()) bitsPerRow * bitWidth - gap else 0.0
-  val title = layoutLabel(model.title, false, measurer, size, if (down) titleRoom(options) else 4000.0, Style.Bold)
+  val title =
+    layoutLabel(
+      model.title,
+      false,
+      measurer,
+      size,
+      if (down) titleRoom(options) else 4000.0,
+      Style.Bold,
+    )
   val titleHeight = if (title.height > 0) title.height + (if (rowsHeight > 0) 12 else 0) else 0.0
 
   // The pieces of a field split across rows share its label, so each width is fitted once.
@@ -117,7 +141,8 @@ private fun draw(model: PacketModel, config: Config, options: RenderOptions, dow
     val byWidth = fits.getOrPut(label) { HashMap() }
     val key = max + 0.0
     if (!byWidth.containsKey(key)) {
-      byWidth[key] = fitText(decodeEntities(label).jsTrim(), max, labelSize, jsRound(size * 0.5), measurer)
+      byWidth[key] =
+        fitText(decodeEntities(label).jsTrim(), max, labelSize, jsRound(size * 0.5), measurer)
     }
     byWidth[key]
   }
@@ -137,28 +162,28 @@ private fun draw(model: PacketModel, config: Config, options: RenderOptions, dow
       fields.append(
         "<g class=\"pele-node\" data-id=\"${jsStr(block.start)}-${jsStr(block.end)}\">" +
           "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(rowHeight)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"$ROUNDED/>" +
-          (
-            if (down) {
-              labelSvg(labels[block]!!, x + w / 2, y + rowHeight / 2, "")
-            } else if (text != null && text.size <= rowHeight) {
-              "<text x=\"${num(x + w / 2)}\" y=\"${num(y + rowHeight / 2 + text.size * 0.35)}\"${
+          (if (down) {
+            labelSvg(labels[block]!!, x + w / 2, y + rowHeight / 2, "")
+          } else if (text != null && text.size <= rowHeight) {
+            "<text x=\"${num(x + w / 2)}\" y=\"${num(y + rowHeight / 2 + text.size * 0.35)}\"${
                 if (text.size == labelSize) "" else " font-size=\"${num(text.size)}\""
               }>${esc(text.text)}</text>"
-            } else {
-              ""
-            }
-            ) +
-          "</g>",
+          } else {
+            ""
+          }) +
+          "</g>"
       )
       if (!showBits) continue
       val leading = if (descending) block.end else block.start
       val trailing = if (descending) block.start else block.end
       if (count == 1.0) {
-        bits.append("<text x=\"${num(x + w / 2)}\" y=\"${num(y - 4)}\" text-anchor=\"middle\">${jsStr(leading)}</text>")
+        bits.append(
+          "<text x=\"${num(x + w / 2)}\" y=\"${num(y - 4)}\" text-anchor=\"middle\">${jsStr(leading)}</text>"
+        )
       } else {
         bits.append(
           "<text x=\"${num(x)}\" y=\"${num(y - 4)}\">${jsStr(leading)}</text>" +
-            "<text x=\"${num(x + w)}\" y=\"${num(y - 4)}\" text-anchor=\"end\">${jsStr(trailing)}</text>",
+            "<text x=\"${num(x + w)}\" y=\"${num(y - 4)}\" text-anchor=\"end\">${jsStr(trailing)}</text>"
         )
       }
     }
@@ -167,10 +192,19 @@ private fun draw(model: PacketModel, config: Config, options: RenderOptions, dow
   val totalWidth = ceil(maxOf(width, title.width) + 2 * pad)
   val totalHeight = ceil(rowsHeight + titleHeight + 2 * pad)
   val content =
-    (if (fields.isNotEmpty()) "<g class=\"pele-packet-fields\" font-size=\"${jsStr(labelSize)}\" text-anchor=\"middle\">$fields</g>" else "") +
-      (if (bits.isNotEmpty()) "<g class=\"pele-packet-bits\" font-size=\"${jsStr(bitSize)}\" fill=\"var(--_m)\">$bits</g>" else "") +
+    (if (fields.isNotEmpty())
+      "<g class=\"pele-packet-fields\" font-size=\"${jsStr(labelSize)}\" text-anchor=\"middle\">$fields</g>"
+    else "") +
+      (if (bits.isNotEmpty())
+        "<g class=\"pele-packet-bits\" font-size=\"${jsStr(bitSize)}\" fill=\"var(--_m)\">$bits</g>"
+      else "") +
       // Mermaid puts a packet's title under it.
-      labelSvg(title, totalWidth / 2, totalHeight - pad - title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"")
+      labelSvg(
+        title,
+        totalWidth / 2,
+        totalHeight - pad - title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      )
 
   return Rendered(
     svg = svgDocument("packet", totalWidth, totalHeight, size, options, model, content),

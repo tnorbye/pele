@@ -46,6 +46,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - name: Check port rules
         run: scripts/check_port_rules.sh
+      - name: Check formatting
+        run: ./gradlew ktfmtCheck
       - name: Test
         run: ./gradlew test testJdk17 testSmallStack
       - uses: actions/setup-node@v7

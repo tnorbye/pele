@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.journey
 
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -20,7 +21,6 @@ import pele.svg.svgDocument
 import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
-import kotlin.math.ceil
 
 private const val PAD_X = 10.0
 private const val PAD_Y = 8.0
@@ -35,8 +35,14 @@ private const val DOT = 5.0
 private const val DOT_STEP = 13.0
 private const val LEGEND_GAP = 20.0
 
-private const val EYES = "<circle cx=\"-3.6\" cy=\"-2.8\" r=\"1.3\"/><circle cx=\"3.6\" cy=\"-2.8\" r=\"1.3\"/>"
-private val MOUTHS = mapOf("happy" to "M-5,2A6,6 0 0 0 5,2", "neutral" to "M-4.5,4.5H4.5", "sad" to "M-5,6.5A6,6 0 0 1 5,6.5")
+private const val EYES =
+  "<circle cx=\"-3.6\" cy=\"-2.8\" r=\"1.3\"/><circle cx=\"3.6\" cy=\"-2.8\" r=\"1.3\"/>"
+private val MOUTHS =
+  mapOf(
+    "happy" to "M-5,2A6,6 0 0 0 5,2",
+    "neutral" to "M-4.5,4.5H4.5",
+    "sad" to "M-5,6.5A6,6 0 0 1 5,6.5",
+  )
 
 private fun face(x: Double, y: Double, mood: String): String =
   "<g class=\"pele-face pele-face-$mood\" transform=\"translate(${num(x)},${num(y)})\">" +
@@ -48,11 +54,22 @@ private fun face(x: Double, y: Double, mood: String): String =
 fun renderJourney(model: JourneyModel, _config: Config, options: RenderOptions): Rendered =
   turnToFit(options) { down -> draw(model, _config, options, down) }
 
-private class LegendItem(val name: String, val label: Label, val x: Double, val y: Double, val h: Double)
+private class LegendItem(
+  val name: String,
+  val label: Label,
+  val x: Double,
+  val y: Double,
+  val h: Double,
+)
 
 private class Run(val start: Int, val count: Int, val label: Label?)
 
-private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, down: Boolean): Rendered {
+private fun draw(
+  model: JourneyModel,
+  _config: Config,
+  options: RenderOptions,
+  down: Boolean,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val small = jsRound(size * 0.875)
   val tiny = jsRound(size * 0.75)
@@ -111,7 +128,8 @@ private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, d
   val left = pad + (width - bodyW) / 2 + GUTTER
   val top = pad + titleH
 
-  // A band covers a run of tasks that share a section, as in Mermaid; a section with no tasks draws nothing.
+  // A band covers a run of tasks that share a section, as in Mermaid; a section with no tasks draws
+  // nothing.
   val runs = ArrayList<Run>()
   var bandH = 0.0
   var i = 0
@@ -120,7 +138,8 @@ private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, d
     while (end < n && tasks[end].section == tasks[i].section) end++
     var label: Label? = null
     if (tasks[i].section != "") {
-      label = fitLabel(tasks[i].section, measurer, small, (end - i) * pitch - GAP - 2 * PAD_X, Style.Bold)
+      label =
+        fitLabel(tasks[i].section, measurer, small, (end - i) * pitch - GAP - 2 * PAD_X, Style.Bold)
       bandH = maxOf(bandH, maxOf(label.height, lineH) + 2 * BAND_PAD)
     }
     runs.add(Run(i, end - i, label))
@@ -149,7 +168,7 @@ private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, d
     }
     body.append(
       "<path class=\"pele-grid\" d=\"$grid\" fill=\"none\" stroke=\"var(--_a)\"/>" +
-      "<g class=\"pele-scale\" font-size=\"${jsStr(tiny)}\" text-anchor=\"end\" fill=\"var(--_m)\">$scale</g>",
+        "<g class=\"pele-scale\" font-size=\"${jsStr(tiny)}\" text-anchor=\"end\" fill=\"var(--_m)\">$scale</g>"
     )
 
     val line = StringBuilder()
@@ -172,25 +191,33 @@ private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, d
       people.forEachIndexed { k, name ->
         dots.append(
           "<circle class=\"pele-actor\" cx=\"${num(cx + (k - (people.size - 1) / 2.0) * step)}\" cy=\"${num(cardsY + cardH - PAD_Y - DOT)}\" r=\"${jsStr(DOT)}\" fill=\"${seriesColor(actor[name] ?: 0)}\" stroke=\"var(--_s)\">" +
-          "<title>${escText(name)}</title></circle>",
+            "<title>${escText(name)}</title></circle>"
         )
       }
       cards.add(
         "<g class=\"pele-node pele-task\" data-id=\"${escText(task.task.jsTrim())}\">" +
           "<rect x=\"${num(x)}\" y=\"${num(cardsY)}\" width=\"${num(cardW)}\" height=\"${num(cardH)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"$ROUNDED/>" +
-          labelSvg(labels[index], cx, cardsY + PAD_Y + textH / 2, " font-size=\"${jsStr(small)}\"") +
+          labelSvg(
+            labels[index],
+            cx,
+            cardsY + PAD_Y + textH / 2,
+            " font-size=\"${jsStr(small)}\"",
+          ) +
           dots +
-          "</g>",
+          "</g>"
       )
     }
     body.append(
       "<path class=\"pele-stems\" d=\"$stems\" fill=\"none\" stroke=\"var(--_b)\" stroke-dasharray=\"2 3\"/>" +
-      (if (n > 1) "<path class=\"pele-edge\" d=\"$line\" fill=\"none\" stroke=\"var(--_l)\" stroke-linejoin=\"round\"/>" else "") +
-      faces,
+        (if (n > 1)
+          "<path class=\"pele-edge\" d=\"$line\" fill=\"none\" stroke=\"var(--_l)\" stroke-linejoin=\"round\"/>"
+        else "") +
+        faces
     )
 
     for (run in runs) {
-      val members = cards.subList(run.start, minOf(run.start + run.count, cards.size)).joinToString("")
+      val members =
+        cards.subList(run.start, minOf(run.start + run.count, cards.size)).joinToString("")
       if (run.label == null) {
         body.append(members)
         continue
@@ -199,10 +226,15 @@ private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, d
       val w = run.count * pitch - GAP
       body.append(
         "<g class=\"pele-cluster pele-section\" data-id=\"${escText(tasks[run.start].section.jsTrim())}\">" +
-        "<rect x=\"${num(x)}\" y=\"${num(top)}\" width=\"${num(w)}\" height=\"${num(bandH)}\" fill=\"var(--_a)\"$ROUNDED/>" +
-        labelSvg(run.label, x + w / 2, top + bandH / 2, " font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"") +
-        members +
-        "</g>",
+          "<rect x=\"${num(x)}\" y=\"${num(top)}\" width=\"${num(w)}\" height=\"${num(bandH)}\" fill=\"var(--_a)\"$ROUNDED/>" +
+          labelSvg(
+            run.label,
+            x + w / 2,
+            top + bandH / 2,
+            " font-size=\"${jsStr(small)}\" font-weight=\"var(--_hw)\"",
+          ) +
+          members +
+          "</g>"
       )
     }
     bottom = chartBottom + FACE
@@ -215,9 +247,9 @@ private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, d
         val cy = y0 + item.y + item.h / 2
         items.append(
           "<g class=\"pele-legend-item\" data-id=\"${escText(item.name)}\">" +
-          "<circle cx=\"${num(x0 + item.x + DOT)}\" cy=\"${num(cy)}\" r=\"${jsStr(DOT)}\" fill=\"${seriesColor(actor[item.name] ?: 0)}\"/>" +
-          labelSvg(item.label, x0 + item.x + 2 * DOT + 6 + item.label.width / 2, cy, "") +
-          "</g>",
+            "<circle cx=\"${num(x0 + item.x + DOT)}\" cy=\"${num(cy)}\" r=\"${jsStr(DOT)}\" fill=\"${seriesColor(actor[item.name] ?: 0)}\"/>" +
+            labelSvg(item.label, x0 + item.x + 2 * DOT + 6 + item.label.width / 2, cy, "") +
+            "</g>"
         )
       }
       body.append("<g class=\"pele-legend\" font-size=\"${jsStr(small)}\">$items</g>")
@@ -228,7 +260,12 @@ private fun draw(model: JourneyModel, _config: Config, options: RenderOptions, d
   val totalWidth = ceil(width + 2 * pad)
   val totalHeight = ceil(maxOf(bottom, pad) + pad)
   val content =
-    labelSvg(title, pad + width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") + body
+    labelSvg(
+      title,
+      pad + width / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) + body
   return Rendered(
     svgDocument("journey", totalWidth, totalHeight, size, options, model, content),
     totalWidth,
@@ -256,37 +293,86 @@ private fun verticalJourney(model: JourneyModel, options: RenderOptions): Render
       section = task.section
       val head = fitLabel(task.section, measurer, size, room - 16, Style.Bold)
       if (head.height != 0.0) {
-        body.append(labelSvg(head, pad + 8 + head.width / 2, y + head.height / 2, " class=\"pele-cluster-label\" font-weight=\"var(--_hw)\""))
+        body.append(
+          labelSvg(
+            head,
+            pad + 8 + head.width / 2,
+            y + head.height / 2,
+            " class=\"pele-cluster-label\" font-weight=\"var(--_hw)\"",
+          )
+        )
         width = maxOf(width, head.width + 16)
         y += head.height + 8
       }
     }
     val label = fitLabel(task.task, measurer, small, room - 72)
-    val people = task.people.filter { name -> name != "" }.map { name -> Pair(name, fitLabel(name, measurer, small, room - 44)) }
+    val people =
+      task.people
+        .filter { name -> name != "" }
+        .map { name -> Pair(name, fitLabel(name, measurer, small, room - 44)) }
     val textH = maxOf(label.height, 42.0)
     var h = 2 * PAD_Y + textH
     for (person in people) h += maxOf(16.0, person.second.height) + 4
     val w = maxOf(room, label.width + 72)
-    body.append("<g class=\"pele-node pele-journey-step\" data-id=\"$index\"><rect x=\"${num(pad)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"$ROUNDED/>")
-    body.append(labelSvg(label, pad + PAD_X + label.width / 2, y + PAD_Y + label.height / 2, " class=\"pele-label\""))
+    body.append(
+      "<g class=\"pele-node pele-journey-step\" data-id=\"$index\"><rect x=\"${num(pad)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"$ROUNDED/>"
+    )
+    body.append(
+      labelSvg(
+        label,
+        pad + PAD_X + label.width / 2,
+        y + PAD_Y + label.height / 2,
+        " class=\"pele-label\"",
+      )
+    )
     val cx = pad + w - 28
-    body.append(face(cx, y + PAD_Y + FACE, if (task.score > 3) "happy" else if (task.score < 3) "sad" else "neutral"))
-    if (!task.score.isNaN()) body.append("<text class=\"pele-journey-score\" x=\"${num(cx)}\" y=\"${num(y + PAD_Y + 2 * FACE + small)}\" font-size=\"${jsStr(small)}\" text-anchor=\"middle\">${num(minOf(5.0, maxOf(1.0, task.score)))}</text>")
+    body.append(
+      face(
+        cx,
+        y + PAD_Y + FACE,
+        if (task.score > 3) "happy" else if (task.score < 3) "sad" else "neutral",
+      )
+    )
+    if (!task.score.isNaN())
+      body.append(
+        "<text class=\"pele-journey-score\" x=\"${num(cx)}\" y=\"${num(y + PAD_Y + 2 * FACE + small)}\" font-size=\"${jsStr(small)}\" text-anchor=\"middle\">${num(minOf(5.0, maxOf(1.0, task.score)))}</text>"
+      )
     var py = y + PAD_Y + textH + 4
     for (person in people) {
       val ph = maxOf(16.0, person.second.height)
-      body.append("<circle class=\"pele-actor\" cx=\"${num(pad + 16)}\" cy=\"${num(py + ph / 2)}\" r=\"${jsStr(DOT)}\" fill=\"${seriesColor(actors[person.first]!!)}\"/>" +
-        labelSvg(person.second, pad + 28 + person.second.width / 2, py + ph / 2, " class=\"pele-journey-actor\" font-size=\"${jsStr(small)}\""))
+      body.append(
+        "<circle class=\"pele-actor\" cx=\"${num(pad + 16)}\" cy=\"${num(py + ph / 2)}\" r=\"${jsStr(DOT)}\" fill=\"${seriesColor(actors[person.first]!!)}\"/>" +
+          labelSvg(
+            person.second,
+            pad + 28 + person.second.width / 2,
+            py + ph / 2,
+            " class=\"pele-journey-actor\" font-size=\"${jsStr(small)}\"",
+          )
+      )
       py += ph + 4
     }
     body.append("</g>")
     y += h
-    if (index + 1 < model.tasks.size) body.append("<path class=\"pele-edge\" d=\"M${num(pad + w / 2)},${num(y)}v16\" fill=\"none\" stroke=\"var(--_l)\"/>")
+    if (index + 1 < model.tasks.size)
+      body.append(
+        "<path class=\"pele-edge\" d=\"M${num(pad + w / 2)},${num(y)}v16\" fill=\"none\" stroke=\"var(--_l)\"/>"
+      )
     y += 16
     width = maxOf(width, w)
   }
   val totalWidth = ceil(width + 2 * pad)
   val height = ceil(maxOf(pad + title.height, y - (if (model.tasks.isNotEmpty()) 16 else 0)) + pad)
-  val content = labelSvg(title, totalWidth / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") + body
-  return Rendered(svgDocument("journey", totalWidth, height, size, options, model, content), totalWidth, height, ArrayList())
+  val content =
+    labelSvg(
+      title,
+      totalWidth / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) + body
+  return Rendered(
+    svgDocument("journey", totalWidth, height, size, options, model, content),
+    totalWidth,
+    height,
+    ArrayList(),
+  )
 }

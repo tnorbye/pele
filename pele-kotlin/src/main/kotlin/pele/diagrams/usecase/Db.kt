@@ -86,7 +86,12 @@ class DraftRelationship(
 
 class DraftNote(val target: String, val span: Span, val label: DraftLabel)
 
-class DraftMetadata(val target: String, val span: Span, val properties: List<DraftProperty>, val statement: GraphStatement)
+class DraftMetadata(
+  val target: String,
+  val span: Span,
+  val properties: List<DraftProperty>,
+  val statement: GraphStatement,
+)
 
 class DraftClassTarget(val id: String, val span: Span)
 
@@ -209,14 +214,24 @@ fun resolveUsecase(
 
   fun error(message: String, span: Span): PeleError {
     val (line, column) = lineColumn(src, span[0])
-    return PeleError(message, PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "usecase", line = line, column = column))
+    return PeleError(
+      message,
+      PeleErrorCode.SEMANTIC,
+      PeleErrorInfo(type = "usecase", line = line, column = column),
+    )
   }
 
   fun fail(message: String, span: Span): Nothing {
     throw error("$message at ${at(span)}", span)
   }
 
-  fun conflict(message: String, current: Span, previous: Span, currentLabel: String? = null, previousLabel: String? = null): Nothing {
+  fun conflict(
+    message: String,
+    current: Span,
+    previous: Span,
+    currentLabel: String? = null,
+    previousLabel: String? = null,
+  ): Nothing {
     fun suffix(label: String?): String = if (label == null) "" else " (label \"$label\")"
     throw error(
       "$message at ${at(current)}${suffix(currentLabel)}; previous declaration at ${at(previous)}${suffix(previousLabel)}",
@@ -245,10 +260,22 @@ fun resolveUsecase(
     val label = if (draft.generated) draft.label.text else null
     val originLabel = if (origin.generated) origin.label else null
     if (origin.kind != kind) {
-      conflict("ID '${draft.id}' is declared as both ${origin.kind} and $kind", draft.span, origin.span, label, originLabel)
+      conflict(
+        "ID '${draft.id}' is declared as both ${origin.kind} and $kind",
+        draft.span,
+        origin.span,
+        label,
+        originLabel,
+      )
     }
     if (origin.generated || draft.generated) {
-      conflict("Generated ID '${draft.id}' collides with another declaration", draft.span, origin.span, label, originLabel)
+      conflict(
+        "Generated ID '${draft.id}' collides with another declaration",
+        draft.span,
+        origin.span,
+        label,
+        originLabel,
+      )
     }
   }
 
@@ -292,7 +319,11 @@ fun resolveUsecase(
       if (state.kind == "actor") actorProperty(state, property, replace)
       else if (property.key == "business" && property.value is Boolean) {
         if (!replace && state.business != null && state.business != property.value) {
-          conflict("Use case '${state.id}' has conflicting business metadata", property.keySpan, state.span)
+          conflict(
+            "Use case '${state.id}' has conflicting business metadata",
+            property.keySpan,
+            state.span,
+          )
         }
         state.business = property.value
       } else invalid(state.id, "usecase", property)
@@ -302,30 +333,32 @@ fun resolveUsecase(
   fun publish(state: ElementState) {
     if (state.kind == "actor") {
       useCases.remove(state.id)
-      val actor = Actor(
-        id = state.id,
-        label = state.label.text,
-        labelType = state.label.type,
-        business = state.business ?: false,
-        classes = ArrayList(state.classes),
-        type = if (!state.icon.isNullOrEmpty()) "icon" else (state.actorType ?: "normal"),
-        styles = actors[state.id]?.styles ?: ArrayList(),
-      )
+      val actor =
+        Actor(
+          id = state.id,
+          label = state.label.text,
+          labelType = state.label.type,
+          business = state.business ?: false,
+          classes = ArrayList(state.classes),
+          type = if (!state.icon.isNullOrEmpty()) "icon" else (state.actorType ?: "normal"),
+          styles = actors[state.id]?.styles ?: ArrayList(),
+        )
       if (!state.icon.isNullOrEmpty()) actor.icon = state.icon
       actors[state.id] = actor
       if (!state.stereotype.isNullOrEmpty()) actor.stereotype = state.stereotype
       if (!state.parent?.id.isNullOrEmpty()) actor.parentId = state.parent!!.id
     } else {
       actors.remove(state.id)
-      val useCase = UseCase(
-        id = state.id,
-        label = state.label.text,
-        labelType = state.label.type,
-        business = state.business ?: false,
-        classes = ArrayList(state.classes),
-        shape = state.shape ?: "ellipse",
-        styles = useCases[state.id]?.styles ?: ArrayList(),
-      )
+      val useCase =
+        UseCase(
+          id = state.id,
+          label = state.label.text,
+          labelType = state.label.type,
+          business = state.business ?: false,
+          classes = ArrayList(state.classes),
+          shape = state.shape ?: "ellipse",
+          styles = useCases[state.id]?.styles ?: ArrayList(),
+        )
       useCases[state.id] = useCase
       if (!state.stereotype.isNullOrEmpty()) useCase.stereotype = state.stereotype
       if (!state.parent?.id.isNullOrEmpty()) useCase.parentId = state.parent!!.id
@@ -337,18 +370,19 @@ fun resolveUsecase(
     val parent = if (!draft.parent?.id.isNullOrEmpty()) draft.parent else null
     val existing = elements[draft.id]
     if (existing == null) {
-      val state = ElementState(
-        kind = draft.kind,
-        id = draft.id,
-        label = draft.label,
-        span = draft.span,
-        generated = draft.generated,
-        classes = ArrayList(draft.classes),
-        parent = parent,
-        shape = draft.shape,
-        stereotype = draft.stereotype,
-        stereotypeSpan = if (!draft.stereotype.isNullOrEmpty()) draft.span else null,
-      )
+      val state =
+        ElementState(
+          kind = draft.kind,
+          id = draft.id,
+          label = draft.label,
+          span = draft.span,
+          generated = draft.generated,
+          classes = ArrayList(draft.classes),
+          parent = parent,
+          shape = draft.shape,
+          stereotype = draft.stereotype,
+          stereotypeSpan = if (!draft.stereotype.isNullOrEmpty()) draft.span else null,
+        )
       elementMetadata(state, draft.metadata, false)
       elements[draft.id] = state
       register(draft, draft.kind)
@@ -357,20 +391,39 @@ fun resolveUsecase(
     if (existing.label.text != draft.label.text || existing.label.type != draft.label.type) {
       conflict("ID '${draft.id}' has conflicting labels", draft.span, existing.span)
     }
-    if (!draft.shape.isNullOrEmpty() && !existing.shape.isNullOrEmpty() && draft.shape != existing.shape) {
+    if (
+      !draft.shape.isNullOrEmpty() &&
+        !existing.shape.isNullOrEmpty() &&
+        draft.shape != existing.shape
+    ) {
       conflict("Use case '${draft.id}' has conflicting shapes", draft.span, existing.span)
     }
     // A boundary whose title makes an empty id is no parent, but it still takes the place of one.
-    if (parent != null && !existing.parent?.id.isNullOrEmpty() && parent.id != existing.parent?.id) {
-      conflict("Element '${draft.id}' belongs to more than one system boundary", parent.span, existing.parent!!.span)
+    if (
+      parent != null && !existing.parent?.id.isNullOrEmpty() && parent.id != existing.parent?.id
+    ) {
+      conflict(
+        "Element '${draft.id}' belongs to more than one system boundary",
+        parent.span,
+        existing.parent!!.span,
+      )
     }
-    if (!draft.stereotype.isNullOrEmpty() && !existing.stereotype.isNullOrEmpty() && draft.stereotype != existing.stereotype) {
-      conflict("Element '${draft.id}' has conflicting stereotypes", draft.span, existing.stereotypeSpan ?: existing.span)
+    if (
+      !draft.stereotype.isNullOrEmpty() &&
+        !existing.stereotype.isNullOrEmpty() &&
+        draft.stereotype != existing.stereotype
+    ) {
+      conflict(
+        "Element '${draft.id}' has conflicting stereotypes",
+        draft.span,
+        existing.stereotypeSpan ?: existing.span,
+      )
     }
     if (existing.shape == null) existing.shape = draft.shape
     if (existing.parent == null) existing.parent = draft.parent
     if (existing.stereotype == null) existing.stereotype = draft.stereotype
-    if (existing.stereotypeSpan == null) existing.stereotypeSpan = if (!draft.stereotype.isNullOrEmpty()) draft.span else null
+    if (existing.stereotypeSpan == null)
+      existing.stereotypeSpan = if (!draft.stereotype.isNullOrEmpty()) draft.span else null
     pushUnique(existing.classes, draft.classes)
     elementMetadata(existing, draft.metadata, false)
   }
@@ -385,7 +438,16 @@ fun resolveUsecase(
       pushUnique(existing.classes, draft.classes)
       return
     }
-    boundaries[draft.id] = BoundaryState(draft.id, draft.label, draft.span, draft.generated, ArrayList(draft.classes), null, ArrayList())
+    boundaries[draft.id] =
+      BoundaryState(
+        draft.id,
+        draft.label,
+        draft.span,
+        draft.generated,
+        ArrayList(draft.classes),
+        null,
+        ArrayList(),
+      )
     register(draft, "boundary")
   }
 
@@ -396,15 +458,16 @@ fun resolveUsecase(
     }
     val origin = symbols[end.id]
     if (origin != null) return origin.kind
-    elements[end.id] = ElementState(
-      id = end.id,
-      label = end.label,
-      span = end.span,
-      generated = end.generated,
-      kind = "usecase",
-      shape = "ellipse",
-      classes = ArrayList(),
-    )
+    elements[end.id] =
+      ElementState(
+        id = end.id,
+        label = end.label,
+        span = end.span,
+        generated = end.generated,
+        kind = "usecase",
+        shape = "ellipse",
+        classes = ArrayList(),
+      )
     register(end, "usecase")
     mention(end.id, end.span[0])
     return "usecase"
@@ -443,31 +506,34 @@ fun resolveUsecase(
   for (relationship in drafts.relationships) {
     val id = relationship.id
     val idSpan = relationship.idSpan
-    if (!id.isNullOrEmpty() && idSpan != null) declarations.add(Declaration(idSpan[0]) { unique(id, "edge", idSpan) })
+    if (!id.isNullOrEmpty() && idSpan != null)
+      declarations.add(Declaration(idSpan[0]) { unique(id, "edge", idSpan) })
   }
   declarations.sortWith { a, b -> a.offset - b.offset }
   for (declaration in declarations) declaration.run()
 
   for (state in inOrder(elements.values) { it.id }) publish(state)
   for (state in inOrder(boundaries.values) { it.id }) {
-    systemBoundaries[state.id] = SystemBoundary(
-      id = state.id,
-      label = state.label.text,
-      labelType = state.label.type,
-      type = "rect",
-      members = ArrayList(),
-      classes = ArrayList(),
-      styles = ArrayList(),
-    )
+    systemBoundaries[state.id] =
+      SystemBoundary(
+        id = state.id,
+        label = state.label.text,
+        labelType = state.label.type,
+        type = "rect",
+        members = ArrayList(),
+        classes = ArrayList(),
+        styles = ArrayList(),
+      )
   }
   for (draft in inOrder(drafts.jsons) { it.id }) {
-    model.jsonNodes[draft.id] = UsecaseJsonNode(
-      id = draft.id,
-      value = draft.value,
-      propertyOrder = draft.propertyOrder,
-      classes = ArrayList(draft.classes),
-      styles = ArrayList(),
-    )
+    model.jsonNodes[draft.id] =
+      UsecaseJsonNode(
+        id = draft.id,
+        value = draft.value,
+        propertyOrder = draft.propertyOrder,
+        classes = ArrayList(draft.classes),
+        styles = ArrayList(),
+      )
   }
 
   var anonymous = 0
@@ -479,36 +545,50 @@ fun resolveUsecase(
     val targetKind = endpoint(target)
     val related = { kind: SymbolKind -> kind == "actor" || kind == "usecase" || kind == "json" }
     if (!related(sourceKind)) {
-      conflict("Relationship source '${source.id}' cannot be $sourceKind", source.span, symbols[source.id]!!.span)
+      conflict(
+        "Relationship source '${source.id}' cannot be $sourceKind",
+        source.span,
+        symbols[source.id]!!.span,
+      )
     }
     if (!related(targetKind)) {
-      conflict("Relationship target '${target.id}' cannot be $targetKind", target.span, symbols[target.id]!!.span)
+      conflict(
+        "Relationship target '${target.id}' cannot be $targetKind",
+        target.span,
+        symbols[target.id]!!.span,
+      )
     }
-    if ((type == "include" || type == "extend") && (sourceKind != "usecase" || targetKind != "usecase")) {
+    if (
+      (type == "include" || type == "extend") &&
+        (sourceKind != "usecase" || targetKind != "usecase")
+    ) {
       fail("$type relationship requires use-case endpoints", draft.span)
     }
     if (type == "generalization" && (sourceKind == "json" || sourceKind != targetKind)) {
       fail("Generalization requires actor-to-actor or use-case-to-use-case endpoints", draft.span)
     }
-    if (type == "association" && (sourceKind == "json" || targetKind == "json") && draft.arrowType > 2) {
+    if (
+      type == "association" && (sourceKind == "json" || targetKind == "json") && draft.arrowType > 2
+    ) {
       fail(
         "JSON relationship '${source.id}' to '${target.id}' permits only point, reversed-point, or markerless solid association",
         draft.span,
       )
     }
     val id = draft.id ?: "edge-${anonymous++}"
-    val relationship = Relationship(
-      id = id,
-      explicitId = !draft.id.isNullOrEmpty(),
-      source = source.id,
-      target = target.id,
-      type = type,
-      arrowType = draft.arrowType,
-      minlen = draft.minlen,
-      classes = ArrayList(),
-      styles = ArrayList(),
-      animate = false,
-    )
+    val relationship =
+      Relationship(
+        id = id,
+        explicitId = !draft.id.isNullOrEmpty(),
+        source = source.id,
+        target = target.id,
+        type = type,
+        arrowType = draft.arrowType,
+        minlen = draft.minlen,
+        classes = ArrayList(),
+        styles = ArrayList(),
+        animate = false,
+      )
     if (draft.label != null) {
       relationship.label = draft.label.text
       relationship.labelType = draft.label.type
@@ -517,7 +597,8 @@ fun resolveUsecase(
     edges[id] = relationship
   }
 
-  // The relationships may have added use cases; put all elements back in the order of first mention.
+  // The relationships may have added use cases; put all elements back in the order of first
+  // mention.
   val declaredActors = LinkedHashMap(actors)
   val declaredUseCases = LinkedHashMap(useCases)
   actors.clear()
@@ -526,8 +607,7 @@ fun resolveUsecase(
     val actor = declaredActors[state.id]
     val useCase = declaredUseCases[state.id]
     if (actor != null) actors[state.id] = actor
-    else if (useCase != null) useCases[state.id] = useCase
-    else publish(state)
+    else if (useCase != null) useCases[state.id] = useCase else publish(state)
   }
 
   for (entry in drafts.metadata) {
@@ -538,13 +618,17 @@ fun resolveUsecase(
     val origin = symbols[target]
     if (origin == null) {
       val inferred = inferKind(properties)
-      return fail("Metadata target '$target' is unresolved${if (inferred != null) " (metadata implies $inferred)" else ""}", span)
+      return fail(
+        "Metadata target '$target' is unresolved${if (inferred != null) " (metadata implies $inferred)" else ""}",
+        span,
+      )
     }
     val kind = origin.kind
     if (kind == "actor" || kind == "usecase") elementMetadata(elements[target]!!, properties, true)
     else if (kind == "edge") {
       statement.kind = "edgeMetadata"
-      statement.edges = listOf(EdgeOccurrence(target, statement.span, idSpan = span, metadata = statement.metadata))
+      statement.edges =
+        listOf(EdgeOccurrence(target, statement.span, idSpan = span, metadata = statement.metadata))
       statement.nodes = null
     }
     val boundary = boundaries[target]
@@ -552,20 +636,33 @@ fun resolveUsecase(
     for (property in if (kind == "actor" || kind == "usecase") listOf() else properties) {
       val key = property.key
       val value = property.value
-      if (kind == "boundary" && boundary != null && key == "type" && (value == "rect" || value == "package")) {
+      if (
+        kind == "boundary" &&
+          boundary != null &&
+          key == "type" &&
+          (value == "rect" || value == "package")
+      ) {
         boundary.type = value as String
-      } else if (kind == "edge" && edge != null && key == "animate" && value is Boolean) edge.animate = value
-      else if (kind == "edge" && edge != null && key == "animation" && (value == "fast" || value == "slow")) {
+      } else if (kind == "edge" && edge != null && key == "animate" && value is Boolean)
+        edge.animate = value
+      else if (
+        kind == "edge" && edge != null && key == "animation" && (value == "fast" || value == "slow")
+      ) {
         edge.animation = value as Animation
         edge.animate = true
       } else invalid(target, kind, property)
     }
   }
-  for (relationship in model.relationships) if (relationship.animation != null) relationship.animate = true
+  for (relationship in model.relationships) if (relationship.animation != null)
+    relationship.animate = true
 
   for (state in elements.values) {
     if (state.kind == "actor") {
-      if (!state.icon.isNullOrEmpty() && !state.actorType.isNullOrEmpty() && state.actorType != "normal") {
+      if (
+        !state.icon.isNullOrEmpty() &&
+          !state.actorType.isNullOrEmpty() &&
+          state.actorType != "normal"
+      ) {
         fail("Actor '${state.id}' cannot combine icon with type '${state.actorType}'", state.span)
       }
       if (state.business == true && (!state.icon.isNullOrEmpty() || state.actorType == "awesome")) {
@@ -594,7 +691,11 @@ fun resolveUsecase(
     val origin = symbols[draft.target]
     if (origin == null) return fail("Note target '${draft.target}' is unresolved", draft.span)
     if (origin.kind != "actor" && origin.kind != "usecase") {
-      conflict("Note target '${draft.target}' must be an actor or use case, not ${origin.kind}", draft.span, origin.span)
+      conflict(
+        "Note target '${draft.target}' must be an actor or use case, not ${origin.kind}",
+        draft.span,
+        origin.span,
+      )
     }
     val id = "note-${notes++}"
     model.notes[id] = UsecaseNote(id, draft.target, draft.label.text, draft.label.type)
@@ -604,7 +705,10 @@ fun resolveUsecase(
     for (id in definition.ids) model.classDefs[id] = ClassDef(id, ArrayList(definition.styles))
   }
   for (assignment in drafts.classes) {
-    for (target in assignment.targets) pushUnique(stylable(target.id, target.span).first, assignment.classes)
+    for (target in assignment.targets) pushUnique(
+      stylable(target.id, target.span).first,
+      assignment.classes,
+    )
   }
   for (assignment in drafts.styles) {
     stylable(assignment.target, assignment.span).second.addAll(assignment.styles)

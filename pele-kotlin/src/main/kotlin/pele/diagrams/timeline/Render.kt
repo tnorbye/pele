@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.timeline
 
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -22,7 +23,6 @@ import pele.svg.svgDocument
 import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
-import kotlin.math.ceil
 
 private const val PAD_X = 12.0
 private const val PAD_Y = 8.0
@@ -48,7 +48,12 @@ fun renderTimeline(model: TimelineModel, config: Config, options: RenderOptions)
   return turnToFit(options) { down -> draw(model, config, options, down) }
 }
 
-private fun draw(model: TimelineModel, config: Config, options: RenderOptions, vertical: Boolean): Rendered {
+private fun draw(
+  model: TimelineModel,
+  config: Config,
+  options: RenderOptions,
+  vertical: Boolean,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val small = jsRound(size * 0.875)
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
@@ -57,31 +62,47 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
   val periods = model.periods
   val hasSections = model.sections.size > 0
 
-  // Mermaid draws nothing for periods that come before the first section; here they lead, in a neutral color.
-  val groups: MutableList<Group> = model.sections.mapIndexed { section, _ -> Group(section, ArrayList()) }.toMutableList()
+  // Mermaid draws nothing for periods that come before the first section; here they lead, in a
+  // neutral color.
+  val groups: MutableList<Group> =
+    model.sections.mapIndexed { section, _ -> Group(section, ArrayList()) }.toMutableList()
   val leading = Group(-1, ArrayList())
-  periods.forEachIndexed { i, period -> (groups.getOrNull(period.sectionIndex) ?: leading).periods.add(i) }
+  periods.forEachIndexed { i, period ->
+    (groups.getOrNull(period.sectionIndex) ?: leading).periods.add(i)
+  }
   if (leading.periods.size > 0) groups.add(0, leading)
 
   // Columns widen, up to a point, for a word that would not fit; past that the word is cut.
   // Running down, the two columns share the width the host has.
-  val room = if (vertical && options.maxWidth != null && options.maxWidth > 0) options.maxWidth - 2 * pad else Double.POSITIVE_INFINITY
+  val room =
+    if (vertical && options.maxWidth != null && options.maxWidth > 0) options.maxWidth - 2 * pad
+    else Double.POSITIVE_INFINITY
   val taken = AXIS + SPINE * 2 + 4 * PAD_X
   val periodText = minOf(MIN_TEXT, maxOf(80.0, jsRound((room - taken) * 0.38)))
   val eventText = minOf(EVENT_TEXT_TD, maxOf(110.0, room - taken - periodText))
   var textW = periodText
   val eventTextW = { if (vertical) eventText else textW }
   var periodLabels = periods.map { p -> plainLabel(p.text, measurer, size, textW) }
-  var eventLabels = periods.map { p -> p.events.map { e -> plainLabel(e, measurer, small, eventTextW()) } }
+  var eventLabels = periods.map { p ->
+    p.events.map { e -> plainLabel(e, measurer, small, eventTextW()) }
+  }
   var widest = 0.0
   for (label in periodLabels) widest = maxOf(widest, label.width)
-  if (!vertical) for (labels in eventLabels) for (label in labels) widest = maxOf(widest, label.width)
+  if (!vertical)
+    for (labels in eventLabels) for (label in labels) widest = maxOf(widest, label.width)
   var overflow = widest > textW
-  if (vertical) for (labels in eventLabels) for (label in labels) overflow = overflow || label.width > eventText
+  if (vertical)
+    for (labels in eventLabels) for (label in labels) overflow = overflow || label.width > eventText
   if (overflow) {
-    textW = minOf(maxOf(ceil(widest), periodText), if (room == Double.POSITIVE_INFINITY) MAX_TEXT else periodText)
+    textW =
+      minOf(
+        maxOf(ceil(widest), periodText),
+        if (room == Double.POSITIVE_INFINITY) MAX_TEXT else periodText,
+      )
     periodLabels = periods.map { p -> fitLabel(p.text, measurer, size, textW) }
-    eventLabels = periods.map { p -> p.events.map { e -> fitLabel(e, measurer, small, eventTextW()) } }
+    eventLabels = periods.map { p ->
+      p.events.map { e -> fitLabel(e, measurer, small, eventTextW()) }
+    }
   }
 
   val lineHeight = jsRound(size * 1.5)
@@ -90,7 +111,8 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
   val chipHeight = { label: Label -> maxOf(label.height, lineHeight) + 2 * PAD_Y }
   val eventHeight = { label: Label -> maxOf(label.height, jsRound(small * 1.5)) + 2 * PAD_Y }
   val colorOf = { group: Group, period: Int ->
-    if (group.section >= 0) seriesColor(group.section) else if (hasSections) "var(--_m)" else seriesColor(if (multicolor) period else 0)
+    if (group.section >= 0) seriesColor(group.section)
+    else if (hasSections) "var(--_m)" else seriesColor(if (multicolor) period else 0)
   }
 
   var hasEvents = false
@@ -100,13 +122,14 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
 
   val pitch = colW + GAP
   val drawn = periods.size > 0
-  val bodyW = if (vertical) {
-    colW + (if (hasEvents) AXIS + SPINE * 2 + eventW else if (drawn) AXIS + TAIL else 0.0)
-  } else if (slots > 0) {
-    slots * pitch - GAP + (if (drawn) TAIL + ARROW else 0.0)
-  } else {
-    0.0
-  }
+  val bodyW =
+    if (vertical) {
+      colW + (if (hasEvents) AXIS + SPINE * 2 + eventW else if (drawn) AXIS + TAIL else 0.0)
+    } else if (slots > 0) {
+      slots * pitch - GAP + (if (drawn) TAIL + ARROW else 0.0)
+    } else {
+      0.0
+    }
   val title = fitLabel(model.title, measurer, size, maxOf(bodyW, 320.0), Style.Bold)
   val titleH = if (title.height > 0) title.height + 16 else 0.0
   val width = maxOf(bodyW, title.width)
@@ -121,7 +144,8 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
       labelSvg(label, x + w / 2, y + h / 2, " font-weight=\"var(--_hw)\"" + ON_COLOR)
   }
   val period = { i: Int, color: String, x: Double, y: Double, h: Double ->
-    box(x, y, colW, h, " fill=\"$color\"") + labelSvg(periodLabels[i], x + colW / 2, y + h / 2, ON_COLOR)
+    box(x, y, colW, h, " fill=\"$color\"") +
+      labelSvg(periodLabels[i], x + colW / 2, y + h / 2, ON_COLOR)
   }
   val event = { label: Label, color: String, x: Double, y: Double, h: Double ->
     "<g class=\"pele-node pele-event\">" +
@@ -133,9 +157,13 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
     "<circle class=\"pele-dot\" cx=\"${num(x)}\" cy=\"${num(y)}\" r=\"4\" fill=\"$color\" stroke=\"var(--_bg)\" stroke-width=\"2\"/>"
   }
   val open = { group: Group ->
-    if (group.section >= 0) "<g class=\"pele-cluster pele-section\" data-id=\"${escText(model.sections[group.section].jsTrim())}\">" else ""
+    if (group.section >= 0)
+      "<g class=\"pele-cluster pele-section\" data-id=\"${escText(model.sections[group.section].jsTrim())}\">"
+    else ""
   }
-  val openPeriod = { i: Int -> "<g class=\"pele-node pele-period\" data-id=\"${escText(periods[i].text.jsTrim())}\">" }
+  val openPeriod = { i: Int ->
+    "<g class=\"pele-node pele-period\" data-id=\"${escText(periods[i].text.jsTrim())}\">"
+  }
 
   var body = ""
   var height: Double
@@ -156,7 +184,8 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
       for (i in group.periods) {
         val color = colorOf(group, i)
         val h = chipHeight(periodLabels[i])
-        // A period and its first event share one center line, so the line between them runs straight.
+        // A period and its first event share one center line, so the line between them runs
+        // straight.
         val first = if (eventLabels[i].size > 0) eventHeight(eventLabels[i][0]) else h
         val cy = y + maxOf(h, first) / 2
         var d = "M${num(left + colW)},${num(cy)}H${num(axisX)}"
@@ -173,11 +202,11 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
         if (cards.isNotEmpty()) d += "M${num(axisX)},${num(cy)}H${num(spineX)}V${num(last)}"
         body +=
           openPeriod(i) +
-          period(i, color, left, cy - h / 2, h) +
-          "<path class=\"pele-edge\" d=\"$d\"$LINE/>" +
-          dot(axisX, cy, color) +
-          cards +
-          "</g>"
+            period(i, color, left, cy - h / 2, h) +
+            "<path class=\"pele-edge\" d=\"$d\"$LINE/>" +
+            dot(axisX, cy, color) +
+            cards +
+            "</g>"
         y = maxOf(cy + h / 2, ey - EVENT_GAP) + GAP
       }
       if (group.periods.size == 0) y += GAP - SECTION_GAP - 4
@@ -188,8 +217,8 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
       val tip = y + TAIL + ARROW
       body =
         "<path class=\"pele-axis\" d=\"M${num(axisX)},${num(top)}V${num(tip - ARROW + 1)}\" fill=\"none\" stroke=\"var(--_l)\"/>" +
-        marker("arrow_point", axisX, tip, 0.0, 1.0, "var(--_l)") +
-        body
+          marker("arrow_point", axisX, tip, 0.0, 1.0, "var(--_l)") +
+          body
       y = tip
     }
     height = y + pad
@@ -221,7 +250,8 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
         val color = colorOf(group, i)
         val x = gx + k * pitch
         val cx = x + colW / 2
-        var d = "M${num(cx)},${num(periodsY + chipH)}V${num(if (eventLabels[i].size > 0) eventsY else axisY)}"
+        var d =
+          "M${num(cx)},${num(periodsY + chipH)}V${num(if (eventLabels[i].size > 0) eventsY else axisY)}"
         var cards = ""
         var ey = eventsY
         for (eventLabel in eventLabels[i]) {
@@ -233,11 +263,11 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
         bottom = maxOf(bottom, ey - EVENT_GAP)
         body +=
           openPeriod(i) +
-          period(i, color, x, periodsY, chipH) +
-          "<path class=\"pele-edge\" d=\"$d\"$LINE/>" +
-          dot(cx, axisY, color) +
-          cards +
-          "</g>"
+            period(i, color, x, periodsY, chipH) +
+            "<path class=\"pele-edge\" d=\"$d\"$LINE/>" +
+            dot(cx, axisY, color) +
+            cards +
+            "</g>"
       }
       if (group.section >= 0) body += "</g>"
       slot += span
@@ -246,8 +276,8 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
       val tip = left + bodyW
       body =
         "<path class=\"pele-axis\" d=\"M${num(left)},${num(axisY)}H${num(tip - ARROW + 1)}\" fill=\"none\" stroke=\"var(--_l)\"/>" +
-        marker("arrow_point", tip, axisY, 1.0, 0.0, "var(--_l)") +
-        body
+          marker("arrow_point", tip, axisY, 1.0, 0.0, "var(--_l)") +
+          body
     }
     height = bottom + pad
   }
@@ -255,7 +285,12 @@ private fun draw(model: TimelineModel, config: Config, options: RenderOptions, v
   val totalWidth = ceil(width + 2 * pad)
   val totalHeight = ceil(maxOf(height, pad * 2))
   val content =
-    labelSvg(title, totalWidth / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") + body
+    labelSvg(
+      title,
+      totalWidth / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) + body
   return Rendered(
     svgDocument("timeline", totalWidth, totalHeight, size, options, model, content),
     totalWidth,

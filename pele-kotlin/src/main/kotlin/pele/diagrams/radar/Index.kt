@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val radar: Diagram<RadarModel> = object : Diagram<RadarModel> {
-  override val type = "radar"
+val radar: Diagram<RadarModel> =
+  object : Diagram<RadarModel> {
+    override val type = "radar"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): RadarModel =
-    buildRadar(parseRadar(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): RadarModel = buildRadar(parseRadar(source), title)
 
-  override fun render(model: RadarModel, config: Config, options: RenderOptions): Rendered = renderRadar(model, config, options)
-}
+    override fun render(model: RadarModel, config: Config, options: RenderOptions): Rendered =
+      renderRadar(model, config, options)
+  }

@@ -113,55 +113,69 @@ private val ID = TokenType(name = "ID", pattern = JsRegExp("""[\w]([-\w]*\w)?"""
 private val RE_NAME_REST = JsRegExp("""[-\w]*\w""", "y")
 
 // Gives way to a longer name, except right after its option, as in `graticule polygonaxis`.
-private fun optionValue(pattern: JsRegExp, option: Int): Scanner =
-  { src, at, previous ->
-    pattern.lastIndex = at
-    if (!pattern.test(src)) {
-      -1
+private fun optionValue(pattern: JsRegExp, option: Int): Scanner = { src, at, previous ->
+  pattern.lastIndex = at
+  if (!pattern.test(src)) {
+    -1
+  } else {
+    val end = pattern.lastIndex
+    if (previous == option) {
+      end
     } else {
-      val end = pattern.lastIndex
-      if (previous == option) {
-        end
-      } else {
-        RE_NAME_REST.lastIndex = end
-        if (RE_NAME_REST.test(src)) -1 else end
-      }
+      RE_NAME_REST.lastIndex = end
+      if (RE_NAME_REST.test(src)) -1 else end
     }
   }
+}
 
-private fun word(text: String): TokenType = TokenType(name = text, pattern = text, longer = listOf(ID))
+private fun word(text: String): TokenType =
+  TokenType(name = text, pattern = text, longer = listOf(ID))
+
 private fun mark(text: String): TokenType = TokenType(name = text, pattern = text)
 
-val RADAR_TOKENS: List<TokenType> = listOf(
-  mark("radar-beta:"),
-  keyword("radar-beta").copy(longer = listOf(ID)),
-  word("showLegend"),
-  word("graticule"),
-  word("curve"),
-  word("ticks"),
-  word("axis"),
-  word("max"),
-  word("min"),
-  mark(":"),
-  mark(","),
-  mark("["),
-  mark("]"),
-  mark("{"),
-  mark("}"),
-  TokenType(name = "GRATICULE", pattern = JsRegExp("""circle|polygon""", "y"), match = optionValue(JsRegExp("""circle|polygon""", "y"), T.graticule)),
-  TokenType(name = "BOOLEAN", pattern = JsRegExp("""true|false""", "y"), match = optionValue(JsRegExp("""true|false""", "y"), T.showLegend)),
-  ACC_DESCR.copy(match = ::matchAccDescr),
-  ACC_TITLE,
-  titleBefore("""[-\w]*\w"""),
-  TokenType(name = "NUMBER", pattern = JsRegExp("""(?:[0-9]+\.[0-9]+(?!\.))|(?:0|[1-9][0-9]*(?!\.))""", "y"), match = ::matchNumber),
-  STRING,
-  ID,
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-)
+val RADAR_TOKENS: List<TokenType> =
+  listOf(
+    mark("radar-beta:"),
+    keyword("radar-beta").copy(longer = listOf(ID)),
+    word("showLegend"),
+    word("graticule"),
+    word("curve"),
+    word("ticks"),
+    word("axis"),
+    word("max"),
+    word("min"),
+    mark(":"),
+    mark(","),
+    mark("["),
+    mark("]"),
+    mark("{"),
+    mark("}"),
+    TokenType(
+      name = "GRATICULE",
+      pattern = JsRegExp("""circle|polygon""", "y"),
+      match = optionValue(JsRegExp("""circle|polygon""", "y"), T.graticule),
+    ),
+    TokenType(
+      name = "BOOLEAN",
+      pattern = JsRegExp("""true|false""", "y"),
+      match = optionValue(JsRegExp("""true|false""", "y"), T.showLegend),
+    ),
+    ACC_DESCR.copy(match = ::matchAccDescr),
+    ACC_TITLE,
+    titleBefore("""[-\w]*\w"""),
+    TokenType(
+      name = "NUMBER",
+      pattern = JsRegExp("""(?:[0-9]+\.[0-9]+(?!\.))|(?:0|[1-9][0-9]*(?!\.))""", "y"),
+      match = ::matchNumber,
+    ),
+    STRING,
+    ID,
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+  )
 
 class AxisAst(
   val name: String,
@@ -207,9 +221,7 @@ fun parseRadar(src: String): RadarAst {
   val r = Reader(lexRadar(src), RADAR_TOKENS, "radar")
   val ast = RadarAst()
 
-  val newlines = {
-    while (r.kind == T.newline) r.i++
-  }
+  val newlines = { while (r.kind == T.newline) r.i++ }
 
   val endOfLine = {
     if (r.kind != -1) {
@@ -218,61 +230,71 @@ fun parseRadar(src: String): RadarAst {
     }
   }
 
-  val label = fun(): String? {
-    if (!r.accept(T.open)) return null
-    val text = stringValue(r.expect(T.string))
-    r.expect(T.close)
-    return text
-  }
+  val label =
+    fun(): String? {
+      if (!r.accept(T.open)) return null
+      val text = stringValue(r.expect(T.string))
+      r.expect(T.close)
+      return text
+    }
 
-  val entry = fun(detailed: Boolean): EntryAst {
-    if (!detailed) return EntryAst(value = jsNumber(r.expect(T.number)))
-    val axis = r.expect(T.id)
-    r.accept(T.colon)
-    return EntryAst(axis = axis, value = jsNumber(r.expect(T.number)))
-  }
+  val entry =
+    fun(detailed: Boolean): EntryAst {
+      if (!detailed) return EntryAst(value = jsNumber(r.expect(T.number)))
+      val axis = r.expect(T.id)
+      r.accept(T.colon)
+      return EntryAst(axis = axis, value = jsNumber(r.expect(T.number)))
+    }
 
-  val curve = fun(): CurveAst {
-    val name = r.expect(T.id)
-    val text = label()
-    val node = CurveAst(name)
-    if (text != null) node.label = text
-    r.expect(T.openBrace)
-    newlines()
-    if (r.kind != T.number && r.kind != T.id) r.fail("a number or an axis name")
-    val detailed = r.kind == T.id
-    node.entries.add(entry(detailed))
-    while (r.accept(T.comma)) {
+  val curve =
+    fun(): CurveAst {
+      val name = r.expect(T.id)
+      val text = label()
+      val node = CurveAst(name)
+      if (text != null) node.label = text
+      r.expect(T.openBrace)
       newlines()
+      if (r.kind != T.number && r.kind != T.id) r.fail("a number or an axis name")
+      val detailed = r.kind == T.id
       node.entries.add(entry(detailed))
+      while (r.accept(T.comma)) {
+        newlines()
+        node.entries.add(entry(detailed))
+      }
+      newlines()
+      r.expect(T.closeBrace)
+      return node
     }
-    newlines()
-    r.expect(T.closeBrace)
-    return node
-  }
 
-  val axis = fun(): AxisAst {
-    val node = AxisAst(r.expect(T.id))
-    val text = label()
-    if (text != null) node.label = text
-    return node
-  }
-
-  val option = fun(): OptionAst {
-    val kind = r.kind
-    val name = r.take()
-    val value: Any = if (kind == T.showLegend) {
-      r.expect(T.boolean) == "true"
-    } else if (kind == T.graticule) {
-      r.expect(T.graticuleValue)
-    } else {
-      jsNumber(r.expect(T.number))
+  val axis =
+    fun(): AxisAst {
+      val node = AxisAst(r.expect(T.id))
+      val text = label()
+      if (text != null) node.label = text
+      return node
     }
-    return OptionAst(name, value)
-  }
+
+  val option =
+    fun(): OptionAst {
+      val kind = r.kind
+      val name = r.take()
+      val value: Any =
+        if (kind == T.showLegend) {
+          r.expect(T.boolean) == "true"
+        } else if (kind == T.graticule) {
+          r.expect(T.graticuleValue)
+        } else {
+          jsNumber(r.expect(T.number))
+        }
+      return OptionAst(name, value)
+    }
 
   val isOption = {
-    r.kind == T.showLegend || r.kind == T.ticks || r.kind == T.max || r.kind == T.min || r.kind == T.graticule
+    r.kind == T.showLegend ||
+      r.kind == T.ticks ||
+      r.kind == T.max ||
+      r.kind == T.min ||
+      r.kind == T.graticule
   }
 
   newlines()

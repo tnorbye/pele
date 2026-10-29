@@ -31,28 +31,49 @@ private object AbnfT {
 }
 
 private const val DIGITS = "0123456789"
-private val NAME = TokenType(name = "ABNF_RULENAME", pattern = JsRegExp("""[A-Za-z][A-Za-z0-9-]*""", "y"), first = LETTERS)
-private val COMMENT = TokenType(name = "ABNF_COMMENT", pattern = JsRegExp(""";[^\n\r]*""", "y"), hidden = true, first = ";")
+private val NAME =
+  TokenType(
+    name = "ABNF_RULENAME",
+    pattern = JsRegExp("""[A-Za-z][A-Za-z0-9-]*""", "y"),
+    first = LETTERS,
+  )
+private val COMMENT =
+  TokenType(
+    name = "ABNF_COMMENT",
+    pattern = JsRegExp(""";[^\n\r]*""", "y"),
+    hidden = true,
+    first = ";",
+  )
 
-val ABNF_TOKENS: List<TokenType> = listOf(
-  opening("railroad-abnf-beta", NAME),
-  literal("="),
-  // A semicolon closes a rule only at the end of its line; with anything after it, it starts a comment.
-  literal(";", listOf(COMMENT)),
-  literal("/"),
-  literal("("),
-  literal(")"),
-  literal("["),
-  literal("]"),
-  title("""[A-Za-z0-9-]"""),
-  ACC_TITLE,
-  ACC_DESCR,
-  NAME,
-  TokenType(name = "ABNF_STRING", pattern = JsRegExp("\"[^\"]*\"", "y"), first = "\""),
-  TokenType(name = "ABNF_NUMVAL", pattern = JsRegExp("""%[xXdDbB][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|\.[0-9A-Fa-f]+)*""", "y"), first = "%"),
-  TokenType(name = "ABNF_REPEAT", pattern = JsRegExp("""[0-9]*\*[0-9]*""", "y"), first = DIGITS + "*"),
-  TokenType(name = "ABNF_EXACT_REPEAT", pattern = JsRegExp("""[0-9]+""", "y"), first = DIGITS),
-) + hiddenTokens("ABNF") + listOf(COMMENT)
+val ABNF_TOKENS: List<TokenType> =
+  listOf(
+    opening("railroad-abnf-beta", NAME),
+    literal("="),
+    // A semicolon closes a rule only at the end of its line; with anything after it, it starts a
+    // comment.
+    literal(";", listOf(COMMENT)),
+    literal("/"),
+    literal("("),
+    literal(")"),
+    literal("["),
+    literal("]"),
+    title("""[A-Za-z0-9-]"""),
+    ACC_TITLE,
+    ACC_DESCR,
+    NAME,
+    TokenType(name = "ABNF_STRING", pattern = JsRegExp("\"[^\"]*\"", "y"), first = "\""),
+    TokenType(
+      name = "ABNF_NUMVAL",
+      pattern = JsRegExp("""%[xXdDbB][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|\.[0-9A-Fa-f]+)*""", "y"),
+      first = "%",
+    ),
+    TokenType(
+      name = "ABNF_REPEAT",
+      pattern = JsRegExp("""[0-9]*\*[0-9]*""", "y"),
+      first = DIGITS + "*",
+    ),
+    TokenType(name = "ABNF_EXACT_REPEAT", pattern = JsRegExp("""[0-9]+""", "y"), first = DIGITS),
+  ) + hiddenTokens("ABNF") + listOf(COMMENT)
 
 sealed class AbnfPrimary : Parent {
   // $type is AbnfStringLiteral or AbnfNumVal.
@@ -71,7 +92,8 @@ class AbnfElement(
 
 class AbnfConcatenation(override val elements: MutableList<AbnfElement> = ArrayList()) : Parent
 
-class AbnfAlternation(override val alternatives: MutableList<AbnfConcatenation> = ArrayList()) : Parent
+class AbnfAlternation(override val alternatives: MutableList<AbnfConcatenation> = ArrayList()) :
+  Parent
 
 class AbnfRule(
   override val name: String,
@@ -90,7 +112,12 @@ private class AbnfFrame(
   val repeat: String?,
 )
 
-private fun frame(node: AbnfPrimary?, alternation: AbnfAlternation, close: Int, repeat: String?): AbnfFrame {
+private fun frame(
+  node: AbnfPrimary?,
+  alternation: AbnfAlternation,
+  close: Int,
+  repeat: String?,
+): AbnfFrame {
   val concatenation = AbnfConcatenation()
   alternation.alternatives.add(concatenation)
   return AbnfFrame(alternation, concatenation, node, close, repeat)
@@ -107,11 +134,21 @@ private fun alternation(r: Reader): AbnfAlternation {
       AbnfT.string -> primary = AbnfPrimary.Literal("AbnfStringLiteral", r.take().jsSlice(1, -1))
       AbnfT.number -> primary = AbnfPrimary.Literal("AbnfNumVal", r.take())
       AbnfT.name -> primary = AbnfPrimary.RuleName(r.take())
-      AbnfT.group, AbnfT.option -> {
+      AbnfT.group,
+      AbnfT.option -> {
         r.i++
         val element = AbnfAlternation()
         stack.add(top)
-        top = frame(AbnfPrimary.Group(if (kind == AbnfT.group) "AbnfGroup" else "AbnfOptionalGroup", element), element, kind + 1, repeat)
+        top =
+          frame(
+            AbnfPrimary.Group(
+              if (kind == AbnfT.group) "AbnfGroup" else "AbnfOptionalGroup",
+              element,
+            ),
+            element,
+            kind + 1,
+            repeat,
+          )
         continue@outer
       }
       else -> r.fail("a string, a number, a name, or an opening bracket")
@@ -130,7 +167,15 @@ private fun alternation(r: Reader): AbnfAlternation {
         r.i++
         top.concatenation = AbnfConcatenation()
         top.alternation.alternatives.add(top.concatenation)
-      } else if (k != AbnfT.string && k != AbnfT.number && k != AbnfT.name && k != AbnfT.group && k != AbnfT.option && k != AbnfT.repeat && k != AbnfT.exact) {
+      } else if (
+        k != AbnfT.string &&
+          k != AbnfT.number &&
+          k != AbnfT.name &&
+          k != AbnfT.group &&
+          k != AbnfT.option &&
+          k != AbnfT.repeat &&
+          k != AbnfT.exact
+      ) {
         if (stack.size == 0) return top.alternation
         r.fail("token of type '${ABNF_TOKENS[top.close].name}'")
       }
@@ -166,7 +211,10 @@ private fun node(part: Parent, kids: List<RailroadNode>): RailroadNode {
       val star = repeat.indexOf('*')
       val exact = star == -1
       val min = if (star > 0 || exact) jsParseInt(repeat, 10) else 0.0
-      val max = if (exact) min else if (star < repeat.length - 1) jsParseInt(repeat.jsSlice(star + 1), 10) else Double.POSITIVE_INFINITY
+      val max =
+        if (exact) min
+        else if (star < repeat.length - 1) jsParseInt(repeat.jsSlice(star + 1), 10)
+        else Double.POSITIVE_INFINITY
       if (min == 0.0 && max == 1.0) optional(kids[0]) else repetition(kids[0], min, max)
     }
     is AbnfPrimary.Literal -> terminal(part.value)

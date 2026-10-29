@@ -23,17 +23,19 @@ class Tokens(
 private const val WORD = 1
 private const val PUNCTUATION = 2
 
-private val CLASS = IntArray(128).also { table ->
-  for (c in 48..57) table[c] = WORD
-  for (c in 65..90) {
-    table[c] = WORD
-    table[c + 32] = WORD
+private val CLASS =
+  IntArray(128).also { table ->
+    for (c in 48..57) table[c] = WORD
+    for (c in 65..90) {
+      table[c] = WORD
+      table[c + 32] = WORD
+    }
+    table[95] = WORD
+    for (ch in "!#$&*+/=?^|~") table[ch.code] = PUNCTUATION
   }
-  table[95] = WORD
-  for (ch in "!#$&*+/=?^|~") table[ch.code] = PUNCTUATION
-}
 
-private val KEYWORD_LENGTH = intArrayOf(0, 12, 5, 14, 3, 9, 2, 2, 2, 2, 2, 4, 3, 4, 8, 5, 5, 7, 6, 4, 5)
+private val KEYWORD_LENGTH =
+  intArrayOf(0, 12, 5, 14, 3, 9, 2, 2, 2, 2, 2, 4, 3, 4, 8, 5, 5, 7, 6, 4, 5)
 
 private fun isWord(c: Int): Boolean = c in 0..127 && (CLASS[c] and WORD) != 0
 
@@ -47,8 +49,12 @@ private fun startsWithNoCase(src: String, at: Int, word: String): Boolean {
 private fun keywordAt(src: String, at: Int, c: Int): Int {
   return when (c) {
     97 -> if (src.startsWith("actor", at)) T.ACTOR else 0
-    115 -> if (src.startsWith("systemBoundary", at)) T.SYSTEM_BOUNDARY else if (src.startsWith("style", at)) T.STYLE else 0
-    101 -> if (src.startsWith("end", at)) T.END else if (startsWithNoCase(src, at, "extend")) T.EXTEND else 0
+    115 ->
+      if (src.startsWith("systemBoundary", at)) T.SYSTEM_BOUNDARY
+      else if (src.startsWith("style", at)) T.STYLE else 0
+    101 ->
+      if (src.startsWith("end", at)) T.END
+      else if (startsWithNoCase(src, at, "extend")) T.EXTEND else 0
     69 -> if (startsWithNoCase(src, at, "extend")) T.EXTEND else 0
     100 -> if (src.startsWith("direction", at)) T.DIRECTION else 0
     84 -> if (src.startsWith("TD", at)) T.TD else if (src.startsWith("TB", at)) T.TB else 0
@@ -58,8 +64,11 @@ private fun keywordAt(src: String, at: Int, c: Int): Int {
     110 -> if (src.startsWith("note", at)) T.NOTE else 0
     102 -> if (src.startsWith("for", at)) T.FOR else if (src.startsWith("false", at)) T.FALSE else 0
     106 -> if (src.startsWith("json", at)) T.JSON else 0
-    99 -> if (src.startsWith("classDef", at)) T.CLASS_DEF else if (src.startsWith("class", at)) T.CLASS else 0
-    105, 73 -> if (startsWithNoCase(src, at, "include")) T.INCLUDE else 0
+    99 ->
+      if (src.startsWith("classDef", at)) T.CLASS_DEF
+      else if (src.startsWith("class", at)) T.CLASS else 0
+    105,
+    73 -> if (startsWithNoCase(src, at, "include")) T.INCLUDE else 0
     116 -> if (src.startsWith("true", at)) T.TRUE else 0
     117 -> if (src.startsWith("usecase-beta", at)) T.USECASE else 0
     else -> 0
@@ -186,11 +195,9 @@ fun tokenize(src: String): Tokens {
                 val ch = src.charCodeAt(k)
                 if (quoted) {
                   if (escaped) escaped = false
-                  else if (ch == 92) escaped = true
-                  else if (ch == 34) quoted = false
+                  else if (ch == 92) escaped = true else if (ch == 34) quoted = false
                 } else if (ch == 34) quoted = true
-                else if (ch == 123) depth++
-                else if (ch == 125 && --depth == 0) break
+                else if (ch == 123) depth++ else if (ch == 125 && --depth == 0) break
                 k++
               }
               types.add(if (k < n) T.JSON_OBJECT_LITERAL else T.UNCLOSED_JSON_OBJECT_LITERAL)
@@ -212,11 +219,14 @@ fun tokenize(src: String): Tokens {
             type = keyword
             end = i + KEYWORD_LENGTH[keyword]
           } else type = T.IDENTIFIER
-        } else if ((c == 111 || c == 120) && src.charCodeAt(i + 1) == 45 && src.charCodeAt(i + 2) == 45) {
+        } else if (
+          (c == 111 || c == 120) && src.charCodeAt(i + 1) == 45 && src.charCodeAt(i + 2) == 45
+        ) {
           type = if (c == 111) T.BACKWARD_CIRCLE else T.BACKWARD_CROSS
           end = i + 3
         } else if (isDigit(c)) {
-          // `1mg` is an identifier, and `1.5px` is a number because the identifier stops at the dot.
+          // `1mg` is an identifier, and `1.5px` is a number because the identifier stops at the
+          // dot.
           var digits = i + 1
           while (isDigit(src.charCodeAt(digits))) digits++
           if (src.charCodeAt(digits) == 46 && isDigit(src.charCodeAt(digits + 1))) {
@@ -320,7 +330,9 @@ fun tokenize(src: String): Tokens {
           } else {
             while (close < n && src.charCodeAt(close) != 10 && src.charCodeAt(close) != 13) close++
             if (close == i) {
-              while (close < n && (src.charCodeAt(close) == 10 || src.charCodeAt(close) == 13)) close++
+              while (
+                close < n && (src.charCodeAt(close) == 10 || src.charCodeAt(close) == 13)
+              ) close++
               throw lexError(src, i, close - i)
             }
             type = T.UNCLOSED_STEREOTYPE_TEXT

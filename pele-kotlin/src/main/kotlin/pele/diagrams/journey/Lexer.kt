@@ -29,23 +29,24 @@ object T {
   const val colon = 14
 }
 
-val TOKEN_NAMES = listOf(
-  "\$end",
-  "EOF",
-  "INVALID",
-  "NEWLINE",
-  "journey",
-  "title",
-  "acc_title",
-  "acc_title_value",
-  "acc_descr",
-  "acc_descr_value",
-  "acc_descr_multiline_value",
-  "section",
-  "taskName",
-  "taskData",
-  ":",
-)
+val TOKEN_NAMES =
+  listOf(
+    "\$end",
+    "EOF",
+    "INVALID",
+    "NEWLINE",
+    "journey",
+    "title",
+    "acc_title",
+    "acc_title_value",
+    "acc_descr",
+    "acc_descr_value",
+    "acc_descr_multiline_value",
+    "section",
+    "taskName",
+    "taskData",
+    ":",
+  )
 
 // `#`, a line break, and `;` end every kind of text; a colon also ends a task name or a section.
 private fun textEnd(src: String, from: Int, colon: Boolean): Int {

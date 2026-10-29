@@ -2,16 +2,18 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.svg
 
+import kotlin.math.ceil
 import pele.text.Label
 import pele.text.Style
 import pele.text.TextMeasurer
 import pele.text.layoutLabel
 import pele.text.withoutMath
-import kotlin.math.ceil
 
 // Mermaid draws diagram titles as text, whatever they hold.
 fun titleLabel(title: String?, measurer: TextMeasurer, size: Double, maxWidth: Double): Label =
-  withoutMath { layoutLabel(title, false, measurer, size, maxWidth, Style.Bold) }
+  withoutMath {
+    layoutLabel(title, false, measurer, size, maxWidth, Style.Bold)
+  }
 
 class Titled(val width: Double, val height: Double, val content: String)
 
@@ -32,7 +34,12 @@ fun withTitle(
   return Titled(
     width = full,
     height = ceil(height + shift),
-    content = labelSvg(label, full / 2, pad + label.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      "<g transform=\"translate(${num((full - width) / 2)},${num(shift)})\">$content</g>",
+    content =
+      labelSvg(
+        label,
+        full / 2,
+        pad + label.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) + "<g transform=\"translate(${num((full - width) / 2)},${num(shift)})\">$content</g>",
   )
 }

@@ -44,7 +44,14 @@ class TreeViewDb {
   val root: TreeNode = TreeNode(id = 0, level = -1.0, name = "/", nodeType = "directory")
   private val stack: MutableList<TreeNode> = arrayListOf(root)
 
-  fun addNode(level: Double, name: String, nodeType: NodeType, cssClass: String? = null, icon: String? = null, description: String? = null) {
+  fun addNode(
+    level: Double,
+    name: String,
+    nodeType: NodeType,
+    cssClass: String? = null,
+    icon: String? = null,
+    description: String? = null,
+  ) {
     val stack = this.stack
     while (level <= stack[stack.size - 1].level) stack.removeAt(stack.size - 1)
     val node = TreeNode(count++, level, name, nodeType, icon, cssClass, description)
@@ -71,7 +78,8 @@ fun populate(ast: TreeViewAst, db: TreeViewDb) {
   }
 }
 
-// Reads the source to a syntax tree, accepting box-drawing input. Errors name lines of the original text.
+// Reads the source to a syntax tree, accepting box-drawing input. Errors name lines of the original
+// text.
 fun readTreeView(source: String): TreeViewAst {
   val processed = preprocessBoxDrawing(source)
   val text = processed.text
@@ -83,13 +91,17 @@ fun readTreeView(source: String): TreeViewAst {
     // The parser already located errors in unchanged text.
     if (text == source) throw error
     val line = lineMap[error.line] ?: throw error
-    val at = if (error.column > 0) (columns[error.line]?.invoke(error.column - 1) ?: (error.column - 1)) else 0
+    val at =
+      if (error.column > 0) (columns[error.line]?.invoke(error.column - 1) ?: (error.column - 1))
+      else 0
     val written = locate(source, lineStart(source, line) + at)
-    val head = if (error.message.contains('\n')) error.message.indexOf('\n') else error.message.length
+    val head =
+      if (error.message.contains('\n')) error.message.indexOf('\n') else error.message.length
     val rest = error.message.jsSlice(head)
     val message =
       remapErrorLines(error.message.jsSlice(0, head), mapOf(error.line to written.line)) +
-        (if (error.snippet.isNotEmpty()) rest.jsReplace(error.snippet) { written.snippet } else rest)
+        (if (error.snippet.isNotEmpty()) rest.jsReplace(error.snippet) { written.snippet }
+        else rest)
     throw PeleError(
       message,
       error.code,
@@ -109,8 +121,10 @@ fun buildTreeView(ast: TreeViewAst, title: String?): TreeViewModel {
   return TreeViewModel(
     type = "treeView",
     title = if (!ast.title.isNullOrEmpty()) ast.title else title,
-    accTitle = if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
-    accDescr = if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
+    accTitle =
+      if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
+    accDescr =
+      if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
     root = db.root,
     count = db.count,
   )

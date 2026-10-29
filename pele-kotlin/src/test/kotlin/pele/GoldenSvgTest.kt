@@ -1,28 +1,31 @@
 // PORT: JVM-only helper with no upstream counterpart (see UPDATE.md).
 package pele
 
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
+import java.io.File
+import java.security.MessageDigest
 import java.util.TimeZone
+import java.util.zip.GZIPInputStream
+import kotlin.test.fail
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import pele.js.jsStr
 import pele.js.jsonParse
 import pele.js.jsonQuote
-import java.io.File
-import java.security.MessageDigest
-import java.util.zip.GZIPInputStream
-import kotlin.test.fail
 
 /** One record of testData/golden/<type>.jsonl.gz, written by scripts/generate_goldens.mjs. */
 class GoldenRecord(val type: String, val index: Int, val json: Map<String, Any?>) {
-  val src: String get() = json["src"] as String
+  val src: String
+    get() = json["src"] as String
 
   @Suppress("UNCHECKED_CAST")
-  val options: Map<String, Any?> get() = json["options"] as Map<String, Any?>
+  val options: Map<String, Any?>
+    get() = json["options"] as Map<String, Any?>
 
-  val ok: Boolean get() = json["ok"] == true
+  val ok: Boolean
+    get() = json["ok"] == true
 
   fun renderOptions(): RenderOptions =
     RenderOptions(
@@ -32,9 +35,11 @@ class GoldenRecord(val type: String, val index: Int, val json: Map<String, Any?>
       images = options["images"] as Boolean?,
     )
 
-  override fun toString(): String = "$type #$index ${jsonStringifyOptions()} ${jsonQuote(src).take(300)}"
+  override fun toString(): String =
+    "$type #$index ${jsonStringifyOptions()} ${jsonQuote(src).take(300)}"
 
-  private fun jsonStringifyOptions(): String = options.entries.joinToString(",", "{", "}") { "${it.key}:${it.value}" }
+  private fun jsonStringifyOptions(): String =
+    options.entries.joinToString(",", "{", "}") { "${it.key}:${it.value}" }
 }
 
 object Goldens {
@@ -46,24 +51,39 @@ object Goldens {
   }
 
   fun types(): List<String> {
-    val only = System.getProperty("pele.type")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
-    val all = dir.listFiles { f -> f.name.endsWith(".jsonl.gz") }!!.map { it.name.removeSuffix(".jsonl.gz") }.sorted()
+    val only =
+      System.getProperty("pele.type")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+    val all =
+      dir
+        .listFiles { f -> f.name.endsWith(".jsonl.gz") }!!
+        .map { it.name.removeSuffix(".jsonl.gz") }
+        .sorted()
     return if (only.isNullOrEmpty()) all else all.filter { it in only }
   }
 
   @Suppress("UNCHECKED_CAST")
   fun load(type: String): List<GoldenRecord> {
-    val text = GZIPInputStream(File(dir, "$type.jsonl.gz").inputStream()).readBytes().toString(Charsets.UTF_8)
-    return text.split('\n').filter { it.isNotEmpty() }.mapIndexed { i, line -> GoldenRecord(type, i, jsonParse(line) as Map<String, Any?>) }
+    val text =
+      GZIPInputStream(File(dir, "$type.jsonl.gz").inputStream())
+        .readBytes()
+        .toString(Charsets.UTF_8)
+    return text
+      .split('\n')
+      .filter { it.isNotEmpty() }
+      .mapIndexed { i, line -> GoldenRecord(type, i, jsonParse(line) as Map<String, Any?>) }
   }
 
   fun sha256(text: String): String =
-    MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+    MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") {
+      "%02x".format(it)
+    }
 
-  private val RE_JSON_MESSAGE = Regex("""^Invalid JSON: .* (\(line \d+, column \d+\))$""", RegexOption.DOT_MATCHES_ALL)
+  private val RE_JSON_MESSAGE =
+    Regex("""^Invalid JSON: .* (\(line \d+, column \d+\))$""", RegexOption.DOT_MATCHES_ALL)
 
   // The only accepted difference: engines word JSON.parse errors differently.
-  fun normalizeMessage(message: String): String = RE_JSON_MESSAGE.replace(message) { "Invalid JSON: ${it.groupValues[1]}" }
+  fun normalizeMessage(message: String): String =
+    RE_JSON_MESSAGE.replace(message) { "Invalid JSON: ${it.groupValues[1]}" }
 
   /** Renders the record and returns a description of the first mismatch, or null. */
   fun check(record: GoldenRecord, svgOut: File? = null): String? {
@@ -86,14 +106,19 @@ object Goldens {
     if (!record.ok) return "rendered, expected error ${json["errorCode"]}: ${json["errorMessage"]}"
     val problems = ArrayList<String>()
     if (result.type != json["type"]) problems.add("type ${result.type} != ${json["type"]}")
-    if (result.mermaidType != json["mermaidType"]) problems.add("mermaidType ${result.mermaidType} != ${json["mermaidType"]}")
-    if (jsStr(result.width) != jsStr(json["width"] as Double)) problems.add("width ${jsStr(result.width)} != ${jsStr(json["width"] as Double)}")
-    if (jsStr(result.height) != jsStr(json["height"] as Double)) problems.add("height ${jsStr(result.height)} != ${jsStr(json["height"] as Double)}")
+    if (result.mermaidType != json["mermaidType"])
+      problems.add("mermaidType ${result.mermaidType} != ${json["mermaidType"]}")
+    if (jsStr(result.width) != jsStr(json["width"] as Double))
+      problems.add("width ${jsStr(result.width)} != ${jsStr(json["width"] as Double)}")
+    if (jsStr(result.height) != jsStr(json["height"] as Double))
+      problems.add("height ${jsStr(result.height)} != ${jsStr(json["height"] as Double)}")
     val links = json["links"] as? List<*>
     if (links == null) {
       problems.add("record has no links")
     } else {
-      val expected = links.map { l -> (l as Map<*, *>).let { "${it["id"]}|${it["href"]}|${it["internal"]}" } }
+      val expected = links.map { l ->
+        (l as Map<*, *>).let { "${it["id"]}|${it["href"]}|${it["internal"]}" }
+      }
       val actual = result.links.map { "${it.id}|${it.href}|${it.internal}" }
       if (expected != actual) problems.add("links $actual != $expected")
     }
@@ -156,7 +181,10 @@ class GoldenSvgTest {
           failures.add("$record\n  $problem")
         }
         if (failures.isNotEmpty()) {
-          fail("${failures.size} of ${records.size} $type records differ:\n\n" + failures.take(8).joinToString("\n\n"))
+          fail(
+            "${failures.size} of ${records.size} $type records differ:\n\n" +
+              failures.take(8).joinToString("\n\n")
+          )
         }
       }
     }

@@ -8,15 +8,23 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val ishikawa: Diagram<IshikawaDb> = object : Diagram<IshikawaDb> {
-  override val type = "ishikawa"
+val ishikawa: Diagram<IshikawaDb> =
+  object : Diagram<IshikawaDb> {
+    override val type = "ishikawa"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): IshikawaDb {
-    val db = IshikawaDb()
-    db.title = title
-    parseIshikawa(source, db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): IshikawaDb {
+      val db = IshikawaDb()
+      db.title = title
+      parseIshikawa(source, db)
+      return db
+    }
+
+    override fun render(model: IshikawaDb, config: Config, options: RenderOptions): Rendered =
+      renderIshikawa(model, config, options)
   }
-
-  override fun render(model: IshikawaDb, config: Config, options: RenderOptions): Rendered = renderIshikawa(model, config, options)
-}

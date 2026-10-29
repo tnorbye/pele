@@ -7,20 +7,23 @@ import pele.syntaxError
 
 private const val COUNT = T.PUNCTUATION + 1
 
-private val ALPHANUM = IntArray(COUNT).also { for (t in intArrayOf(T.UNICODE_TEXT, T.ALPHA, T.MINUS)) it[t] = 1 }
+private val ALPHANUM =
+  IntArray(COUNT).also { for (t in intArrayOf(T.UNICODE_TEXT, T.ALPHA, T.MINUS)) it[t] = 1 }
 
-private val STYLE_PART = IntArray(COUNT).also {
-  for (t in intArrayOf(T.ALPHA, T.COLON, T.BRKT, T.STYLE, T.PCT, T.LABEL)) it[t] = 1
-}
+private val STYLE_PART =
+  IntArray(COUNT).also {
+    for (t in intArrayOf(T.ALPHA, T.COLON, T.BRKT, T.STYLE, T.PCT, T.LABEL)) it[t] = 1
+  }
 
 // Mermaid's relationType numbers, plus one so that zero means "not an end marker".
-private val END_TYPE = IntArray(COUNT).also {
-  it[T.AGGREGATION] = 1
-  it[T.EXTENSION] = 2
-  it[T.COMPOSITION] = 3
-  it[T.DEPENDENCY] = 4
-  it[T.LOLLIPOP] = 5
-}
+private val END_TYPE =
+  IntArray(COUNT).also {
+    it[T.AGGREGATION] = 1
+    it[T.EXTENSION] = 2
+    it[T.COMPOSITION] = 3
+    it[T.DEPENDENCY] = 4
+    it[T.LOLLIPOP] = 5
+  }
 
 private const val NAME_TOKENS = "'UNICODE_TEXT', 'NUM', 'ALPHA', 'MINUS', 'BQUOTE_STR'"
 
@@ -195,19 +198,22 @@ fun parseClassDiagram(src: String, db: ClassDb) {
     val type1 = relationEnd()
     t = types[i]
     if (t != T.LINE && t != T.DOTTED_LINE) {
-      fail("'AGGREGATION', 'EXTENSION', 'COMPOSITION', 'DEPENDENCY', 'LOLLIPOP', 'LINE', 'DOTTED_LINE'")
+      fail(
+        "'AGGREGATION', 'EXTENSION', 'COMPOSITION', 'DEPENDENCY', 'LOLLIPOP', 'LINE', 'DOTTED_LINE'"
+      )
     }
     i++
     val type2 = relationEnd()
     val title2 = if (types[i] == T.STR) texts[i++] else "none"
     val id2 = name(true)
-    val relation = ClassRelation(
-      id1 = id1,
-      id2 = id2,
-      relation = RelationKind(type1, type2, if (t == T.LINE) 0 else 1),
-      relationTitle1 = title1,
-      relationTitle2 = title2,
-    )
+    val relation =
+      ClassRelation(
+        id1 = id1,
+        id2 = id2,
+        relation = RelationKind(type1, type2, if (t == T.LINE) 0 else 1),
+        relationTitle1 = title1,
+        relationTitle2 = title2,
+      )
     if (types[i] == T.LABEL) relation.title = db.cleanupLabel(texts[i++])
     db.addRelation(relation)
   }
@@ -215,7 +221,8 @@ fun parseClassDiagram(src: String, db: ClassDb) {
   fun styles(): List<String> {
     val out = ArrayList<String>()
     while (true) {
-      if (STYLE_PART[types[i]] == 0) fail("'ALPHA', 'NUM', 'COLON', 'UNIT', 'SPACE', 'BRKT', 'STYLE', 'PCT', 'LABEL'")
+      if (STYLE_PART[types[i]] == 0)
+        fail("'ALPHA', 'NUM', 'COLON', 'UNIT', 'SPACE', 'BRKT', 'STYLE', 'PCT', 'LABEL'")
       var s = texts[i++]
       while (STYLE_PART[types[i]] == 1) s += texts[i++]
       out.add(s)
@@ -238,7 +245,10 @@ fun parseClassDiagram(src: String, db: ClassDb) {
   fun statement() {
     val t = types[i]
     when (t) {
-      T.UNICODE_TEXT, T.ALPHA, T.MINUS, T.BQUOTE_STR -> {
+      T.UNICODE_TEXT,
+      T.ALPHA,
+      T.MINUS,
+      T.BQUOTE_STR -> {
         classOrRelation()
         return
       }
@@ -282,7 +292,8 @@ fun parseClassDiagram(src: String, db: ClassDb) {
           return
         }
         val fn = expect(T.CALLBACK_NAME)
-        if (types[i] == T.CALLBACK_ARGS) db.setClickEvent(id, fn, texts[i++]) else db.setClickEvent(id, fn)
+        if (types[i] == T.CALLBACK_ARGS) db.setClickEvent(id, fn, texts[i++])
+        else db.setClickEvent(id, fn)
         tooltip(id)
         return
       }
@@ -298,7 +309,8 @@ fun parseClassDiagram(src: String, db: ClassDb) {
         db.setCssClass(ids, expect(T.ALPHA))
         return
       }
-      T.NOTE, T.NOTE_FOR -> {
+      T.NOTE,
+      T.NOTE_FOR -> {
         noteStatement()
         return
       }
@@ -312,9 +324,15 @@ fun parseClassDiagram(src: String, db: ClassDb) {
         db.defineClass(ids, styles())
         return
       }
-      T.direction_tb, T.direction_bt, T.direction_rl, T.direction_lr -> {
+      T.direction_tb,
+      T.direction_bt,
+      T.direction_rl,
+      T.direction_lr -> {
         i++
-        db.setDirection(if (t == T.direction_tb) "TB" else if (t == T.direction_bt) "BT" else if (t == T.direction_rl) "RL" else "LR")
+        db.setDirection(
+          if (t == T.direction_tb) "TB"
+          else if (t == T.direction_bt) "BT" else if (t == T.direction_rl) "RL" else "LR"
+        )
         return
       }
       T.acc_title -> {

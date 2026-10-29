@@ -2,10 +2,10 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.common
 
+import kotlin.math.floor
 import pele.js.jsTrimEnd
 import pele.js.toCodePointStrings
 import pele.text.TextMeasurer
-import kotlin.math.floor
 
 class Fitted(val text: String, val size: Double, val width: Double)
 
@@ -36,7 +36,9 @@ fun fitText(
   var high = chars.size - 1
   while (low < high) {
     val mid = (low + high + 1) shr 1
-    if (measurer.width(chars.subList(0, mid).joinToString("").jsTrimEnd() + "…", min, style) <= max) low = mid else high = mid - 1
+    if (measurer.width(chars.subList(0, mid).joinToString("").jsTrimEnd() + "…", min, style) <= max)
+      low = mid
+    else high = mid - 1
   }
   if (low == 0) return null
   val cut = chars.subList(0, low).joinToString("").jsTrimEnd() + "…"

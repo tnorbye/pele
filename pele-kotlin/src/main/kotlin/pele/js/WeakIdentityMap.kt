@@ -5,8 +5,8 @@ import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 
 /**
- * A `WeakMap`: keys are compared by identity and held weakly. A value must not reference its
- * own key, or the entry is never collected.
+ * A `WeakMap`: keys are compared by identity and held weakly. A value must not reference its own
+ * key, or the entry is never collected.
  */
 class WeakIdentityMap<K : Any, V : Any> {
   private class Key(referent: Any, q: ReferenceQueue<Any>?) : WeakReference<Any>(referent, q) {

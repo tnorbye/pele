@@ -98,64 +98,87 @@ private fun numberScanner(): Scanner {
 }
 
 private val ARROW = TokenType(name = "ARROW", pattern = JsRegExp("""->""", "y"), first = "-")
-private val LINK_ARROW = TokenType(
-  name = "LINK_ARROW",
-  pattern = JsRegExp("""-->|-\.->|>|\+'[^']*'<>|\+'[^']*'<|\+'[^']*'>""", "y"),
-  first = "->+",
-)
+private val LINK_ARROW =
+  TokenType(
+    name = "LINK_ARROW",
+    pattern = JsRegExp("""-->|-\.->|>|\+'[^']*'<>|\+'[^']*'<|\+'[^']*'>""", "y"),
+    first = "->+",
+  )
 
 private fun word(name: String, text: String): TokenType =
   TokenType(name = name, pattern = JsRegExp(text, "y"), first = text[0].toString())
 
-val WARDLEY_TOKENS: List<TokenType> = listOf(
-  TokenType(name = "[", pattern = "["),
-  TokenType(name = ",", pattern = ","),
-  TokenType(name = "]", pattern = "]"),
-  TokenType(name = "@", pattern = "@"),
-  TokenType(name = "/", pattern = "/"),
-  TokenType(name = "(", pattern = "("),
-  TokenType(name = ")", pattern = ")"),
-  TokenType(name = "-", pattern = "-", longer = listOf(ARROW, LINK_ARROW, YAML)),
-  TokenType(name = "{", pattern = "{"),
-  TokenType(name = "}", pattern = "}"),
-  TokenType(name = "WARDLEY_NUMBER", pattern = JsRegExp("""[0-9]+\.[0-9]+""", "y"), first = "0123456789", scanner = ::numberScanner),
-  ARROW,
-  TokenType(name = "LINK_PORT", pattern = JsRegExp("""\+<>|\+>|\+<""", "y"), first = "+"),
-  LINK_ARROW,
-  TokenType(name = "LINK_LABEL", pattern = JsRegExp(""";[^\n\r]+""", "y"), first = ";"),
-  TokenType(name = "STRATEGY", pattern = JsRegExp("""build|buy|outsource|market""", "y"), first = "bom"),
-  word("KW_WARDLEY", "wardley-beta"),
-  word("KW_SIZE", "size"),
-  word("KW_EVOLUTION", "evolution"),
-  word("KW_ANCHOR", "anchor"),
-  word("KW_COMPONENT", "component"),
-  word("KW_LABEL", "label"),
-  word("KW_INERTIA", "inertia"),
-  word("KW_EVOLVE", "evolve"),
-  word("KW_PIPELINE", "pipeline"),
-  word("KW_NOTE", "note"),
-  word("KW_ANNOTATIONS", "annotations"),
-  word("KW_ANNOTATION", "annotation"),
-  word("KW_ACCELERATOR", "accelerator"),
-  word("KW_DEACCELERATOR", "deaccelerator"),
-  TokenType(
-    name = "NAME_WITH_SPACES",
-    pattern = JsRegExp("""(?!title\s|accTitle|accDescr)[A-Za-z](?:[A-Za-z0-9_()&]|-(?!>))*(?:[ \t]+[A-Za-z(](?:[A-Za-z0-9_()&]|-(?!>))*)*""", "y"),
-    first = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-  ),
-  TokenType(name = "WS", pattern = JsRegExp("""[ \t]+""", "y"), hidden = true, first = "\t "),
-  accDescr(),
-  ACC_TITLE,
-  TITLE,
-  TokenType(name = "INT", pattern = JsRegExp("""0|[1-9][0-9]*(?!\.)""", "y"), first = "0123456789"),
-  STRING,
-  TokenType(name = "ID", pattern = JsRegExp("""[\w]([-\w]*\w)?""", "y"), first = "_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"),
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-)
+val WARDLEY_TOKENS: List<TokenType> =
+  listOf(
+    TokenType(name = "[", pattern = "["),
+    TokenType(name = ",", pattern = ","),
+    TokenType(name = "]", pattern = "]"),
+    TokenType(name = "@", pattern = "@"),
+    TokenType(name = "/", pattern = "/"),
+    TokenType(name = "(", pattern = "("),
+    TokenType(name = ")", pattern = ")"),
+    TokenType(name = "-", pattern = "-", longer = listOf(ARROW, LINK_ARROW, YAML)),
+    TokenType(name = "{", pattern = "{"),
+    TokenType(name = "}", pattern = "}"),
+    TokenType(
+      name = "WARDLEY_NUMBER",
+      pattern = JsRegExp("""[0-9]+\.[0-9]+""", "y"),
+      first = "0123456789",
+      scanner = ::numberScanner,
+    ),
+    ARROW,
+    TokenType(name = "LINK_PORT", pattern = JsRegExp("""\+<>|\+>|\+<""", "y"), first = "+"),
+    LINK_ARROW,
+    TokenType(name = "LINK_LABEL", pattern = JsRegExp(""";[^\n\r]+""", "y"), first = ";"),
+    TokenType(
+      name = "STRATEGY",
+      pattern = JsRegExp("""build|buy|outsource|market""", "y"),
+      first = "bom",
+    ),
+    word("KW_WARDLEY", "wardley-beta"),
+    word("KW_SIZE", "size"),
+    word("KW_EVOLUTION", "evolution"),
+    word("KW_ANCHOR", "anchor"),
+    word("KW_COMPONENT", "component"),
+    word("KW_LABEL", "label"),
+    word("KW_INERTIA", "inertia"),
+    word("KW_EVOLVE", "evolve"),
+    word("KW_PIPELINE", "pipeline"),
+    word("KW_NOTE", "note"),
+    word("KW_ANNOTATIONS", "annotations"),
+    word("KW_ANNOTATION", "annotation"),
+    word("KW_ACCELERATOR", "accelerator"),
+    word("KW_DEACCELERATOR", "deaccelerator"),
+    TokenType(
+      name = "NAME_WITH_SPACES",
+      pattern =
+        JsRegExp(
+          """(?!title\s|accTitle|accDescr)[A-Za-z](?:[A-Za-z0-9_()&]|-(?!>))*(?:[ \t]+[A-Za-z(](?:[A-Za-z0-9_()&]|-(?!>))*)*""",
+          "y",
+        ),
+      first = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+    ),
+    TokenType(name = "WS", pattern = JsRegExp("""[ \t]+""", "y"), hidden = true, first = "\t "),
+    accDescr(),
+    ACC_TITLE,
+    TITLE,
+    TokenType(
+      name = "INT",
+      pattern = JsRegExp("""0|[1-9][0-9]*(?!\.)""", "y"),
+      first = "0123456789",
+    ),
+    STRING,
+    TokenType(
+      name = "ID",
+      pattern = JsRegExp("""[\w]([-\w]*\w)?""", "y"),
+      first = "_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+    ),
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+  )
 
 class LabelAst(
   val negX: Boolean,
@@ -391,13 +414,15 @@ fun parseWardley(src: String): WardleyAst {
         endOfLine()
         ast.annotation.add(AnnotationAst(n, x, y, text))
       }
-      T.accelerator, T.deaccelerator -> {
+      T.accelerator,
+      T.deaccelerator -> {
         val slow = r.kind == T.deaccelerator
         r.i++
         val force = name()
         val (x, y) = pair(::number)
         endOfLine()
-        if (slow) ast.deaccelerators.add(DeacceleratorAst(force, x, y)) else ast.accelerators.add(AcceleratorAst(force, x, y))
+        if (slow) ast.deaccelerators.add(DeacceleratorAst(force, x, y))
+        else ast.accelerators.add(AcceleratorAst(force, x, y))
       }
       else -> {
         if (!isName()) r.fail("a statement")

@@ -15,7 +15,12 @@ private class Part(
 )
 
 // Moves disconnected parts into rows without changing the layout inside a part.
-fun wrapComponents(nodes: List<CNode>, edges: List<CEdge>, width: Double, gap: Double): CompoundResult? {
+fun wrapComponents(
+  nodes: List<CNode>,
+  edges: List<CEdge>,
+  width: Double,
+  gap: Double,
+): CompoundResult? {
   val parent = IntArray(nodes.size) { it }
   val root = { iIn: Int ->
     var i = iIn
@@ -40,7 +45,15 @@ fun wrapComponents(nodes: List<CNode>, edges: List<CEdge>, width: Double, gap: D
     val id = root(i)
     var part = parts[id]
     if (part == null) {
-      part = Part(ArrayList(), ArrayList(), Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY)
+      part =
+        Part(
+          ArrayList(),
+          ArrayList(),
+          Double.POSITIVE_INFINITY,
+          Double.POSITIVE_INFINITY,
+          Double.NEGATIVE_INFINITY,
+          Double.NEGATIVE_INFINITY,
+        )
       parts[id] = part
     }
     val c = nodes[i]

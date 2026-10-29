@@ -8,12 +8,22 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val eventmodeling: Diagram<EventModelingModel> = object : Diagram<EventModelingModel> {
-  override val type = "eventmodeling"
-  override val keepComments = true
+val eventmodeling: Diagram<EventModelingModel> =
+  object : Diagram<EventModelingModel> {
+    override val type = "eventmodeling"
+    override val keepComments = true
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): EventModelingModel =
-    buildEventModel(parseEventModel(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): EventModelingModel = buildEventModel(parseEventModel(source), title)
 
-  override fun render(model: EventModelingModel, config: Config, options: RenderOptions): Rendered = renderEventModel(model, config, options)
-}
+    override fun render(
+      model: EventModelingModel,
+      config: Config,
+      options: RenderOptions,
+    ): Rendered = renderEventModel(model, config, options)
+  }

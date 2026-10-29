@@ -30,25 +30,27 @@ object T {
 }
 
 // As the generated parser prints them. It has no name for the end of input and prints its number.
-private val NAMES = listOf(
-  "1",
-  "INVALID",
-  "SPACELINE",
-  "NL",
-  "EOF",
-  "",
-  "SPACELIST",
-  "ICON",
-  "CLASS",
-  "NODE_DSTART",
-  "NODE_ID",
-  "NODE_DESCR",
-  "NODE_DEND",
-  "SHAPE_DATA",
-)
+private val NAMES =
+  listOf(
+    "1",
+    "INVALID",
+    "SPACELINE",
+    "NL",
+    "EOF",
+    "",
+    "SPACELIST",
+    "ICON",
+    "CLASS",
+    "NODE_DSTART",
+    "NODE_ID",
+    "NODE_DESCR",
+    "NODE_DEND",
+    "SHAPE_DATA",
+  )
 
 fun tokenName(type: Int, kanban: Boolean): String =
-  if (type == T.KEYWORD) (if (kanban) "KANBAN" else "MINDMAP") else NAMES.getOrElse(type) { "undefined" }
+  if (type == T.KEYWORD) (if (kanban) "KANBAN" else "MINDMAP")
+  else NAMES.getOrElse(type) { "undefined" }
 
 object NODE_TYPE {
   const val DEFAULT = 0
@@ -167,7 +169,11 @@ fun tokenize(src: String, kanban: Boolean): ScanTokens {
       } else if (c == 58 && d == 58 && letters(src, p + 2, "icon") && src.charCodeAt(p + 6) == 40) {
         p += 7
         state = S.ICON
-      } else if ((c == 45 && d == 41) || (c == 40 && (d == 45 || d == 40)) || ((c == 41 || c == 123) && d == c)) {
+      } else if (
+        (c == 45 && d == 41) ||
+          (c == 40 && (d == 45 || d == 40)) ||
+          ((c == 41 || c == 123) && d == c)
+      ) {
         emit(T.NODE_DSTART, p + 2, S.NODE)
       } else if (c == 41 || c == 40 || c == 91) {
         emit(T.NODE_DSTART, p + 1, S.NODE)
@@ -249,9 +255,10 @@ fun tokenize(src: String, kanban: Boolean): ScanTokens {
 }
 
 private const val STOP = "'SPACELINE', 'NL', 'EOF'"
-private val START = IntArray(T.SHAPE_DATA + 1).also { a ->
-  for (t in listOf(T.SPACELINE, T.SPACELIST, T.ICON, T.CLASS, T.NODE_DSTART, T.NODE_ID)) a[t] = 1
-}
+private val START =
+  IntArray(T.SHAPE_DATA + 1).also { a ->
+    for (t in listOf(T.SPACELINE, T.SPACELIST, T.ICON, T.CLASS, T.NODE_DSTART, T.NODE_ID)) a[t] = 1
+  }
 
 private fun isStop(type: Int): Boolean = type == T.SPACELINE || type == T.NL || type == T.EOF
 
@@ -337,6 +344,7 @@ fun parseOutline(src: String, db: OutlineDb, kanban: Boolean) {
     i++
     while (ty(i) == T.NL || ty(i) == T.EOF) i++
     if (ty(i) == T.END) return
-    if (START.getOrElse(ty(i)) { -1 } == 0) fail("$STOP, 'SPACELIST', 'ICON', 'CLASS', 'NODE_DSTART', 'NODE_ID'")
+    if (START.getOrElse(ty(i)) { -1 } == 0)
+      fail("$STOP, 'SPACELIST', 'ICON', 'CLASS', 'NODE_DSTART', 'NODE_ID'")
   }
 }

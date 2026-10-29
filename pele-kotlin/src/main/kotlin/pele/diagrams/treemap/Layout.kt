@@ -31,15 +31,27 @@ class Insets(
 
 private fun box(node: TreemapNode, parent: Box?, series: Int): Box {
   val nodeValue = node.value
-  val value = if (node.children == null && nodeValue != null && nodeValue.isFinite() && nodeValue > 0) nodeValue else 0.0
+  val value =
+    if (node.children == null && nodeValue != null && nodeValue.isFinite() && nodeValue > 0)
+      nodeValue
+    else 0.0
   return Box(node, parent, series, value)
 }
 
-private fun clamp(v: Double, low: Double, high: Double): Double = if (v >= low) minOf(v, high) else low
+private fun clamp(v: Double, low: Double, high: Double): Double =
+  if (v >= low) minOf(v, high) else low
 
 // Lays out boxes[from..to) in the rectangle as one squarified treemap: rows are added along the
 // shorter side, and a row stops growing when another box would make its boxes less square.
-private fun squarify(boxes: List<Box>, total: Double, xIn: Double, yIn: Double, wIn: Double, hIn: Double, gap: Double) {
+private fun squarify(
+  boxes: List<Box>,
+  total: Double,
+  xIn: Double,
+  yIn: Double,
+  wIn: Double,
+  hIn: Double,
+  gap: Double,
+) {
   var x = xIn
   var y = yIn
   var w = wIn
@@ -56,7 +68,8 @@ private fun squarify(boxes: List<Box>, total: Double, xIn: Double, yIn: Double, 
     while (to < boxes.size) {
       val smallest = boxes[to].value * scale
       val next = sum + smallest
-      val ratio = maxOf((side * side * largest) / (next * next), (next * next) / (side * side * smallest))
+      val ratio =
+        maxOf((side * side * largest) / (next * next), (next * next) / (side * side * smallest))
       if (ratio > worst) break
       worst = ratio
       sum = next
@@ -94,7 +107,12 @@ private fun squarify(boxes: List<Box>, total: Double, xIn: Double, yIn: Double, 
 }
 
 // Returns boxes with positive values, including zero-size boxes, parents before children.
-fun layoutTreemap(roots: List<TreemapNode>, width: Double, height: Double, insets: Insets): List<Box> {
+fun layoutTreemap(
+  roots: List<TreemapNode>,
+  width: Double,
+  height: Double,
+  insets: Insets,
+): List<Box> {
   val top = roots.mapIndexed { index, node -> box(node, null, index) }
   val all = ArrayList(top)
   var i = 0
@@ -117,28 +135,32 @@ fun layoutTreemap(roots: List<TreemapNode>, width: Double, height: Double, inset
   val short = insets.short
   val side = insets.side
   val placed = ArrayList<Box>()
-  val place = fun(children: List<Box>, x: Double, y: Double, wIn: Double, hIn: Double) {
-    // PORT: a NaN difference counts as equal, like a NaN comparator result in JS.
-    val shown = children.filter { b -> b.value > 0 }.sortedWith { a, b ->
-      val d = b.value - a.value
-      if (d.isNaN()) 0 else if (d < 0) -1 else if (d > 0) 1 else 0
+  val place =
+    fun(children: List<Box>, x: Double, y: Double, wIn: Double, hIn: Double) {
+      // PORT: a NaN difference counts as equal, like a NaN comparator result in JS.
+      val shown =
+        children
+          .filter { b -> b.value > 0 }
+          .sortedWith { a, b ->
+            val d = b.value - a.value
+            if (d.isNaN()) 0 else if (d < 0) -1 else if (d > 0) 1 else 0
+          }
+      var total = 0.0
+      for (b in shown) total += b.value
+      if (shown.isEmpty() || !total.isFinite()) return
+      val w = maxOf(0.0, wIn)
+      val h = maxOf(0.0, hIn)
+      if (w > 0 && h > 0) squarify(shown, total, x - gap / 2, y - gap / 2, w + gap, h + gap, gap)
+      for (b in shown) {
+        val x0 = clamp(b.x, x, x + w)
+        val y0 = clamp(b.y, y, y + h)
+        b.w = clamp(b.x + b.w, x0, x + w) - x0
+        b.h = clamp(b.y + b.h, y0, y + h) - y0
+        b.x = x0
+        b.y = y0
+        placed.add(b)
+      }
     }
-    var total = 0.0
-    for (b in shown) total += b.value
-    if (shown.isEmpty() || !total.isFinite()) return
-    val w = maxOf(0.0, wIn)
-    val h = maxOf(0.0, hIn)
-    if (w > 0 && h > 0) squarify(shown, total, x - gap / 2, y - gap / 2, w + gap, h + gap, gap)
-    for (b in shown) {
-      val x0 = clamp(b.x, x, x + w)
-      val y0 = clamp(b.y, y, y + h)
-      b.w = clamp(b.x + b.w, x0, x + w) - x0
-      b.h = clamp(b.y + b.h, y0, y + h) - y0
-      b.x = x0
-      b.y = y0
-      placed.add(b)
-    }
-  }
 
   place(top, 0.0, 0.0, width, height)
   var p = 0
@@ -149,7 +171,8 @@ fun layoutTreemap(roots: List<TreemapNode>, width: Double, height: Double, inset
     val headerRoom = if (b.h - header - side >= 12) header else short
     b.headed = b.w > maxOf(24.0, 2 * side) && b.h - headerRoom - side >= 8
     b.header = if (b.headed) headerRoom else 0.0
-    if (b.headed) place(b.children, b.x + side, b.y + headerRoom, b.w - 2 * side, b.h - headerRoom - side)
+    if (b.headed)
+      place(b.children, b.x + side, b.y + headerRoom, b.w - 2 * side, b.h - headerRoom - side)
     else place(b.children, b.x, b.y, b.w, b.h)
   }
   return placed

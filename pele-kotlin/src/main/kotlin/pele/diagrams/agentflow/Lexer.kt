@@ -38,9 +38,12 @@ private object S {
   const val shapeDataStr = 15
 }
 
-private val NODE_CHAR: BooleanArray = BooleanArray(128).also { table ->
-  for (ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#\$%&'*+.`?\\_/") table[ch.code] = true
-}
+private val NODE_CHAR: BooleanArray =
+  BooleanArray(128).also { table ->
+    for (ch in
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!\"#\$%&'*+.`?\\_/") table[
+      ch.code] = true
+  }
 
 private val RE_ACC_TITLE = JsRegExp("""accTitle\s*:\s*""", "y")
 private val RE_ACC_DESCR = JsRegExp("""accDescr\s*:\s*""", "y")
@@ -51,13 +54,14 @@ private val RE_NODIR = JsRegExp("""(?:\r?\n)*\s*\n""", "y")
 private val RE_DIR = JsRegExp("""\s*(?:LR|RL|TB|BT|TD|BR)\b""", "y")
 private val RE_DIR_SYM = JsRegExp("""\s*[<>^]""", "y")
 private val RE_DIR_V = JsRegExp("""\s*v\b""", "y")
-private val RE_DIRECTION = listOf(
-  JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+TD[^\n]*""", "y"),
-)
+private val RE_DIRECTION =
+  listOf(
+    JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+TD[^\n]*""", "y"),
+  )
 private val RE_LINE_END = JsRegExp("""[\n\r  ]""", "g")
 private val RE_EMPTY_CALL = JsRegExp("""\(\s*\)""", "y")
 private val RE_BR = JsRegExp("""\n\s*""", "g")
@@ -181,9 +185,11 @@ fun tokenize(src: String): Tokens {
     re.lastIndex = q
     return if (re.test(src)) re.lastIndex else -1
   }
-  fun kw(word: String): Boolean = src.startsWith(word, p) && !isWord(src.charCodeAt(p + word.length))
+  fun kw(word: String): Boolean =
+    src.startsWith(word, p) && !isWord(src.charCodeAt(p + word.length))
 
-  // End of the run of whitespace starting at q. The last run is kept, so asking again from inside it costs nothing.
+  // End of the run of whitespace starting at q. The last run is kept, so asking again from inside
+  // it costs nothing.
   fun wsEnd(q: Int): Int {
     if (q >= wsFrom && q <= wsTo) return wsTo
     var j = q
@@ -246,7 +252,8 @@ fun tokenize(src: String): Tokens {
 
   // `%%` not followed by `{`, through the end of the line.
   fun commentEnd(q: Int): Int {
-    if (src.charCodeAt(q) != 37 || src.charCodeAt(q + 1) != 37 || src.charCodeAt(q + 2) == 123) return -1
+    if (src.charCodeAt(q) != 37 || src.charCodeAt(q + 1) != 37 || src.charCodeAt(q + 2) == 123)
+      return -1
     val e = src.indexOf('\n', q + 2)
     return if (e == -1) n else e
   }
@@ -499,7 +506,8 @@ fun tokenize(src: String): Tokens {
       }
     }
 
-    // A link id is a run of non-space characters up to its last `@` that is not followed by `{` or `"`.
+    // A link id is a run of non-space characters up to its last `@` that is not followed by `{` or
+    // `"`.
     if (atNext != -1 && c != 34 && !isSpace(c)) {
       if (p >= runEnd) {
         if (atNext < p) atNext = src.indexOf('@', p)
@@ -550,7 +558,8 @@ fun tokenize(src: String): Tokens {
         return true
       }
       58 -> {
-        if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58) emitFlat(T.STYLE_SEPARATOR, p + 3)
+        if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58)
+          emitFlat(T.STYLE_SEPARATOR, p + 3)
         else emitFlat(T.COLON, p + 1)
         return true
       }
@@ -587,7 +596,8 @@ fun tokenize(src: String): Tokens {
         }
         return opener(c)
       }
-      124, 123 -> return opener(c)
+      124,
+      123 -> return opener(c)
       62 -> {
         push(S.text)
         emitFlat(T.TAGEND, p + 1)
@@ -631,12 +641,9 @@ fun tokenize(src: String): Tokens {
       e = p
       while (true) {
         val ch = src.charCodeAt(e)
-        if (ch == 10) e++
-        else if (ch == 13 && src.charCodeAt(e + 1) == 10) e += 2
-        else break
+        if (ch == 10) e++ else if (ch == 13 && src.charCodeAt(e + 1) == 10) e += 2 else break
       }
-      if (e > p) emit(T.NEWLINE, e)
-      else emit(T.SPACE, p + 1)
+      if (e > p) emit(T.NEWLINE, e) else emit(T.SPACE, p + 1)
       return true
     }
 
@@ -670,39 +677,42 @@ fun tokenize(src: String): Tokens {
     when (state) {
       S.INITIAL -> ok = initial(c)
 
-      S.string -> if (c == 34) {
-        if (src.charCodeAt(p + 1) == 96) {
-          push(S.md_string)
-          advance(p + 2)
+      S.string ->
+        if (c == 34) {
+          if (src.charCodeAt(p + 1) == 96) {
+            push(S.md_string)
+            advance(p + 2)
+          } else {
+            pop()
+            advance(p + 1)
+          }
         } else {
-          pop()
-          advance(p + 1)
+          val e = src.indexOf('"', p)
+          emit(T.STR, if (e == -1) n else e)
         }
-      } else {
-        val e = src.indexOf('"', p)
-        emit(T.STR, if (e == -1) n else e)
-      }
 
-      S.md_string -> if (c == 96) {
-        if (src.charCodeAt(p + 1) == 34) {
-          pop()
-          advance(p + 2)
+      S.md_string ->
+        if (c == 96) {
+          if (src.charCodeAt(p + 1) == 34) {
+            pop()
+            advance(p + 2)
+          } else {
+            ok = false
+          }
+        } else if (c == 34) {
+          quote()
         } else {
-          ok = false
+          var q = p + 1
+          while (q < n) {
+            val ch = src.charCodeAt(q)
+            if (ch == 96 || ch == 34) break
+            q++
+          }
+          emit(T.MD_STR, q)
         }
-      } else if (c == 34) {
-        quote()
-      } else {
-        var q = p + 1
-        while (q < n) {
-          val ch = src.charCodeAt(q)
-          if (ch == 96 || ch == 34) break
-          q++
-        }
-        emit(T.MD_STR, q)
-      }
 
-      S.acc_title, S.acc_descr -> {
+      S.acc_title,
+      S.acc_descr -> {
         var e = src.indexOf('\n', p)
         if (e == -1) e = n
         val type = if (state == S.acc_title) T.acc_title_value else T.acc_descr_value
@@ -710,14 +720,15 @@ fun tokenize(src: String): Tokens {
         emit(type, e)
       }
 
-      S.acc_descr_multiline -> if (c == 125) {
-        pop()
-        advance(p + 1)
-      } else {
-        var e = src.indexOf('}', p)
-        if (e == -1) e = n
-        emit(T.acc_descr_multiline_value, e)
-      }
+      S.acc_descr_multiline ->
+        if (c == 125) {
+          pop()
+          advance(p + 1)
+        } else {
+          var e = src.indexOf('}', p)
+          if (e == -1) e = n
+          emit(T.acc_descr_multiline_value, e)
+        }
 
       S.dir -> {
         var e: Int
@@ -746,12 +757,13 @@ fun tokenize(src: String): Tokens {
         val d = src.charCodeAt(p + 1)
         when (c) {
           34 -> quote()
-          40, 91, 123 -> opener(c)
+          40,
+          91,
+          123 -> opener(c)
           93 -> {
             pop()
             if (d == 41) emitFlat(T.STADIUMEND, p + 2)
-            else if (d == 93) emitFlat(T.SUBROUTINEEND, p + 2)
-            else emitFlat(T.SQE, p + 1)
+            else if (d == 93) emitFlat(T.SUBROUTINEEND, p + 2) else emitFlat(T.SQE, p + 1)
           }
           41 -> {
             pop()
@@ -768,16 +780,27 @@ fun tokenize(src: String): Tokens {
             emitFlat(T.DIAMOND_STOP, p + 1)
           }
           37 -> {
-            // Jison drops the lone `%` from Mermaid's text pattern, so only a comment may start with one.
+            // Jison drops the lone `%` from Mermaid's text pattern, so only a comment may start
+            // with one.
             val e = commentEnd(p)
-            if (e >= 0) advance(e)
-            else ok = false
+            if (e >= 0) advance(e) else ok = false
           }
           else -> {
             var q = p + 1
             while (q < n) {
               val ch = src.charCodeAt(q)
-              if (ch == 91 || ch == 93 || ch == 40 || ch == 41 || ch == 123 || ch == 125 || ch == 124 || ch == 34 || ch == 37) break
+              if (
+                ch == 91 ||
+                  ch == 93 ||
+                  ch == 40 ||
+                  ch == 41 ||
+                  ch == 123 ||
+                  ch == 125 ||
+                  ch == 124 ||
+                  ch == 34 ||
+                  ch == 37
+              )
+                break
               q++
             }
             emit(T.TEXT, q)
@@ -790,7 +813,7 @@ fun tokenize(src: String): Tokens {
         var e = -1
         if (c == 34) {
           quote()
-        } else if (c == 37 &&commentEnd(p).also { e = it } >= 0) {
+        } else if (c == 37 && commentEnd(p).also { e = it } >= 0) {
           advance(e)
         } else if ((c == 45 || c == 47 || c == 41) && d == 41) {
           pop()
@@ -803,7 +826,8 @@ fun tokenize(src: String): Tokens {
           var q = p + 1
           while (q < n) {
             val ch = src.charCodeAt(q)
-            if (ch == 34 || ch == 40 || ch == 41 || ch == 91 || ch == 93 || ch == 123 || ch == 125) break
+            if (ch == 34 || ch == 40 || ch == 41 || ch == 91 || ch == 93 || ch == 123 || ch == 125)
+              break
             if ((ch == 45 || ch == 47) && src.charCodeAt(q + 1) == 41) break
             if (ch == 37 && src.charCodeAt(q + 1) == 37 && src.charCodeAt(q + 2) != 123) break
             q++
@@ -812,153 +836,176 @@ fun tokenize(src: String): Tokens {
         }
       }
 
-      S.trapText -> run trap@{
-        val d = src.charCodeAt(p + 1)
-        if (c == 34) {
-          quote()
-          return@trap
+      S.trapText ->
+        run trap@{
+          val d = src.charCodeAt(p + 1)
+          if (c == 34) {
+            quote()
+            return@trap
+          }
+          when (c) {
+            40 ->
+              if (d == 45 || d == 91 || (d == 40 && src.charCodeAt(p + 2) == 40)) {
+                opener(c)
+              } else if (d == 93) {
+                pop()
+                emitFlat(T.TRAPEND, p + 2)
+              } else {
+                opener(c)
+              }
+            91,
+            123 -> opener(c)
+            92 ->
+              if (d == 93) {
+                pop()
+                emitFlat(T.TRAPEND, p + 2)
+              } else {
+                emitFlat(T.TEXT, p + 1)
+              }
+            47 ->
+              if (d == 93) {
+                pop()
+                emitFlat(T.INVTRAPEND, p + 2)
+              } else {
+                emitFlat(T.TEXT, p + 1)
+              }
+            93,
+            41 ->
+              if (d == 93) {
+                pop()
+                emitFlat(T.TRAPEND, p + 2)
+              } else {
+                ok = false
+              }
+            125 -> ok = false
+            37 -> {
+              val e = commentEnd(p)
+              if (e >= 0) advance(e) else ok = false
+            }
+            else -> {
+              if ((c == 63 || c == 61) && d == 93) {
+                pop()
+                emitFlat(T.TRAPEND, p + 2)
+                return@trap
+              }
+              var q = p + 1
+              while (q < n) {
+                val ch = src.charCodeAt(q)
+                if (
+                  ch == 92 ||
+                    ch == 91 ||
+                    ch == 93 ||
+                    ch == 40 ||
+                    ch == 41 ||
+                    ch == 123 ||
+                    ch == 125 ||
+                    ch == 47 ||
+                    ch == 37
+                )
+                  break
+                q++
+              }
+              emit(T.TEXT, q)
+            }
+          }
         }
-        when (c) {
-          40 -> if (d == 45 || d == 91 || (d == 40 && src.charCodeAt(p + 2) == 40)) {
-            opener(c)
-          } else if (d == 93) {
-            pop()
-            emitFlat(T.TRAPEND, p + 2)
-          } else {
-            opener(c)
+
+      S.edgeText ->
+        run edge@{
+          if (c == 34) {
+            quote()
+            return@edge
           }
-          91, 123 -> opener(c)
-          92 -> if (d == 93) {
+          val e = arrowEnd(p)
+          if (e >= 0) {
             pop()
-            emitFlat(T.TRAPEND, p + 2)
-          } else {
-            emitFlat(T.TEXT, p + 1)
+            emit(T.LINK, e)
+            return@edge
           }
-          47 -> if (d == 93) {
-            pop()
-            emitFlat(T.INVTRAPEND, p + 2)
-          } else {
-            emitFlat(T.TEXT, p + 1)
-          }
-          93, 41 -> if (d == 93) {
-            pop()
-            emitFlat(T.TRAPEND, p + 2)
-          } else {
+          if (c == 45 && src.charCodeAt(p + 1) == 45) {
             ok = false
+            return@edge
           }
-          125 -> ok = false
-          37 -> {
-            val e = commentEnd(p)
-            if (e >= 0) advance(e)
-            else ok = false
-          }
-          else -> {
-            if ((c == 63 || c == 61) && d == 93) {
-              pop()
-              emitFlat(T.TRAPEND, p + 2)
-              return@trap
+          var q = p + 1
+          while (q < n) {
+            val ch = src.charCodeAt(q)
+            if (ch == 34) break
+            if (ch == 45) {
+              if (src.charCodeAt(q + 1) == 45) break
+            } else if (isSpace(ch) && arrowEnd(q) >= 0) {
+              break
             }
-            var q = p + 1
-            while (q < n) {
-              val ch = src.charCodeAt(q)
-              if (ch == 92 || ch == 91 || ch == 93 || ch == 40 || ch == 41 || ch == 123 || ch == 125 || ch == 47 || ch == 37) break
-              q++
-            }
-            emit(T.TEXT, q)
+            q++
           }
+          emitChars(T.EDGE_TEXT, q)
         }
-      }
 
-      S.edgeText -> run edge@{
+      S.click ->
         if (c == 34) {
           quote()
-          return@edge
-        }
-        val e = arrowEnd(p)
-        if (e >= 0) {
+        } else if (isSpace(c)) {
           pop()
-          emit(T.LINK, e)
-          return@edge
-        }
-        if (c == 45 && src.charCodeAt(p + 1) == 45) {
-          ok = false
-          return@edge
-        }
-        var q = p + 1
-        while (q < n) {
-          val ch = src.charCodeAt(q)
-          if (ch == 34) break
-          if (ch == 45) {
-            if (src.charCodeAt(q + 1) == 45) break
-          } else if (isSpace(ch) && arrowEnd(q) >= 0) {
-            break
-          }
-          q++
-        }
-        emitChars(T.EDGE_TEXT, q)
-      }
-
-      S.click -> if (c == 34) {
-        quote()
-      } else if (isSpace(c)) {
-        pop()
-        advance(p + 1)
-      } else {
-        var q = p + 1
-        while (q < n && !isSpace(src.charCodeAt(q))) q++
-        emitFlat(T.CLICK, q)
-      }
-
-      S.callbackname -> if (c == 40) {
-        val e = at(RE_EMPTY_CALL, p)
-        pop()
-        if (e >= 0) {
-          advance(e)
-        } else {
-          push(S.callbackargs)
           advance(p + 1)
+        } else {
+          var q = p + 1
+          while (q < n && !isSpace(src.charCodeAt(q))) q++
+          emitFlat(T.CLICK, q)
         }
-      } else {
-        var e = src.indexOf('(', p)
-        if (e == -1) e = n
-        emit(T.CALLBACKNAME, e)
-      }
 
-      S.callbackargs -> if (c == 41) {
-        pop()
-        advance(p + 1)
-      } else {
-        var e = src.indexOf(')', p)
-        if (e == -1) e = n
-        emit(T.CALLBACKARGS, e)
-      }
-
-      S.shapeData -> if (c == 34) {
-        push(S.shapeDataStr)
-        emitFlat(T.SHAPE_DATA, p + 1)
-      } else if (c == 125) {
-        pop()
-        advance(p + 1)
-      } else if (c == 94) {
-        ok = false
-      } else {
-        var q = p + 1
-        while (q < n) {
-          val ch = src.charCodeAt(q)
-          if (ch == 125 || ch == 94 || ch == 34) break
-          q++
+      S.callbackname ->
+        if (c == 40) {
+          val e = at(RE_EMPTY_CALL, p)
+          pop()
+          if (e >= 0) {
+            advance(e)
+          } else {
+            push(S.callbackargs)
+            advance(p + 1)
+          }
+        } else {
+          var e = src.indexOf('(', p)
+          if (e == -1) e = n
+          emit(T.CALLBACKNAME, e)
         }
-        emit(T.SHAPE_DATA, q)
-      }
 
-      S.shapeDataStr -> if (c == 34) {
-        pop()
-        emitFlat(T.SHAPE_DATA, p + 1)
-      } else {
-        var e = src.indexOf('"', p)
-        if (e == -1) e = n
-        emitText(T.SHAPE_DATA, src.jsSlice(p, e).jsReplace(RE_BR, "<br/>"), e)
-      }
+      S.callbackargs ->
+        if (c == 41) {
+          pop()
+          advance(p + 1)
+        } else {
+          var e = src.indexOf(')', p)
+          if (e == -1) e = n
+          emit(T.CALLBACKARGS, e)
+        }
+
+      S.shapeData ->
+        if (c == 34) {
+          push(S.shapeDataStr)
+          emitFlat(T.SHAPE_DATA, p + 1)
+        } else if (c == 125) {
+          pop()
+          advance(p + 1)
+        } else if (c == 94) {
+          ok = false
+        } else {
+          var q = p + 1
+          while (q < n) {
+            val ch = src.charCodeAt(q)
+            if (ch == 125 || ch == 94 || ch == 34) break
+            q++
+          }
+          emit(T.SHAPE_DATA, q)
+        }
+
+      S.shapeDataStr ->
+        if (c == 34) {
+          pop()
+          emitFlat(T.SHAPE_DATA, p + 1)
+        } else {
+          var e = src.indexOf('"', p)
+          if (e == -1) e = n
+          emitText(T.SHAPE_DATA, src.jsSlice(p, e).jsReplace(RE_BR, "<br/>"), e)
+        }
     }
 
     if (!ok) {

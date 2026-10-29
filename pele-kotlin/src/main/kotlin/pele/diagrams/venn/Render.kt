@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.venn
 
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -22,7 +23,6 @@ import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.ceil
 
 private const val RADIUS = 100.0
 private const val MAX_GROWTH = 1.6
@@ -86,14 +86,18 @@ fun renderVenn(model: VennModel, _config: Config, options: RenderOptions): Rende
   val neighbors = circles.map { ArrayList<Int>() }
   for (a in circles.indices) {
     for (b in a + 1 until circles.size) {
-      if (hypot(circles[a].x - circles[b].x, circles[a].y - circles[b].y) < circles[a].r + circles[b].r) {
+      if (
+        hypot(circles[a].x - circles[b].x, circles[a].y - circles[b].y) <
+          circles[a].r + circles[b].r
+      ) {
         neighbors[a].add(b)
         neighbors[b].add(a)
       }
     }
   }
 
-  // One region for each set and each stated overlap; a later statement about the same sets replaces an earlier one.
+  // One region for each set and each stated overlap; a later statement about the same sets replaces
+  // an earlier one.
   val stated = LinkedHashMap<String, VennSubset>()
   for (subset in model.subsets) stated[keyOf(subset.sets)] = subset
   val regions = LinkedHashMap<String, Region>()
@@ -114,13 +118,17 @@ fun renderVenn(model: VennModel, _config: Config, options: RenderOptions): Rende
     val region = Region(sets, inside, spot, ArrayList(), style, across)
     if (!text.isNullOrEmpty()) {
       val fontSize = if (sets.size == 1) size else small
-      region.lines.add(Line(null, text, fontSize, base, layoutLabel(text, false, measurer, fontSize, 4000.0, base)))
+      region.lines.add(
+        Line(null, text, fontSize, base, layoutLabel(text, false, measurer, fontSize, 4000.0, base))
+      )
     }
     regions[key] = region
   }
   for (node in model.textNodes) {
     val raw = node.label ?: node.id
-    regions[keyOf(node.sets)]?.lines?.add(Line(node.id, raw, tiny, 0, layoutLabel(raw, false, measurer, tiny, 4000.0)))
+    regions[keyOf(node.sets)]
+      ?.lines
+      ?.add(Line(node.id, raw, tiny, 0, layoutLabel(raw, false, measurer, tiny, 4000.0)))
   }
 
   // Lengths so far are in units of the layout. The scale gives the largest circle a set radius,
@@ -146,7 +154,8 @@ fun renderVenn(model: VennModel, _config: Config, options: RenderOptions): Rende
   for (region in regions.values) {
     val room = maxOf(region.spot.margin * scale * 1.8, 72.0)
     for (line in region.lines) {
-      if (line.label.width > room) line.label = layoutLabel(line.raw, false, measurer, line.size, room, line.base)
+      if (line.label.width > room)
+        line.label = layoutLabel(line.raw, false, measurer, line.size, room, line.base)
     }
   }
 
@@ -180,7 +189,15 @@ fun renderVenn(model: VennModel, _config: Config, options: RenderOptions): Rende
   }
 
   val modelTitle = model.title
-  val title = layoutLabel(if (!modelTitle.isNullOrEmpty()) normalizeText(modelTitle) else modelTitle, false, measurer, size, 4000.0, Style.Bold)
+  val title =
+    layoutLabel(
+      if (!modelTitle.isNullOrEmpty()) normalizeText(modelTitle) else modelTitle,
+      false,
+      measurer,
+      size,
+      4000.0,
+      Style.Bold,
+    )
   val titleHeight = if (title.height > 0) title.height + 12 else 0.0
   val inner = maxOf(maxX - minX, title.width)
   val ox = pad + (inner - (maxX - minX)) / 2 - minX
@@ -193,15 +210,20 @@ fun renderVenn(model: VennModel, _config: Config, options: RenderOptions): Rende
   placed.forEachIndexed { i, c ->
     val color = seriesColor(i)
     val style = regions[c.id]?.style ?: NO_STYLE
-    sets += "<circle class=\"pele-venn-set\" data-id=\"${escText(c.id)}\" cx=\"${num(c.x)}\" cy=\"${num(c.y)}\" r=\"${num(c.r)}\" fill=\"$color\" fill-opacity=\"0.2\" stroke=\"$color\"${style.shape}/>"
+    sets +=
+      "<circle class=\"pele-venn-set\" data-id=\"${escText(c.id)}\" cx=\"${num(c.x)}\" cy=\"${num(c.y)}\" r=\"${num(c.r)}\" fill=\"$color\" fill-opacity=\"0.2\" stroke=\"$color\"${style.shape}/>"
   }
 
   val painted = regions.values.filter { r -> r.sets.size > 1 && r.style.shape != "" }
-  // The fill under a region's text is the last overlap drawn over all of it, or its own circle when the style sets an opacity.
+  // The fill under a region's text is the last overlap drawn over all of it, or its own circle when
+  // the style sets an opacity.
   fun under(region: Region): String {
     if (region.across) return ""
-    var fill = if (region.sets.size == 1 && RE_FILL_OPACITY.test(region.style.shape)) region.style.shape else ""
-    for (other in painted) if (other.sets.all { id -> region.sets.contains(id) }) fill = other.style.shape
+    var fill =
+      if (region.sets.size == 1 && RE_FILL_OPACITY.test(region.style.shape)) region.style.shape
+      else ""
+    for (other in painted) if (other.sets.all { id -> region.sets.contains(id) })
+      fill = other.style.shape
     return fill
   }
 
@@ -209,10 +231,13 @@ fun renderVenn(model: VennModel, _config: Config, options: RenderOptions): Rende
   var labels = ""
   for (region in regions.values) {
     val id = escText(region.sets.joinToString("|"))
-    // An overlap is only drawn when a style gives it a look of its own; otherwise the circles show it.
+    // An overlap is only drawn when a style gives it a look of its own; otherwise the circles show
+    // it.
     if (region.sets.size > 1 && region.style.shape != "") {
       val d = regionPath(region.inside.map { placed[it] }, ::num)
-      if (d != "") overlaps += "<path class=\"pele-venn-overlap\" data-id=\"$id\" d=\"$d\" fill=\"none\"${region.style.shape}/>"
+      if (d != "")
+        overlaps +=
+          "<path class=\"pele-venn-overlap\" data-id=\"$id\" d=\"$d\" fill=\"none\"${region.style.shape}/>"
     }
     var total = 0.0
     for (line in region.lines) total += line.label.height
@@ -236,17 +261,23 @@ fun renderVenn(model: VennModel, _config: Config, options: RenderOptions): Rende
     labels += "<g class=\"pele-venn-region\" data-id=\"$id\">$content</g>"
   }
 
-  val svg = svgDocument(
-    "venn",
-    width,
-    height,
-    size,
-    options,
-    Acc(),
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      "<g class=\"pele-venn-sets\">$sets</g>" +
-      (if (overlaps != "") "<g class=\"pele-venn-overlaps\">$overlaps</g>" else "") +
-      (if (labels != "") "<g class=\"pele-venn-labels\">$labels</g>" else ""),
-  )
+  val svg =
+    svgDocument(
+      "venn",
+      width,
+      height,
+      size,
+      options,
+      Acc(),
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        "<g class=\"pele-venn-sets\">$sets</g>" +
+        (if (overlaps != "") "<g class=\"pele-venn-overlaps\">$overlaps</g>" else "") +
+        (if (labels != "") "<g class=\"pele-venn-labels\">$labels</g>" else ""),
+    )
   return Rendered(svg, width, height, ArrayList())
 }

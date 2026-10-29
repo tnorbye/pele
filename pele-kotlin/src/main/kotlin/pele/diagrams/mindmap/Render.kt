@@ -2,6 +2,8 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.mindmap
 
+import kotlin.math.abs
+import kotlin.math.ceil
 import pele.Config
 import pele.IconResolver
 import pele.RenderOptions
@@ -29,8 +31,6 @@ import pele.text.iconMarkup
 import pele.text.labelLine
 import pele.text.layoutLabel
 import pele.text.lineMiddle
-import kotlin.math.abs
-import kotlin.math.ceil
 
 // Indexed by Mermaid's node type. A node without delimiters is text on a line, except the root.
 private val SHAPES = listOf("", "rounded", "rect", "circle", "cloud", "bang", "hex")
@@ -48,19 +48,29 @@ private const val PILL_PAD = 12.0
 private const val TINT = 0.22
 private const val ICON_GAP = 6.0
 
-// Running down, each level is set in by this much, and links leave a node this far from its left edge.
+// Running down, each level is set in by this much, and links leave a node this far from its left
+// edge.
 private const val INDENT = 28.0
 private const val STEM = 12.0
 private const val BEND = 8.0
 private const val ROW_GAP = 10.0
 
-// A label with each line starting at `left`, for an outline, where centered lines would look ragged.
+// A label with each line starting at `left`, for an outline, where centered lines would look
+// ragged.
 private fun leftLabel(label: Label, left: Double, cy: Double, icons: IconResolver?): String {
-  if (label.lines.size < 2) return labelSvg(label, left + label.width / 2, cy, " class=\"pele-label\"", icons)
+  if (label.lines.size < 2)
+    return labelSvg(label, left + label.width / 2, cy, " class=\"pele-label\"", icons)
   var out = ""
   val top = cy - label.height / 2
   for (k in 0 until label.lines.size) {
-    out += labelSvg(labelLine(label, k), left + label.widths[k] / 2, top + lineMiddle(label, k), " class=\"pele-label\"", icons)
+    out +=
+      labelSvg(
+        labelLine(label, k),
+        left + label.widths[k] / 2,
+        top + lineMiddle(label, k),
+        " class=\"pele-label\"",
+        icons,
+      )
   }
   return out
 }
@@ -70,7 +80,12 @@ fun renderMindmap(model: MindmapModel, config: Config, options: RenderOptions): 
 
 // `down` draws the map as an outline: the root at the top, and each level set in under its parent.
 // It is far narrower than branches spreading to both sides, and as tall as it needs to be.
-private fun draw(model: MindmapModel, config: Config, options: RenderOptions, down: Boolean): Rendered {
+private fun draw(
+  model: MindmapModel,
+  config: Config,
+  options: RenderOptions,
+  down: Boolean,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
   val pad = options.padding ?: 8.0
@@ -90,7 +105,9 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
     }
   }
   // An outline has the width the host gives it, less what its level is set in.
-  val room = if (down && options.maxWidth != null && options.maxWidth > 0) options.maxWidth - 2 * pad else Double.POSITIVE_INFINITY
+  val room =
+    if (down && options.maxWidth != null && options.maxWidth > 0) options.maxWidth - 2 * pad
+    else Double.POSITIVE_INFINITY
   val labels = arrayOfNulls<Label>(n)
   val shapes = arrayOfNulls<String>(n)
   val w = DoubleArray(n)
@@ -104,12 +121,23 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
   for (i in 0 until n) {
     val node = nodes[i]
     drawn[i] = if (node.icon != null && iconMarkup(node.icon!!) != "") 1 else 0
-    val fit = minOf(wrap, maxOf(72.0, room - depth[i] * INDENT - 2 * TEXT_PAD - (if (drawn[i] != 0) glyph + ICON_GAP else 0.0)))
+    val fit =
+      minOf(
+        wrap,
+        maxOf(
+          72.0,
+          room - depth[i] * INDENT - 2 * TEXT_PAD - (if (drawn[i] != 0) glyph + ICON_GAP else 0.0),
+        ),
+      )
     val label = layoutLabel(node.descr, true, measurer, size, fit)
     labels[i] = label
-    val tw = label.width + (if (drawn[i] != 0) glyph + (if (label.width > 0) ICON_GAP else 0.0) else 0.0)
+    val tw =
+      label.width + (if (drawn[i] != 0) glyph + (if (label.width > 0) ICON_GAP else 0.0) else 0.0)
     val th = maxOf(label.height, jsRound(size * 1.5))
-    var shape = SHAPES.getOrNull(node.type).let { if (it.isNullOrEmpty()) (if (i == 0) ROOT_SHAPE else "") else it }
+    var shape =
+      SHAPES.getOrNull(node.type).let {
+        if (it.isNullOrEmpty()) (if (i == 0) ROOT_SHAPE else "") else it
+      }
     // In an outline the root heads a column, and the trunk drops from under its left end. A circle
     // or a cloud would stand wide of that, so the root is a pill there unless it is a box already.
     if (down && i == 0 && shape != "rect" && shape != "rounded") shape = ROOT_SHAPE
@@ -186,7 +214,8 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
       row += h[i] + ROW_GAP
     }
   } else if (n > 0) {
-    // The first branches go right and the rest left, split where the two sides are closest in height.
+    // The first branches go right and the rest left, split where the two sides are closest in
+    // height.
     val branches = nodes[0].children
     val count = branches.size
     var total = 0.0
@@ -242,7 +271,7 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
     if (body != "") {
       out +=
         "<g class=\"pele-branch pele-section-${section ?: 0}\">" +
-        "<g class=\"pele-edges\" fill=\"none\" stroke=\"$color\" stroke-width=\"1.5\">$edges</g>$body</g>"
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"$color\" stroke-width=\"1.5\">$edges</g>$body</g>"
       edges = ""
       body = ""
     }
@@ -277,19 +306,24 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
       val bend = maxOf(0.0, minOf(BEND, minOf(x2 - x1, y2 - y1)))
       // The next link carries on from where this one leaves the trunk, so the trunk has no gap.
       trunk[p] = y2 - bend
-      edges += "<path class=\"pele-edge\" d=\"M${num(x1)},${num(y1)}V${num(y2 - bend)}Q${num(x1)},${num(y2)} ${num(x1 + bend)},${num(y2)}H${num(x2)}\"/>"
+      edges +=
+        "<path class=\"pele-edge\" d=\"M${num(x1)},${num(y1)}V${num(y2 - bend)}Q${num(x1)},${num(y2)} ${num(x1 + bend)},${num(y2)}H${num(x2)}\"/>"
     } else if (i > 0) {
       if (parent[i] == 0) color = seriesColor(node.section ?: 0)
       val p = parent[i]
       val dir = side[i]
       val from = if (dir > 0) 1 else 3
-      val x1 = x[p] + dir * (w[p] / 2 - (if (shapes[p] != "") shapeInset(shapes[p]!!, w[p], h[p], from) else 0.0))
+      val x1 =
+        x[p] +
+          dir *
+            (w[p] / 2 - (if (shapes[p] != "") shapeInset(shapes[p]!!, w[p], h[p], from) else 0.0))
       val y1 = y[p] + anchor[p]
       val near = cx - (dir * w[i]) / 2
       val x2 = near + (if (shape != "") dir * shapeInset(shape, w[i], h[i], 4 - from) else 0.0)
       val y2 = top + anchor[i]
       val mid = num((x1 + x2) / 2)
-      edges += "<path class=\"pele-edge\" d=\"M${num(x1)},${num(y1)}C$mid,${num(y1)} $mid,${num(y2)} ${num(x2)},${num(y2)}\"/>"
+      edges +=
+        "<path class=\"pele-edge\" d=\"M${num(x1)},${num(y1)}C$mid,${num(y1)} $mid,${num(y2)} ${num(x2)},${num(y2)}\"/>"
     }
 
     val pill = shape == "" && node.children.size > 0
@@ -299,9 +333,19 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
     val tint = " fill=\"$color\" fill-opacity=\"${jsStr(TINT)}\" stroke=\"$color\""
     var inner = ""
     if (shape != "") {
-      inner = if (i > 0) drawShape(shape, w[i], h[i], tint, " stroke=\"$color\"") else drawShape(shape, w[i], h[i], " fill=\"var(--_s)\" stroke=\"var(--_b)\"", " stroke=\"var(--_b)\"")
+      inner =
+        if (i > 0) drawShape(shape, w[i], h[i], tint, " stroke=\"$color\"")
+        else
+          drawShape(
+            shape,
+            w[i],
+            h[i],
+            " fill=\"var(--_s)\" stroke=\"var(--_b)\"",
+            " stroke=\"var(--_b)\"",
+          )
     } else if (pill) {
-      inner = "<rect x=\"${num(-w[i] / 2)}\" y=\"${num(-h[i] / 2)}\" width=\"${num(w[i])}\" height=\"${num(h[i])}\" rx=\"${num(h[i] / 2)}\"$tint/>"
+      inner =
+        "<rect x=\"${num(-w[i] / 2)}\" y=\"${num(-h[i] / 2)}\" width=\"${num(w[i])}\" height=\"${num(h[i])}\" rx=\"${num(h[i] / 2)}\"$tint/>"
     }
     var shift = 0.0
     val icon = node.icon
@@ -311,11 +355,12 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
     }
     val group =
       "<g class=\"pele-node pele-shape-${if (shape != "") shape else (if (pill) "branch" else "text")}${if (i > 0) "" else " pele-root"}${classNames(node.`class` ?: "")}\" data-id=\"${escText(
-        node.nodeId,
+        node.nodeId
       )}\" transform=\"translate(${num(cx)},${num(top + h[i] / 2)})\">" +
-      inner +
-      (if (down && shape == "") leftLabel(label, shift - label.width / 2, dy[i], icons) else labelSvg(label, shift, dy[i], " class=\"pele-label\"", icons)) +
-      "</g>"
+        inner +
+        (if (down && shape == "") leftLabel(label, shift - label.width / 2, dy[i], icons)
+        else labelSvg(label, shift, dy[i], " class=\"pele-label\"", icons)) +
+        "</g>"
     if (i > 0) body += group else out += group
   }
 
@@ -325,7 +370,12 @@ private fun draw(model: MindmapModel, config: Config, options: RenderOptions, do
   val totalWidth = ceil(width + 2 * pad)
   val totalHeight = ceil(maxY - minY + titleHeight + 2 * pad)
   val content =
-    labelSvg(title, totalWidth / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
+    labelSvg(
+      title,
+      totalWidth / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) +
       "<g transform=\"translate(${num(pad - minX + (width - maxX + minX) / 2)},${num(pad + titleHeight - minY)})\">$out</g>"
 
   return Rendered(

@@ -81,7 +81,11 @@ class ClassMember(input: String, memberType: String) {
     val last = input.jsSlice(-1)
     if (isVisibility(first)) visibility = first
     if (last == "$" || last == "*") classifier = last
-    id = input.jsSubstring(if (visibility == "") 0 else 1, if (classifier == "") input.length else input.length - 1)
+    id =
+      input.jsSubstring(
+        if (visibility == "") 0 else 1,
+        if (classifier == "") input.length else input.length - 1,
+      )
   }
 
   fun getDisplayDetails(): DisplayDetails {
@@ -94,7 +98,8 @@ class ClassMember(input: String, memberType: String) {
   }
 
   fun parseClassifier(): String =
-    if (classifier == "*") "font-style:italic;" else if (classifier == "$") "text-decoration:underline;" else ""
+    if (classifier == "*") "font-style:italic;"
+    else if (classifier == "$") "text-decoration:underline;" else ""
 }
 
 // PORT: `{ displayText, cssStyle }`.

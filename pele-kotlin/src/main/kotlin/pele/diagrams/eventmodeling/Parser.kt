@@ -17,43 +17,76 @@ import pele.js.JsRegExp
 private val EM_ID = TokenType(name = "EM_ID", pattern = JsRegExp("""[_a-zA-Z][\w_]*""", "y"))
 
 // Langium gives every keyword that is also an identifier the identifier as a longer alternative.
-private fun word(text: String): TokenType = TokenType(name = text, pattern = text, longer = listOf(EM_ID))
+private fun word(text: String): TokenType =
+  TokenType(name = text, pattern = text, longer = listOf(EM_ID))
+
 private fun sign(text: String): TokenType = TokenType(name = text, pattern = text)
 
-private val WORDS = listOf(
-  "resetframe", "readmodel", "processor", "timeframe", "command", "entity", "event", "jsobj", "figma", "given", "json", "salt", "html",
-  "text", "data", "note", "when", "then", "rmo", "cmd", "evt", "pcr", "uri",
-)
+private val WORDS =
+  listOf(
+    "resetframe",
+    "readmodel",
+    "processor",
+    "timeframe",
+    "command",
+    "entity",
+    "event",
+    "jsobj",
+    "figma",
+    "given",
+    "json",
+    "salt",
+    "html",
+    "text",
+    "data",
+    "note",
+    "when",
+    "then",
+    "rmo",
+    "cmd",
+    "evt",
+    "pcr",
+    "uri",
+  )
 
-val EVENTMODELING_TOKENS: List<TokenType> = listOf(
-  keyword("eventmodeling").copy(longer = listOf(EM_ID)),
-  *WORDS.map { text -> word(text) }.toTypedArray(),
-  sign("->>"),
-  word("gwt"),
-  word("ui"),
-  word("md"),
-  word("tf"),
-  sign("[["),
-  sign("]]"),
-  word("rf"),
-  sign("`"),
-  sign("."),
-  EM_ID,
-  TokenType(name = "EM_FID", pattern = JsRegExp("""\d{1,3}""", "y")),
-  TokenType(name = "EM_DATA_INLINE", pattern = JsRegExp("""\{(.*)\}|"(.*)"|'(.*)'""", "y")),
-  TokenType(name = "EM_DATA_BLOCK", pattern = JsRegExp("""\{[\t ]*\r?\n(?:[\S\s]*?\r?\n)?\}(?:\r?\n|(?!\S))""", "y")),
-  accDescr("EM_ACC_DESCR"),
-  ACC_TITLE.copy(name = "EM_ACC_TITLE"),
-  titleBefore("""\w""").copy(name = "EM_TITLE"),
-  TokenType(name = "EM_WS", pattern = JsRegExp("""\s+""", "y"), hidden = true),
-  YAML.copy(name = "EM_YAML"),
-  DIRECTIVE.copy(name = "EM_DIRECTIVE"),
-  SINGLE_LINE_COMMENT.copy(name = "EM_SINGLE_LINE_COMMENT"),
-  TokenType(name = "EM_ML_COMMENT", pattern = JsRegExp("""\/\*[\s\S]*?\*\/""", "y"), hidden = true),
-  TokenType(name = "EM_SL_COMMENT", pattern = JsRegExp("""\/\/[^\n\r]*""", "y"), hidden = true),
-)
+val EVENTMODELING_TOKENS: List<TokenType> =
+  listOf(
+    keyword("eventmodeling").copy(longer = listOf(EM_ID)),
+    *WORDS.map { text -> word(text) }.toTypedArray(),
+    sign("->>"),
+    word("gwt"),
+    word("ui"),
+    word("md"),
+    word("tf"),
+    sign("[["),
+    sign("]]"),
+    word("rf"),
+    sign("`"),
+    sign("."),
+    EM_ID,
+    TokenType(name = "EM_FID", pattern = JsRegExp("""\d{1,3}""", "y")),
+    TokenType(name = "EM_DATA_INLINE", pattern = JsRegExp("""\{(.*)\}|"(.*)"|'(.*)'""", "y")),
+    TokenType(
+      name = "EM_DATA_BLOCK",
+      pattern = JsRegExp("""\{[\t ]*\r?\n(?:[\S\s]*?\r?\n)?\}(?:\r?\n|(?!\S))""", "y"),
+    ),
+    accDescr("EM_ACC_DESCR"),
+    ACC_TITLE.copy(name = "EM_ACC_TITLE"),
+    titleBefore("""\w""").copy(name = "EM_TITLE"),
+    TokenType(name = "EM_WS", pattern = JsRegExp("""\s+""", "y"), hidden = true),
+    YAML.copy(name = "EM_YAML"),
+    DIRECTIVE.copy(name = "EM_DIRECTIVE"),
+    SINGLE_LINE_COMMENT.copy(name = "EM_SINGLE_LINE_COMMENT"),
+    TokenType(
+      name = "EM_ML_COMMENT",
+      pattern = JsRegExp("""\/\*[\s\S]*?\*\/""", "y"),
+      hidden = true,
+    ),
+    TokenType(name = "EM_SL_COMMENT", pattern = JsRegExp("""\/\/[^\n\r]*""", "y"), hidden = true),
+  )
 
 private fun index(name: String): Int = EVENTMODELING_TOKENS.indexOfFirst { t -> t.name == name }
+
 private fun kinds(names: List<String>): Set<Int> = names.map { name -> index(name) }.toSet()
 
 private object T {
@@ -81,7 +114,8 @@ private object T {
 
 private val TIME_FRAME = kinds(listOf("tf", "timeframe"))
 private val RESET_FRAME = kinds(listOf("rf", "resetframe"))
-private val ENTITY_TYPE = kinds(listOf("rmo", "readmodel", "ui", "cmd", "command", "evt", "event", "pcr", "processor"))
+private val ENTITY_TYPE =
+  kinds(listOf("rmo", "readmodel", "ui", "cmd", "command", "evt", "event", "pcr", "processor"))
 private val DATA_TYPE = kinds(listOf("json", "jsobj", "figma", "salt", "uri", "md", "html", "text"))
 
 // A cross-reference as Mermaid reads it: by its text, never linked.
@@ -139,7 +173,12 @@ class EventModelAst(
 )
 
 fun parseEventModel(src: String): EventModelAst {
-  val r = Reader(tokenize(src, EVENTMODELING_TOKENS, "eventmodeling"), EVENTMODELING_TOKENS, "eventmodeling")
+  val r =
+    Reader(
+      tokenize(src, EVENTMODELING_TOKENS, "eventmodeling"),
+      EVENTMODELING_TOKENS,
+      "eventmodeling",
+    )
   val ast = EventModelAst(source = src)
   fun at(kind: Int): Boolean = r.kinds.getOrNull(r.i) == kind
   fun has(set: Set<Int>): Boolean {
@@ -180,14 +219,15 @@ fun parseEventModel(src: String): EventModelAst {
       r.i++
       ast.modelEntities.add(EmModelEntity(qualifiedName()))
     } else if (kind != null && (TIME_FRAME.contains(kind) || RESET_FRAME.contains(kind))) {
-      val frame = EmFrame(
-        type = if (TIME_FRAME.contains(kind)) "EmTimeFrame" else "EmResetFrame",
-        name = "",
-        modelEntityType = "",
-        entityIdentifier = "",
-        sourceFrames = ArrayList(),
-        offset = r.tokens.starts[r.i],
-      )
+      val frame =
+        EmFrame(
+          type = if (TIME_FRAME.contains(kind)) "EmTimeFrame" else "EmResetFrame",
+          name = "",
+          modelEntityType = "",
+          entityIdentifier = "",
+          sourceFrames = ArrayList(),
+          offset = r.tokens.starts[r.i],
+        )
       r.i++
       frame.name = r.expect(T.frameId)
       frame.modelEntityType = one(ENTITY_TYPE, "an entity type")

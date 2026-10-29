@@ -16,7 +16,8 @@ private const val RING = 5.0
 fun classMarkerTrim(type: EndMarker): Double {
   when (type) {
     "extension" -> return TRIANGLE
-    "composition", "aggregation" -> return DIAMOND
+    "composition",
+    "aggregation" -> return DIAMOND
     "lollipop" -> return 2 * RING
     "dependency" -> return markerTrim("arrow_point")
   }
@@ -24,7 +25,14 @@ fun classMarkerTrim(type: EndMarker): Double {
 }
 
 // Draws an end marker whose tip is at (x, y), pointing along (dx, dy).
-fun classMarker(type: EndMarker, x: Double, y: Double, dx: Double, dy: Double, color: String): String {
+fun classMarker(
+  type: EndMarker,
+  x: Double,
+  y: Double,
+  dx: Double,
+  dy: Double,
+  color: String,
+): String {
   val nx = -dy
   val ny = dx
   when (type) {
@@ -35,7 +43,8 @@ fun classMarker(type: EndMarker, x: Double, y: Double, dx: Double, dy: Double, c
         bx - nx * HALF
       )},${num(by - ny * HALF)}Z\" stroke-linejoin=\"round\"/>"
     }
-    "composition", "aggregation" -> {
+    "composition",
+    "aggregation" -> {
       val mx = x - (dx * DIAMOND) / 2
       val my = y - (dy * DIAMOND) / 2
       val half = HALF - 1
@@ -45,7 +54,8 @@ fun classMarker(type: EndMarker, x: Double, y: Double, dx: Double, dy: Double, c
         if (type == "composition") " fill=\"$color\"" else ""
       }/>"
     }
-    "lollipop" -> return "<circle class=\"pele-marker\" cx=\"${num(x - dx * RING)}\" cy=\"${num(y - dy * RING)}\" r=\"${jsStr(RING)}\"/>"
+    "lollipop" ->
+      return "<circle class=\"pele-marker\" cx=\"${num(x - dx * RING)}\" cy=\"${num(y - dy * RING)}\" r=\"${jsStr(RING)}\"/>"
     "dependency" -> return marker("arrow_point", x, y, dx, dy, color)
   }
   return ""

@@ -1,13 +1,13 @@
 // PORT: JVM-only helper with no upstream counterpart (see UPDATE.md).
 package pele.diagrams.gantt
 
-import pele.js.isJsWhitespace
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.math.floor
 import kotlin.math.truncate
+import pele.js.isJsWhitespace
 
 private const val MS_PER_DAY = 86400000.0
 private const val MAX_TIME = 8.64e15
@@ -30,9 +30,12 @@ private fun offsetOfLocal(local: Double): Double {
   return offset.totalSeconds * 1000.0
 }
 
-// A local time further out than any offset could bring back into range is NaN after TimeClip anyway.
+// A local time further out than any offset could bring back into range is NaN after TimeClip
+// anyway.
 private fun toUtc(local: Double): Double =
-  if (local.isFinite() && local >= -MAX_TIME - 1e9 && local <= MAX_TIME + 1e9) local - offsetOfLocal(local) else Double.NaN
+  if (local.isFinite() && local >= -MAX_TIME - 1e9 && local <= MAX_TIME + 1e9)
+    local - offsetOfLocal(local)
+  else Double.NaN
 
 private fun toLocal(utc: Double): Double = if (utc.isFinite()) utc + offsetAt(utc) else Double.NaN
 
@@ -64,7 +67,14 @@ private fun civilFromDays(days: Long): LongArray {
 
 // V8's MakeDay: NaN outside its supported range.
 fun makeDay(year: Double, month: Double, date: Double): Double {
-  if (!(year >= -1000000 && year <= 1000000 && month >= -10000000 && month <= 10000000 && date.isFinite())) return Double.NaN
+  if (
+    !(year >= -1000000 &&
+      year <= 1000000 &&
+      month >= -10000000 &&
+      month <= 10000000 &&
+      date.isFinite())
+  )
+    return Double.NaN
   var y = truncate(year).toLong()
   var m = truncate(month).toLong()
   y += m / 12
@@ -77,8 +87,12 @@ fun makeDay(year: Double, month: Double, date: Double): Double {
 }
 
 fun makeTime(hour: Double, minute: Double, second: Double, ms: Double): Double {
-  if (!(hour.isFinite() && minute.isFinite() && second.isFinite() && ms.isFinite())) return Double.NaN
-  return truncate(hour) * 3600000.0 + truncate(minute) * 60000.0 + truncate(second) * 1000.0 + truncate(ms)
+  if (!(hour.isFinite() && minute.isFinite() && second.isFinite() && ms.isFinite()))
+    return Double.NaN
+  return truncate(hour) * 3600000.0 +
+    truncate(minute) * 60000.0 +
+    truncate(second) * 1000.0 +
+    truncate(ms)
 }
 
 fun makeDate(day: Double, time: Double): Double {
@@ -103,10 +117,15 @@ fun dateUtc(
   minutes: Double = 0.0,
   seconds: Double = 0.0,
   ms: Double = 0.0,
-): Double = timeClip(makeDate(makeDay(fullYear(year), month, date), makeTime(hours, minutes, seconds, ms)))
+): Double =
+  timeClip(makeDate(makeDay(fullYear(year), month, date), makeTime(hours, minutes, seconds, ms)))
 
-/** The part of the JS `Date` that the gantt code uses. The time value is epoch milliseconds, NaN when invalid. */
-class JsDate private constructor(private var time: Double, @Suppress("UNUSED_PARAMETER") tag: Unit) {
+/**
+ * The part of the JS `Date` that the gantt code uses. The time value is epoch milliseconds, NaN
+ * when invalid.
+ */
+class JsDate
+private constructor(private var time: Double, @Suppress("UNUSED_PARAMETER") tag: Unit) {
   // new Date(ms)
   constructor(ms: Double) : this(timeClip(ms), Unit)
 
@@ -127,7 +146,8 @@ class JsDate private constructor(private var time: Double, @Suppress("UNUSED_PAR
       seconds: Double = 0.0,
       ms: Double = 0.0,
     ): JsDate {
-      val local = makeDate(makeDay(fullYear(year), month, date), makeTime(hours, minutes, seconds, ms))
+      val local =
+        makeDate(makeDay(fullYear(year), month, date), makeTime(hours, minutes, seconds, ms))
       return JsDate(timeClip(toUtc(local)))
     }
 
@@ -197,7 +217,11 @@ class JsDate private constructor(private var time: Double, @Suppress("UNUSED_PAR
     val local = localTime()
     if (local.isNaN()) return Double.NaN
     val civil = civilFromDays(floor(local / MS_PER_DAY).toLong())
-    return setTime(toUtc(makeDate(makeDay(civil[0].toDouble(), (civil[1] - 1).toDouble(), date), withinDay(local))))
+    return setTime(
+      toUtc(
+        makeDate(makeDay(civil[0].toDouble(), (civil[1] - 1).toDouble(), date), withinDay(local))
+      )
+    )
   }
 
   fun setMonth(month: Double, date: Double? = null): Double {
@@ -216,7 +240,12 @@ class JsDate private constructor(private var time: Double, @Suppress("UNUSED_PAR
     return setTime(toUtc(makeDate(makeDay(year, m, d), withinDay(local))))
   }
 
-  fun setHours(hours: Double, minutes: Double? = null, seconds: Double? = null, ms: Double? = null): Double {
+  fun setHours(
+    hours: Double,
+    minutes: Double? = null,
+    seconds: Double? = null,
+    ms: Double? = null,
+  ): Double {
     val local = localTime()
     if (local.isNaN()) return Double.NaN
     val day = floor(local / MS_PER_DAY)
@@ -242,35 +271,36 @@ private object Kw {
 
 private class Keyword(val a: Char, val b: Char, val c: Char, val type: Int, val value: Int)
 
-private val KEYWORDS = listOf(
-  Keyword('j', 'a', 'n', Kw.MONTH_NAME, 1),
-  Keyword('f', 'e', 'b', Kw.MONTH_NAME, 2),
-  Keyword('m', 'a', 'r', Kw.MONTH_NAME, 3),
-  Keyword('a', 'p', 'r', Kw.MONTH_NAME, 4),
-  Keyword('m', 'a', 'y', Kw.MONTH_NAME, 5),
-  Keyword('j', 'u', 'n', Kw.MONTH_NAME, 6),
-  Keyword('j', 'u', 'l', Kw.MONTH_NAME, 7),
-  Keyword('a', 'u', 'g', Kw.MONTH_NAME, 8),
-  Keyword('s', 'e', 'p', Kw.MONTH_NAME, 9),
-  Keyword('o', 'c', 't', Kw.MONTH_NAME, 10),
-  Keyword('n', 'o', 'v', Kw.MONTH_NAME, 11),
-  Keyword('d', 'e', 'c', Kw.MONTH_NAME, 12),
-  Keyword('a', 'm', '\u0000', Kw.AM_PM, 0),
-  Keyword('p', 'm', '\u0000', Kw.AM_PM, 12),
-  Keyword('u', 't', '\u0000', Kw.TIME_ZONE_NAME, 0),
-  Keyword('u', 't', 'c', Kw.TIME_ZONE_NAME, 0),
-  Keyword('z', '\u0000', '\u0000', Kw.TIME_ZONE_NAME, 0),
-  Keyword('g', 'm', 't', Kw.TIME_ZONE_NAME, 0),
-  Keyword('c', 'd', 't', Kw.TIME_ZONE_NAME, -5),
-  Keyword('c', 's', 't', Kw.TIME_ZONE_NAME, -6),
-  Keyword('e', 'd', 't', Kw.TIME_ZONE_NAME, -4),
-  Keyword('e', 's', 't', Kw.TIME_ZONE_NAME, -5),
-  Keyword('m', 'd', 't', Kw.TIME_ZONE_NAME, -6),
-  Keyword('m', 's', 't', Kw.TIME_ZONE_NAME, -7),
-  Keyword('p', 'd', 't', Kw.TIME_ZONE_NAME, -7),
-  Keyword('p', 's', 't', Kw.TIME_ZONE_NAME, -8),
-  Keyword('t', '\u0000', '\u0000', Kw.TIME_SEPARATOR, 0),
-)
+private val KEYWORDS =
+  listOf(
+    Keyword('j', 'a', 'n', Kw.MONTH_NAME, 1),
+    Keyword('f', 'e', 'b', Kw.MONTH_NAME, 2),
+    Keyword('m', 'a', 'r', Kw.MONTH_NAME, 3),
+    Keyword('a', 'p', 'r', Kw.MONTH_NAME, 4),
+    Keyword('m', 'a', 'y', Kw.MONTH_NAME, 5),
+    Keyword('j', 'u', 'n', Kw.MONTH_NAME, 6),
+    Keyword('j', 'u', 'l', Kw.MONTH_NAME, 7),
+    Keyword('a', 'u', 'g', Kw.MONTH_NAME, 8),
+    Keyword('s', 'e', 'p', Kw.MONTH_NAME, 9),
+    Keyword('o', 'c', 't', Kw.MONTH_NAME, 10),
+    Keyword('n', 'o', 'v', Kw.MONTH_NAME, 11),
+    Keyword('d', 'e', 'c', Kw.MONTH_NAME, 12),
+    Keyword('a', 'm', '\u0000', Kw.AM_PM, 0),
+    Keyword('p', 'm', '\u0000', Kw.AM_PM, 12),
+    Keyword('u', 't', '\u0000', Kw.TIME_ZONE_NAME, 0),
+    Keyword('u', 't', 'c', Kw.TIME_ZONE_NAME, 0),
+    Keyword('z', '\u0000', '\u0000', Kw.TIME_ZONE_NAME, 0),
+    Keyword('g', 'm', 't', Kw.TIME_ZONE_NAME, 0),
+    Keyword('c', 'd', 't', Kw.TIME_ZONE_NAME, -5),
+    Keyword('c', 's', 't', Kw.TIME_ZONE_NAME, -6),
+    Keyword('e', 'd', 't', Kw.TIME_ZONE_NAME, -4),
+    Keyword('e', 's', 't', Kw.TIME_ZONE_NAME, -5),
+    Keyword('m', 'd', 't', Kw.TIME_ZONE_NAME, -6),
+    Keyword('m', 's', 't', Kw.TIME_ZONE_NAME, -7),
+    Keyword('p', 'd', 't', Kw.TIME_ZONE_NAME, -7),
+    Keyword('p', 's', 't', Kw.TIME_ZONE_NAME, -8),
+    Keyword('t', '\u0000', '\u0000', Kw.TIME_SEPARATOR, 0),
+  )
 
 private object Tag {
   const val INVALID = -6
@@ -283,11 +313,20 @@ private object Tag {
 
 // Keyword tokens carry their keyword type (0 and up) as the tag.
 private class DateToken(val tag: Int, val length: Int, val value: Int) {
-  val isInvalid get() = tag == Tag.INVALID
-  val isNumber get() = tag == Tag.NUMBER
-  val isEndOfInput get() = tag == Tag.END
-  val isWhiteSpace get() = tag == Tag.WHITESPACE
-  val isKeyword get() = tag >= 0
+  val isInvalid
+    get() = tag == Tag.INVALID
+
+  val isNumber
+    get() = tag == Tag.NUMBER
+
+  val isEndOfInput
+    get() = tag == Tag.END
+
+  val isWhiteSpace
+    get() = tag == Tag.WHITESPACE
+
+  val isKeyword
+    get() = tag >= 0
 
   fun isFixedLengthNumber(n: Int) = isNumber && length == n
 
@@ -415,7 +454,13 @@ private class DateStringTokenizer(private val input: InputReader) {
 
   private fun lookup(pre: IntArray, len: Int): Keyword? {
     for (k in KEYWORDS) {
-      if (pre[0] == k.a.code && pre[1] == k.b.code && pre[2] == k.c.code && (len <= 3 || k.type == Kw.MONTH_NAME)) return k
+      if (
+        pre[0] == k.a.code &&
+          pre[1] == k.b.code &&
+          pre[2] == k.c.code &&
+          (len <= 3 || k.type == Kw.MONTH_NAME)
+      )
+        return k
     }
     return null
   }
@@ -464,6 +509,7 @@ private fun isDay(x: Int) = between(x, 1, 31)
 private class TimeZoneComposer {
   var sign = NONE
     private set
+
   var hour = NONE
   var minute = NONE
 
@@ -489,7 +535,9 @@ private class TimeZoneComposer {
     if (hour == NONE) hour = 0
     if (minute == NONE) minute = 0
     // Unsigned 32-bit arithmetic, as in V8.
-    val total = ((hour.toLong() and 0xFFFFFFFFL) * 3600L + (minute.toLong() and 0xFFFFFFFFL) * 60L) and 0xFFFFFFFFL
+    val total =
+      ((hour.toLong() and 0xFFFFFFFFL) * 3600L + (minute.toLong() and 0xFFFFFFFFL) * 60L) and
+        0xFFFFFFFFL
     if (total > Int.MAX_VALUE) return null
     return (if (sign < 0) -total else total).toDouble()
   }
@@ -624,7 +672,12 @@ private fun readMilliseconds(token: DateToken): Int {
   return number
 }
 
-private fun parseEs5DateTime(scanner: DateStringTokenizer, day: DayComposer, time: TimeComposer, tz: TimeZoneComposer): DateToken {
+private fun parseEs5DateTime(
+  scanner: DateStringTokenizer,
+  day: DayComposer,
+  time: TimeComposer,
+  tz: TimeZoneComposer,
+): DateToken {
   // Mandatory date: [('-'|'+')yy]yyyy['-'MM['-'DD]]
   if (scanner.peek().isAsciiSign()) {
     val signToken = scanner.next()
@@ -639,10 +692,12 @@ private fun parseEs5DateTime(scanner: DateStringTokenizer, day: DayComposer, tim
     return scanner.next()
   }
   if (scanner.skipSymbol('-')) {
-    if (!scanner.peek().isFixedLengthNumber(2) || !isMonth(scanner.peek().value)) return scanner.next()
+    if (!scanner.peek().isFixedLengthNumber(2) || !isMonth(scanner.peek().value))
+      return scanner.next()
     day.add(scanner.next().value)
     if (scanner.skipSymbol('-')) {
-      if (!scanner.peek().isFixedLengthNumber(2) || !isDay(scanner.peek().value)) return scanner.next()
+      if (!scanner.peek().isFixedLengthNumber(2) || !isDay(scanner.peek().value))
+        return scanner.next()
       day.add(scanner.next().value)
     }
   }
@@ -651,22 +706,32 @@ private fun parseEs5DateTime(scanner: DateStringTokenizer, day: DayComposer, tim
     if (!scanner.peek().isEndOfInput) return scanner.next()
   } else {
     scanner.next()
-    if (!scanner.peek().isFixedLengthNumber(2) || !between(scanner.peek().value, 0, 24)) return DateToken.INVALID
+    if (!scanner.peek().isFixedLengthNumber(2) || !between(scanner.peek().value, 0, 24))
+      return DateToken.INVALID
     // 24:00[:00[.000]] is allowed, but no other time starting with 24.
     val hourIs24 = scanner.peek().value == 24
     time.add(scanner.next().value)
     if (!scanner.skipSymbol(':')) return DateToken.INVALID
-    if (!scanner.peek().isFixedLengthNumber(2) || !isMinute(scanner.peek().value) || (hourIs24 && scanner.peek().value > 0)) {
+    if (
+      !scanner.peek().isFixedLengthNumber(2) ||
+        !isMinute(scanner.peek().value) ||
+        (hourIs24 && scanner.peek().value > 0)
+    ) {
       return DateToken.INVALID
     }
     time.add(scanner.next().value)
     if (scanner.skipSymbol(':')) {
-      if (!scanner.peek().isFixedLengthNumber(2) || !isSecond(scanner.peek().value) || (hourIs24 && scanner.peek().value > 0)) {
+      if (
+        !scanner.peek().isFixedLengthNumber(2) ||
+          !isSecond(scanner.peek().value) ||
+          (hourIs24 && scanner.peek().value > 0)
+      ) {
         return DateToken.INVALID
       }
       time.add(scanner.next().value)
       if (scanner.skipSymbol('.')) {
-        if (!scanner.peek().isNumber || (hourIs24 && scanner.peek().value > 0)) return DateToken.INVALID
+        if (!scanner.peek().isNumber || (hourIs24 && scanner.peek().value > 0))
+          return DateToken.INVALID
         time.add(readMilliseconds(scanner.next()))
       }
     }
@@ -684,10 +749,12 @@ private fun parseEs5DateTime(scanner: DateStringTokenizer, day: DayComposer, tim
         tz.hour = hour
         tz.minute = min
       } else {
-        if (!scanner.peek().isFixedLengthNumber(2) || !isHour(scanner.peek().value)) return DateToken.INVALID
+        if (!scanner.peek().isFixedLengthNumber(2) || !isHour(scanner.peek().value))
+          return DateToken.INVALID
         tz.hour = scanner.next().value
         if (!scanner.skipSymbol(':')) return DateToken.INVALID
-        if (!scanner.peek().isFixedLengthNumber(2) || !isMinute(scanner.peek().value)) return DateToken.INVALID
+        if (!scanner.peek().isFixedLengthNumber(2) || !isMinute(scanner.peek().value))
+          return DateToken.INVALID
         tz.minute = scanner.next().value
       }
     }
@@ -737,7 +804,8 @@ private fun parseFields(str: String, out: DoubleArray): Boolean {
         time.addFinal(n)
         // Require the end, white space, "Z", "+" or "-" right after the time is final.
         val peek = scanner.peek()
-        if (!peek.isEndOfInput && !peek.isWhiteSpace && !peek.isKeywordZ() && !peek.isAsciiSign()) return false
+        if (!peek.isEndOfInput && !peek.isWhiteSpace && !peek.isKeywordZ() && !peek.isAsciiSign())
+          return false
       } else {
         if (!day.add(n)) return false
         scanner.skipSymbol('-')

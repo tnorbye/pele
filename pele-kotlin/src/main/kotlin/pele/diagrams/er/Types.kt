@@ -41,7 +41,8 @@ class RelSpec(
   val cardB: Cardinality,
 )
 
-// entityA and entityB hold an entity's id, or a subgraph's id when the name was a subgraph at the time.
+// entityA and entityB hold an entity's id, or a subgraph's id when the name was a subgraph at the
+// time.
 class ErRelationship(
   val entityA: String,
   val roleA: String,

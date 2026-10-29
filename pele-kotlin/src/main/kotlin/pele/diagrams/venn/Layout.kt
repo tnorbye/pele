@@ -2,8 +2,6 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.venn
 
-import pele.js.jsHypot
-import pele.js.jsonStringify
 import java.lang.StrictMath.acos
 import java.lang.StrictMath.atan2
 import java.lang.StrictMath.cos
@@ -12,6 +10,8 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.sqrt
+import pele.js.jsHypot
+import pele.js.jsonStringify
 
 class Circle(
   val id: String,
@@ -90,7 +90,14 @@ fun distanceForOverlap(r1: Double, r2: Double, area: Double): Double {
 
 // How far a point is from the nearest outline it must stay within or without. Gives up, with
 // some value below `floor`, as soon as the point cannot reach `floor`.
-private fun margin(circles: List<Circle>, inside: List<Int>, outside: List<Int>, x: Double, y: Double, floor: Double): Double {
+private fun margin(
+  circles: List<Circle>,
+  inside: List<Int>,
+  outside: List<Int>,
+  x: Double,
+  y: Double,
+  floor: Double,
+): Double {
   var best = Double.POSITIVE_INFINITY
   for (i in inside) {
     val c = circles[i]
@@ -153,7 +160,8 @@ fun findSpot(circles: List<Circle>, inside: List<Int>, outside: List<Int>): Spot
   val GRID = 10
   for (gy in -GRID..GRID) {
     for (gx in -GRID..GRID) {
-      if (gx * gx + gy * gy <= GRID * GRID) consider(smallest.x + (gx * r) / GRID, smallest.y + (gy * r) / GRID)
+      if (gx * gx + gy * gy <= GRID * GRID)
+        consider(smallest.x + (gx * r) / GRID, smallest.y + (gy * r) / GRID)
     }
   }
   var step = r / GRID
@@ -201,13 +209,17 @@ fun layoutCircles(subsets: List<VennSubset>): List<Circle> {
     val b = index[subset.sets[1]]!!
     if (a != b) overlaps[minOf(a, b).toDouble() * n + maxOf(a, b)] = subset.size
   }
-  // How far apart each overlapping pair should be. Pairs that do not overlap only have to keep a gap.
+  // How far apart each overlapping pair should be. Pairs that do not overlap only have to keep a
+  // gap.
   val wanted = LinkedHashMap<Double, Double>()
   for ((key, area) in overlaps) {
-    wanted[key] = distanceForOverlap(circles[floor(key / n).toInt()].r, circles[(key % n).toInt()].r, area)
+    wanted[key] =
+      distanceForOverlap(circles[floor(key / n).toInt()].r, circles[(key % n).toInt()].r, area)
   }
   val gap = widest * 0.15
-  val distance = { a: Int, b: Int -> wanted[a.toDouble() * n + b] ?: (circles[a].r + circles[b].r + gap) }
+  val distance = { a: Int, b: Int ->
+    wanted[a.toDouble() * n + b] ?: (circles[a].r + circles[b].r + gap)
+  }
 
   if (n == 2) {
     circles[1].x = distance(0, 1)
@@ -327,7 +339,10 @@ fun regionPath(circles: List<Circle>, format: (value: Double) -> String): String
     var smallest = circles[0]
     for (c in circles) if (c.r < smallest.r) smallest = c
     for (c in circles) {
-      if (c !== smallest && hypot(c.x - smallest.x, c.y - smallest.y) + smallest.r > c.r * (1 + 1e-9)) return ""
+      if (
+        c !== smallest && hypot(c.x - smallest.x, c.y - smallest.y) + smallest.r > c.r * (1 + 1e-9)
+      )
+        return ""
     }
     return whole(smallest)
   }
@@ -365,7 +380,9 @@ fun regionPath(circles: List<Circle>, format: (value: Double) -> String): String
         large = if (sweep > Math.PI) 1 else 0
       }
     }
-    d += if (arc == null) "L${format(to.x)},${format(to.y)}" else "A${format(arc.r)},${format(arc.r)} 0 $large 1 ${format(to.x)},${format(to.y)}"
+    d +=
+      if (arc == null) "L${format(to.x)},${format(to.y)}"
+      else "A${format(arc.r)},${format(arc.r)} 0 $large 1 ${format(to.x)},${format(to.y)}"
   }
   return d + "Z"
 }

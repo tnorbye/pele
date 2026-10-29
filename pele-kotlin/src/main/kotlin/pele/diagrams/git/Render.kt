@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.git
 
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -19,7 +20,6 @@ import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.ceil
 
 private const val DOT = 7.0
 private const val STEP = 44.0
@@ -78,7 +78,12 @@ fun renderGit(model: GitModel, config: Config, options: RenderOptions): Rendered
   return turnToFit(options) { down -> draw(model, config, options, if (down) "TB" else "LR") }
 }
 
-private fun draw(model: GitModel, config: Config, options: RenderOptions, direction: GitDirection): Rendered {
+private fun draw(
+  model: GitModel,
+  config: Config,
+  options: RenderOptions,
+  direction: GitDirection,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val small = jsRound(size * 0.75)
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
@@ -95,8 +100,10 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
   model.lanes.forEachIndexed { index, name -> laneOf[name] = index }
   val laneCount = model.lanes.size
   val medium = jsRound(size * 0.875)
-  // Mermaid writes branch names, tags, and commit ids as plain text, so tags in them show as written.
-  val names = model.lanes.map { name -> plainLabel(if (showBranches) name else "", measurer, medium, 4000.0) }
+  // Mermaid writes branch names, tags, and commit ids as plain text, so tags in them show as
+  // written.
+  val names =
+    model.lanes.map { name -> plainLabel(if (showBranches) name else "", measurer, medium, 4000.0) }
 
   val views = ArrayList<View>()
   val byId = LinkedHashMap<String, View>()
@@ -110,20 +117,22 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
       val label = plainLabel(tag, measurer, small, 4000.0)
       if (label.lines.size > 0) tags.add(label)
     }
-    val view = View(
-      commit = commit,
-      index = views.size,
-      lane = laneOf[commit.branch] ?: 0,
-      m = 0.0,
-      label = if (labelled) plainLabel(commit.id, measurer, small, 4000.0) else null,
-      tags = tags,
-    )
+    val view =
+      View(
+        commit = commit,
+        index = views.size,
+        lane = laneOf[commit.branch] ?: 0,
+        m = 0.0,
+        label = if (labelled) plainLabel(commit.id, measurer, small, 4000.0) else null,
+        tags = tags,
+      )
     views.add(view)
     byId[commit.id] = view
   }
 
   // Room each commit needs: along the main axis on either side, and across it towards the
-  // previous lane (`lo`) and the next one (`hi`). Tags sit on one side of a lane and ids on the other.
+  // previous lane (`lo`) and the next one (`hi`). Tags sit on one side of a lane and ids on the
+  // other.
   val half = DoubleArray(views.size)
   val tagHalf = DoubleArray(views.size)
   val lo = DoubleArray(laneCount).also { it.fill(DOT) }
@@ -200,7 +209,8 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
   val cross = DoubleArray(laneCount)
   for (i in 0 until laneCount) {
     val name = names[i]
-    val reach = if (name.lines.size == 0) 0.0 else if (vertical) name.width / 2 + 8 else name.height / 2 + 2
+    val reach =
+      if (name.lines.size == 0) 0.0 else if (vertical) name.width / 2 + 8 else name.height / 2 + 2
     lo[i] = maxOf(lo[i], reach)
     hi[i] = maxOf(hi[i], reach)
     if (i > 0) cross[i] = cross[i - 1] + maxOf(LANE, hi[i - 1] + lo[i] + GAP)
@@ -236,12 +246,12 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
       grow(px(end + TAIL, c), py(end + TAIL, c), px(end + TAIL, c), py(end + TAIL, c))
       branches +=
         "<g class=\"pele-branch\" data-id=\"${escText(model.lanes[i])}\">" +
-        "<path class=\"pele-lane\" d=\"M${point(-LABEL_GAP, c)}L${point(end + TAIL, c)}\" stroke=\"$color\" stroke-dasharray=\"2 4\"/>"
+          "<path class=\"pele-lane\" d=\"M${point(-LABEL_GAP, c)}L${point(end + TAIL, c)}\" stroke=\"$color\" stroke-dasharray=\"2 4\"/>"
       if (name.lines.size > 0) {
         grow(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
         branches +=
           "<rect x=\"${num(cx - w / 2)}\" y=\"${num(cy - h / 2)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"$color\"$ROUNDED/>" +
-          labelSvg(name, cx, cy, " class=\"pele-label\" fill=\"var(--_bg)\"")
+            labelSvg(name, cx, cy, " class=\"pele-label\" fill=\"var(--_bg)\"")
       }
       branches += "</g>"
     }
@@ -281,7 +291,8 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
       val c1 = cross[parent.lane]
       val m1 = parent.m
       if (parent.lane == view.lane) {
-        lines += "<path class=\"pele-edge\" d=\"M${point(m1, c1)}L${point(m2, c2)}\" stroke=\"${seriesColor(view.lane)}\"/>"
+        lines +=
+          "<path class=\"pele-edge\" d=\"M${point(m1, c1)}L${point(m2, c2)}\" stroke=\"${seriesColor(view.lane)}\"/>"
         continue
       }
       val merged = j > 0 && commit.type == commitType.MERGE
@@ -293,10 +304,12 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
       } else if (!merged && !busy(view.lane, m1, m2)) {
         // Leaves the parent at once and runs along the child's lane.
         val s = minOf(CURVE, m2 - m1)
-        d += "C${point(m1 + s / 2, c1)} ${point(m1 + s / 2, c2)} ${point(m1 + s, c2)}L${point(m2, c2)}"
+        d +=
+          "C${point(m1 + s / 2, c1)} ${point(m1 + s / 2, c2)} ${point(m1 + s, c2)}L${point(m2, c2)}"
       } else {
         // Turns in just before the child, or before its tags when it comes from their side.
-        val to = if (parent.lane < view.lane && m2 - lead[view.index] > m1) m2 - lead[view.index] else m2
+        val to =
+          if (parent.lane < view.lane && m2 - lead[view.index] > m1) m2 - lead[view.index] else m2
         var s = minOf(CURVE, to - m1)
         var along = c1
         if (!merged || busy(parent.lane, m1, m2)) {
@@ -306,12 +319,13 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
           s = minOf(CURVE, (to - m1) / 2)
           d += "C${point(m1 + s / 2, c1)} ${point(m1 + s / 2, along)} ${point(m1 + s, along)}"
         }
-        d += "L${point(to - s, along)}C${point(to - s / 2, along)} ${point(to - s / 2, c2)} ${point(to, c2)}"
+        d +=
+          "L${point(to - s, along)}C${point(to - s / 2, along)} ${point(to - s / 2, c2)} ${point(to, c2)}"
         if (to < m2) d += "L${point(m2, c2)}"
       }
       curves +=
         "<path class=\"pele-edge${if (merged) " pele-edge-merge" else if (picked) " pele-edge-cherry-pick" else ""}\" d=\"$d\" " +
-        "stroke=\"${seriesColor(if (merged) parent.lane else view.lane)}\"${if (picked) " stroke-dasharray=\"4 3\"" else ""}/>"
+          "stroke=\"${seriesColor(if (merged) parent.lane else view.lane)}\"${if (picked) " stroke-dasharray=\"4 3\"" else ""}/>"
     }
   }
 
@@ -324,7 +338,8 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
     val y = py(view.m, cross[view.lane])
     val type = commit.customType ?: commit.type
     grow(x - DOT - 1, y - DOT - 1, x + DOT + 1, y + DOT + 1)
-    // Merges and cherry-picks carry a message Mermaid makes up; only a written one is worth showing.
+    // Merges and cherry-picks carry a message Mermaid makes up; only a written one is worth
+    // showing.
     val written = commit.type < commitType.MERGE && commit.message != ""
     var body = if (written) "<title>${escText(commit.message)}</title>" else ""
     body += symbol(type, x, y, seriesColor(view.lane))
@@ -344,9 +359,9 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
         grow(ax - reach, if (flip) ay - reach else ay - k, ax + k, if (flip) ay + k else ay + reach)
         body +=
           "<g class=\"pele-commit-label\" transform=\"rotate(${if (flip) 45 else -45} ${num(ax)} ${num(ay)})\">" +
-          back(ax - w / 2, ay) +
-          labelSvg(label, ax - w / 2, ay, "") +
-          "</g>"
+            back(ax - w / 2, ay) +
+            labelSvg(label, ax - w / 2, ay, "") +
+            "</g>"
       } else {
         val cx = if (vertical) x - DOT - 6 - w / 2 else x
         val cy = if (vertical) y else y + DOT + 6 + h / 2
@@ -368,15 +383,17 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
       grow(left, cy - h / 2, left + w, cy + h / 2)
       body +=
         "<g class=\"pele-tag\">" +
-        "<path d=\"M${num(left)},${num(cy)}L${num(left + NOTCH)},${num(cy - h / 2)}H${num(left + w)}V${num(cy + h / 2)}H${num(left + NOTCH)}Z\" fill=\"var(--_s)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>" +
-        "<circle cx=\"${num(left + NOTCH)}\" cy=\"${num(cy)}\" r=\"1.5\" fill=\"var(--_b)\"/>" +
-        labelSvg(tag, left + NOTCH + 4 + tag.width / 2, cy, " fill=\"var(--_fg)\"") +
-        "</g>"
+          "<path d=\"M${num(left)},${num(cy)}L${num(left + NOTCH)},${num(cy - h / 2)}H${num(left + w)}V${num(cy + h / 2)}H${num(left + NOTCH)}Z\" fill=\"var(--_s)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>" +
+          "<circle cx=\"${num(left + NOTCH)}\" cy=\"${num(cy)}\" r=\"1.5\" fill=\"var(--_b)\"/>" +
+          labelSvg(tag, left + NOTCH + 4 + tag.width / 2, cy, " fill=\"var(--_fg)\"") +
+          "</g>"
       t += if (vertical) 1 else -1
     }
 
-    val merge = if (commit.type == commitType.MERGE && type != commitType.MERGE) " pele-commit-merge" else ""
-    commits += "<g class=\"pele-commit pele-commit-${CLASSES.getOrNull(type) ?: CLASSES[0]}$merge\" data-id=\"${escText(commit.id)}\">$body</g>"
+    val merge =
+      if (commit.type == commitType.MERGE && type != commitType.MERGE) " pele-commit-merge" else ""
+    commits +=
+      "<g class=\"pele-commit pele-commit-${CLASSES.getOrNull(type) ?: CLASSES[0]}$merge\" data-id=\"${escText(commit.id)}\">$body</g>"
   }
 
   if (minX > maxX) grow(0.0, 0.0, 0.0, 0.0)
@@ -389,11 +406,22 @@ private fun draw(model: GitModel, config: Config, options: RenderOptions, direct
   val dy = pad + titleHeight - minY
 
   val content =
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
+    labelSvg(
+      title,
+      width / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) +
       "<g transform=\"translate(${num(dx)},${num(dy)})\">" +
-      (if (branches != "") "<g class=\"pele-branches\" fill=\"none\" font-size=\"${jsStr(medium)}\">$branches</g>" else "") +
-      (if (curves != "" || lines != "") "<g class=\"pele-edges\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\">$curves$lines</g>" else "") +
-      (if (commits != "") "<g class=\"pele-commits\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\">$commits</g>" else "") +
+      (if (branches != "")
+        "<g class=\"pele-branches\" fill=\"none\" font-size=\"${jsStr(medium)}\">$branches</g>"
+      else "") +
+      (if (curves != "" || lines != "")
+        "<g class=\"pele-edges\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\">$curves$lines</g>"
+      else "") +
+      (if (commits != "")
+        "<g class=\"pele-commits\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\">$commits</g>"
+      else "") +
       "</g>"
 
   return Rendered(

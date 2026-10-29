@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.common
 
+import kotlin.math.ceil
 import pele.js.JsRegExp
 import pele.js.jsRound
 import pele.js.jsSplit
@@ -17,14 +18,19 @@ import pele.text.Label
 import pele.text.Span
 import pele.text.TextMeasurer
 import pele.text.withHeights
-import kotlin.math.ceil
 
 private val SPACE = JsRegExp("""\s""")
 
 // Literal labels, including filenames and protocol fields, must retain every character but the
 // spaces a line breaks at. Long words can break between code points; measurement stays bounded
 // by one line of text.
-fun literalLabel(text: String, measurer: TextMeasurer, size: Double, room: Double, style: Int = 0): Label {
+fun literalLabel(
+  text: String,
+  measurer: TextMeasurer,
+  size: Double,
+  room: Double,
+  style: Int = 0,
+): Label {
   val lines = ArrayList<String>()
   for (raw in text.jsSplit("\n")) {
     val chars = raw.toCodePointStrings()
@@ -32,7 +38,11 @@ fun literalLabel(text: String, measurer: TextMeasurer, size: Double, room: Doubl
     var from = 0
     while (from < chars.size) {
       val fits = { length: Int ->
-        measurer.width(chars.subList(from, minOf(chars.size, from + length)).joinToString(""), size, style) <= room
+        measurer.width(
+          chars.subList(from, minOf(chars.size, from + length)).joinToString(""),
+          size,
+          style,
+        ) <= room
       }
       var hi = 1
       while (hi < chars.size - from && fits(hi)) hi = minOf(chars.size - from, hi * 2)
@@ -63,7 +73,10 @@ fun literalLabel(text: String, measurer: TextMeasurer, size: Double, room: Doubl
   for (w in widths) width = maxOf(width, w)
   val lineHeight = jsRound(size * 1.5)
   return Label(
-    lines = lines.mapIndexed { i, line -> mutableListOf(Span(text = line, style = style, width = widths[i])) },
+    lines =
+      lines.mapIndexed { i, line ->
+        mutableListOf(Span(text = line, style = style, width = widths[i]))
+      },
     widths = widths,
     width = width,
     height = lines.size * lineHeight,
@@ -99,8 +112,10 @@ fun breakLabel(label: Label, measurer: TextMeasurer, room: Double): Label {
       }
       for (char in span.text.toCodePointStrings()) {
         var last: Span? = current.lastOrNull()
-        val joined = last != null && last.icon == null && last.math == null && last.style == span.style
-        val nextWidth = measurer.width(if (joined) last!!.text + char else char, label.size, span.style)
+        val joined =
+          last != null && last.icon == null && last.math == null && last.style == span.style
+        val nextWidth =
+          measurer.width(if (joined) last!!.text + char else char, label.size, span.style)
         var added = nextWidth - (if (joined) last!!.width else 0.0)
         if (current.isNotEmpty() && width + added > room) {
           commit()
@@ -120,7 +135,13 @@ fun breakLabel(label: Label, measurer: TextMeasurer, room: Double): Label {
   }
   var width = 0.0
   for (w in widths) width = maxOf(width, w)
-  val broken = label.copy(lines = lines, widths = widths, width = width, height = lines.size * label.lineHeight)
+  val broken =
+    label.copy(
+      lines = lines,
+      widths = widths,
+      width = width,
+      height = lines.size * label.lineHeight,
+    )
   return if (label.heights != null) withHeights(broken) else broken
 }
 
@@ -137,11 +158,16 @@ fun leftLabelSvg(label: Label, x: Double, top: Double, attrs: String): String {
       val width = label.widths[i]
       body.append(
         labelSvg(
-          label.copy(lines = listOf(spans), widths = listOf(width), width = width, height = label.lineHeight),
+          label.copy(
+            lines = listOf(spans),
+            widths = listOf(width),
+            width = width,
+            height = label.lineHeight,
+          ),
           x + width / 2,
           cy,
           attrs,
-        ),
+        )
       )
       continue
     }
@@ -151,7 +177,9 @@ fun leftLabelSvg(label: Label, x: Double, top: Double, attrs: String): String {
       text.append(if (own.isNotEmpty()) "<tspan$own>${esc(span.text)}</tspan>" else esc(span.text))
     }
     if (text.isNotEmpty()) {
-      body.append("$open x=\"${num(x)}\" y=\"${num(cy + label.size * 0.35)}\" text-anchor=\"start\" xml:space=\"preserve\">$text</text>")
+      body.append(
+        "$open x=\"${num(x)}\" y=\"${num(cy + label.size * 0.35)}\" text-anchor=\"start\" xml:space=\"preserve\">$text</text>"
+      )
     }
   }
   return body.toString()

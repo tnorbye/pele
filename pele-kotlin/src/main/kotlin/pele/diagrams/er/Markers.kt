@@ -16,7 +16,9 @@ private const val RING = 3.5
 // Draws a crow's foot cardinality marker over the end of a line that meets a box at (x, y)
 // while travelling along the unit vector (dx, dy). Types are Mermaid's lower-cased cardinalities.
 fun erMarker(type: String, x: Double, y: Double, dx: Double, dy: Double): String {
-  val at = { back: Double, side: Double -> num(x - dx * back - dy * side) + "," + num(y - dy * back + dx * side) }
+  val at = { back: Double, side: Double ->
+    num(x - dx * back - dy * side) + "," + num(y - dy * back + dx * side)
+  }
   val bar = { back: Double -> "M${at(back, -BAR)}L${at(back, BAR)}" }
   val foot = "M${at(0.0, -FOOT)}L${at(FOOT_LENGTH, 0.0)}L${at(0.0, FOOT)}"
   val ring = { back: Double ->

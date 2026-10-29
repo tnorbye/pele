@@ -10,41 +10,48 @@ import pele.syntaxError
 // The calls Mermaid's grammar makes on its `yy` object.
 interface SeqBuilder {
   fun apply(doc: Any)
+
   fun parseMessage(str: String): SeqText
+
   fun parseBoxData(str: String): SeqBoxData
+
   fun setDiagramTitle(text: String)
+
   fun setAccTitle(text: String)
+
   fun setAccDescription(text: String)
 }
 
-private val SIGNAL = IntArray(T.STICK_ARROW_BOTTOM_REVERSE_DOTTED + 1) { -1 }.also { s ->
-  s[T.SOLID_OPEN_ARROW] = LINETYPE.SOLID_OPEN
-  s[T.DOTTED_OPEN_ARROW] = LINETYPE.DOTTED_OPEN
-  s[T.SOLID_ARROW] = LINETYPE.SOLID
-  s[T.DOTTED_ARROW] = LINETYPE.DOTTED
-  s[T.BIDIRECTIONAL_SOLID_ARROW] = LINETYPE.BIDIRECTIONAL_SOLID
-  s[T.BIDIRECTIONAL_DOTTED_ARROW] = LINETYPE.BIDIRECTIONAL_DOTTED
-  s[T.SOLID_CROSS] = LINETYPE.SOLID_CROSS
-  s[T.DOTTED_CROSS] = LINETYPE.DOTTED_CROSS
-  s[T.SOLID_POINT] = LINETYPE.SOLID_POINT
-  s[T.DOTTED_POINT] = LINETYPE.DOTTED_POINT
-  s[T.SOLID_ARROW_TOP] = LINETYPE.SOLID_TOP
-  s[T.SOLID_ARROW_BOTTOM] = LINETYPE.SOLID_BOTTOM
-  s[T.STICK_ARROW_TOP] = LINETYPE.STICK_TOP
-  s[T.STICK_ARROW_BOTTOM] = LINETYPE.STICK_BOTTOM
-  s[T.SOLID_ARROW_TOP_DOTTED] = LINETYPE.SOLID_TOP_DOTTED
-  s[T.SOLID_ARROW_BOTTOM_DOTTED] = LINETYPE.SOLID_BOTTOM_DOTTED
-  s[T.STICK_ARROW_TOP_DOTTED] = LINETYPE.STICK_TOP_DOTTED
-  s[T.STICK_ARROW_BOTTOM_DOTTED] = LINETYPE.STICK_BOTTOM_DOTTED
-  s[T.SOLID_ARROW_TOP_REVERSE] = LINETYPE.SOLID_ARROW_TOP_REVERSE
-  s[T.SOLID_ARROW_BOTTOM_REVERSE] = LINETYPE.SOLID_ARROW_BOTTOM_REVERSE
-  s[T.STICK_ARROW_TOP_REVERSE] = LINETYPE.STICK_ARROW_TOP_REVERSE
-  s[T.STICK_ARROW_BOTTOM_REVERSE] = LINETYPE.STICK_ARROW_BOTTOM_REVERSE
-  s[T.SOLID_ARROW_TOP_REVERSE_DOTTED] = LINETYPE.SOLID_ARROW_TOP_REVERSE_DOTTED
-  s[T.SOLID_ARROW_BOTTOM_REVERSE_DOTTED] = LINETYPE.SOLID_ARROW_BOTTOM_REVERSE_DOTTED
-  s[T.STICK_ARROW_TOP_REVERSE_DOTTED] = LINETYPE.STICK_ARROW_TOP_REVERSE_DOTTED
-  s[T.STICK_ARROW_BOTTOM_REVERSE_DOTTED] = LINETYPE.STICK_ARROW_BOTTOM_REVERSE_DOTTED
-}
+private val SIGNAL =
+  IntArray(T.STICK_ARROW_BOTTOM_REVERSE_DOTTED + 1) { -1 }
+    .also { s ->
+      s[T.SOLID_OPEN_ARROW] = LINETYPE.SOLID_OPEN
+      s[T.DOTTED_OPEN_ARROW] = LINETYPE.DOTTED_OPEN
+      s[T.SOLID_ARROW] = LINETYPE.SOLID
+      s[T.DOTTED_ARROW] = LINETYPE.DOTTED
+      s[T.BIDIRECTIONAL_SOLID_ARROW] = LINETYPE.BIDIRECTIONAL_SOLID
+      s[T.BIDIRECTIONAL_DOTTED_ARROW] = LINETYPE.BIDIRECTIONAL_DOTTED
+      s[T.SOLID_CROSS] = LINETYPE.SOLID_CROSS
+      s[T.DOTTED_CROSS] = LINETYPE.DOTTED_CROSS
+      s[T.SOLID_POINT] = LINETYPE.SOLID_POINT
+      s[T.DOTTED_POINT] = LINETYPE.DOTTED_POINT
+      s[T.SOLID_ARROW_TOP] = LINETYPE.SOLID_TOP
+      s[T.SOLID_ARROW_BOTTOM] = LINETYPE.SOLID_BOTTOM
+      s[T.STICK_ARROW_TOP] = LINETYPE.STICK_TOP
+      s[T.STICK_ARROW_BOTTOM] = LINETYPE.STICK_BOTTOM
+      s[T.SOLID_ARROW_TOP_DOTTED] = LINETYPE.SOLID_TOP_DOTTED
+      s[T.SOLID_ARROW_BOTTOM_DOTTED] = LINETYPE.SOLID_BOTTOM_DOTTED
+      s[T.STICK_ARROW_TOP_DOTTED] = LINETYPE.STICK_TOP_DOTTED
+      s[T.STICK_ARROW_BOTTOM_DOTTED] = LINETYPE.STICK_BOTTOM_DOTTED
+      s[T.SOLID_ARROW_TOP_REVERSE] = LINETYPE.SOLID_ARROW_TOP_REVERSE
+      s[T.SOLID_ARROW_BOTTOM_REVERSE] = LINETYPE.SOLID_ARROW_BOTTOM_REVERSE
+      s[T.STICK_ARROW_TOP_REVERSE] = LINETYPE.STICK_ARROW_TOP_REVERSE
+      s[T.STICK_ARROW_BOTTOM_REVERSE] = LINETYPE.STICK_ARROW_BOTTOM_REVERSE
+      s[T.SOLID_ARROW_TOP_REVERSE_DOTTED] = LINETYPE.SOLID_ARROW_TOP_REVERSE_DOTTED
+      s[T.SOLID_ARROW_BOTTOM_REVERSE_DOTTED] = LINETYPE.SOLID_ARROW_BOTTOM_REVERSE_DOTTED
+      s[T.STICK_ARROW_TOP_REVERSE_DOTTED] = LINETYPE.STICK_ARROW_TOP_REVERSE_DOTTED
+      s[T.STICK_ARROW_BOTTOM_REVERSE_DOTTED] = LINETYPE.STICK_ARROW_BOTTOM_REVERSE_DOTTED
+    }
 
 private object K {
   const val Top = 0
@@ -62,23 +69,26 @@ private class ParseFrame(
   var kind: Int,
   var text: String,
   var startType: Int,
-  // The current section's statements. Slot 0 of a block's first section is kept for its start entry.
+  // The current section's statements. Slot 0 of a block's first section is kept for its start
+  // entry.
   var list: MutableList<Any>,
   // Finished sections, each followed by the divider text that ended it.
   var sections: MutableList<Any>?,
 )
 
-private val BLOCK = IntArray(T.STICK_ARROW_BOTTOM_REVERSE_DOTTED + 1) { -1 }.also { b ->
-  b[T.loop] = K.Loop
-  b[T.rect] = K.Rect
-  b[T.opt] = K.Opt
-  b[T.`break`] = K.Break
-  b[T.alt] = K.Alt
-  b[T.par] = K.Par
-  b[T.par_over] = K.Par
-  b[T.critical] = K.Critical
-  b[T.box] = K.Box
-}
+private val BLOCK =
+  IntArray(T.STICK_ARROW_BOTTOM_REVERSE_DOTTED + 1) { -1 }
+    .also { b ->
+      b[T.loop] = K.Loop
+      b[T.rect] = K.Rect
+      b[T.opt] = K.Opt
+      b[T.`break`] = K.Break
+      b[T.alt] = K.Alt
+      b[T.par] = K.Par
+      b[T.par_over] = K.Par
+      b[T.critical] = K.Critical
+      b[T.box] = K.Box
+    }
 
 private const val SIGNAL_TOKENS =
   "'SOLID_OPEN_ARROW', 'DOTTED_OPEN_ARROW', 'SOLID_ARROW', 'DOTTED_ARROW', 'SOLID_CROSS', 'DOTTED_CROSS', 'SOLID_POINT', 'DOTTED_POINT'"
@@ -148,7 +158,14 @@ fun parseSequence(src: String, db: SeqBuilder) {
     if (mark == T.CENTRAL || (!centralFrom && (mark == T.PLUS || mark == T.MINUS))) i++
     val to = actor()
     val msg = text2()
-    val message = SeqStatement(type = "addMessage", from = from.actor as String, to = to.actor as String, signalType = signalType, msg = msg)
+    val message =
+      SeqStatement(
+        type = "addMessage",
+        from = from.actor as String,
+        to = to.actor as String,
+        signalType = signalType,
+        msg = msg,
+      )
     val out = ArrayList<Any>()
     out.add(from)
     out.add(to)
@@ -156,18 +173,42 @@ fun parseSequence(src: String, db: SeqBuilder) {
     if (centralFrom) {
       val dual = mark == T.CENTRAL
       message.activate = dual
-      message.centralConnection = if (dual) LINETYPE.CENTRAL_CONNECTION_DUAL else LINETYPE.CENTRAL_CONNECTION_REVERSE
-      if (dual) out.add(SeqStatement(type = "centralConnection", signalType = LINETYPE.CENTRAL_CONNECTION, actor = to.actor))
-      out.add(SeqStatement(type = "centralConnectionReverse", signalType = LINETYPE.CENTRAL_CONNECTION_REVERSE, actor = from.actor))
+      message.centralConnection =
+        if (dual) LINETYPE.CENTRAL_CONNECTION_DUAL else LINETYPE.CENTRAL_CONNECTION_REVERSE
+      if (dual)
+        out.add(
+          SeqStatement(
+            type = "centralConnection",
+            signalType = LINETYPE.CENTRAL_CONNECTION,
+            actor = to.actor,
+          )
+        )
+      out.add(
+        SeqStatement(
+          type = "centralConnectionReverse",
+          signalType = LINETYPE.CENTRAL_CONNECTION_REVERSE,
+          actor = from.actor,
+        )
+      )
     } else if (mark == T.PLUS) {
       message.activate = true
-      out.add(SeqStatement(type = "activeStart", signalType = LINETYPE.ACTIVE_START, actor = to.actor))
+      out.add(
+        SeqStatement(type = "activeStart", signalType = LINETYPE.ACTIVE_START, actor = to.actor)
+      )
     } else if (mark == T.MINUS) {
-      out.add(SeqStatement(type = "activeEnd", signalType = LINETYPE.ACTIVE_END, actor = from.actor))
+      out.add(
+        SeqStatement(type = "activeEnd", signalType = LINETYPE.ACTIVE_END, actor = from.actor)
+      )
     } else if (mark == T.CENTRAL) {
       message.activate = true
       message.centralConnection = LINETYPE.CENTRAL_CONNECTION
-      out.add(SeqStatement(type = "centralConnection", signalType = LINETYPE.CENTRAL_CONNECTION, actor = to.actor))
+      out.add(
+        SeqStatement(
+          type = "centralConnection",
+          signalType = LINETYPE.CENTRAL_CONNECTION,
+          actor = to.actor,
+        )
+      )
     }
     return out
   }
@@ -192,18 +233,25 @@ fun parseSequence(src: String, db: SeqBuilder) {
         who = arrayListOf<Any>(first, second)
         ids = listOf(first.actor as String, second.actor as String)
       }
-      return arrayListOf<Any>(who, SeqStatement(type = "addNote", placement = PLACEMENT.OVER, actor = ids, text = text2()))
+      return arrayListOf<Any>(
+        who,
+        SeqStatement(type = "addNote", placement = PLACEMENT.OVER, actor = ids, text = text2()),
+      )
     }
     if (t != T.left_of && t != T.right_of) fail("'over', 'left_of', 'right_of'")
     i++
     val who = actor()
     val placement = if (t == T.left_of) PLACEMENT.LEFTOF else PLACEMENT.RIGHTOF
-    return arrayListOf<Any>(who, SeqStatement(type = "addNote", placement = placement, actor = who.actor, text = text2()))
+    return arrayListOf<Any>(
+      who,
+      SeqStatement(type = "addNote", placement = placement, actor = who.actor, text = text2()),
+    )
   }
 
   fun autonumber(): SeqStatement {
     i++
-    val node = SeqStatement(type = "sequenceIndex", sequenceVisible = true, signalType = LINETYPE.AUTONUMBER)
+    val node =
+      SeqStatement(type = "sequenceIndex", sequenceVisible = true, signalType = LINETYPE.AUTONUMBER)
     if (types[i] == T.NUM) {
       node.sequenceIndex = jsNumber(texts[i++])
       node.sequenceIndexStep = if (types[i] == T.NUM) jsNumber(texts[i++]) else 1.0
@@ -231,8 +279,7 @@ fun parseSequence(src: String, db: SeqBuilder) {
           "parText" -> head.parText = text
           else -> head.optionText = text
         }
-        @Suppress("UNCHECKED_CAST")
-        val section = sections[k] as MutableList<Any>
+        @Suppress("UNCHECKED_CAST") val section = sections[k] as MutableList<Any>
         val merged = ArrayList<Any>(section)
         merged.add(head)
         merged.add(list)
@@ -252,34 +299,87 @@ fun parseSequence(src: String, db: SeqBuilder) {
         list.add(SeqStatement(type = "boxEnd", boxText = text))
       }
       K.Loop -> {
-        list[0] = SeqStatement(type = "loopStart", loopText = db.parseMessage(text), signalType = LINETYPE.LOOP_START)
+        list[0] =
+          SeqStatement(
+            type = "loopStart",
+            loopText = db.parseMessage(text),
+            signalType = LINETYPE.LOOP_START,
+          )
         list.add(SeqStatement(type = "loopEnd", loopText = text, signalType = LINETYPE.LOOP_END))
       }
       K.Rect -> {
-        list[0] = SeqStatement(type = "rectStart", color = db.parseMessage(text), signalType = LINETYPE.RECT_START)
-        list.add(SeqStatement(type = "rectEnd", color = db.parseMessage(text), signalType = LINETYPE.RECT_END))
+        list[0] =
+          SeqStatement(
+            type = "rectStart",
+            color = db.parseMessage(text),
+            signalType = LINETYPE.RECT_START,
+          )
+        list.add(
+          SeqStatement(
+            type = "rectEnd",
+            color = db.parseMessage(text),
+            signalType = LINETYPE.RECT_END,
+          )
+        )
       }
       K.Opt -> {
-        list[0] = SeqStatement(type = "optStart", optText = db.parseMessage(text), signalType = LINETYPE.OPT_START)
-        list.add(SeqStatement(type = "optEnd", optText = db.parseMessage(text), signalType = LINETYPE.OPT_END))
+        list[0] =
+          SeqStatement(
+            type = "optStart",
+            optText = db.parseMessage(text),
+            signalType = LINETYPE.OPT_START,
+          )
+        list.add(
+          SeqStatement(
+            type = "optEnd",
+            optText = db.parseMessage(text),
+            signalType = LINETYPE.OPT_END,
+          )
+        )
       }
       K.Break -> {
-        list[0] = SeqStatement(type = "breakStart", breakText = db.parseMessage(text), signalType = LINETYPE.BREAK_START)
-        list.add(SeqStatement(type = "breakEnd", optText = db.parseMessage(text), signalType = LINETYPE.BREAK_END))
+        list[0] =
+          SeqStatement(
+            type = "breakStart",
+            breakText = db.parseMessage(text),
+            signalType = LINETYPE.BREAK_START,
+          )
+        list.add(
+          SeqStatement(
+            type = "breakEnd",
+            optText = db.parseMessage(text),
+            signalType = LINETYPE.BREAK_END,
+          )
+        )
       }
       K.Alt -> {
         list = fold(frame, "else", "altText", LINETYPE.ALT_ELSE)
-        list[0] = SeqStatement(type = "altStart", altText = db.parseMessage(text), signalType = LINETYPE.ALT_START)
+        list[0] =
+          SeqStatement(
+            type = "altStart",
+            altText = db.parseMessage(text),
+            signalType = LINETYPE.ALT_START,
+          )
         list.add(SeqStatement(type = "altEnd", signalType = LINETYPE.ALT_END))
       }
       K.Par -> {
         list = fold(frame, "and", "parText", LINETYPE.PAR_AND)
-        list[0] = SeqStatement(type = "parStart", parText = db.parseMessage(text), signalType = frame.startType)
+        list[0] =
+          SeqStatement(
+            type = "parStart",
+            parText = db.parseMessage(text),
+            signalType = frame.startType,
+          )
         list.add(SeqStatement(type = "parEnd", signalType = LINETYPE.PAR_END))
       }
       else -> {
         list = fold(frame, "option", "optionText", LINETYPE.CRITICAL_OPTION)
-        list[0] = SeqStatement(type = "criticalStart", criticalText = db.parseMessage(text), signalType = LINETYPE.CRITICAL_START)
+        list[0] =
+          SeqStatement(
+            type = "criticalStart",
+            criticalText = db.parseMessage(text),
+            signalType = LINETYPE.CRITICAL_START,
+          )
         list.add(SeqStatement(type = "criticalEnd", signalType = LINETYPE.CRITICAL_END))
       }
     }
@@ -312,11 +412,14 @@ fun parseSequence(src: String, db: SeqBuilder) {
       continue
     }
     when (t) {
-      T.NEWLINE, T.INVALID -> {
+      T.NEWLINE,
+      T.INVALID -> {
         list.add(ArrayList<Any>())
         i++
       }
-      T.participant, T.participant_actor, T.destroy -> list.add(participant())
+      T.participant,
+      T.participant_actor,
+      T.destroy -> list.add(participant())
       T.create -> {
         i++
         val next = types[i]
@@ -353,19 +456,25 @@ fun parseSequence(src: String, db: SeqBuilder) {
         expect(T.NEWLINE)
       }
       T.autonumber -> list.add(autonumber())
-      T.activate, T.deactivate -> {
+      T.activate,
+      T.deactivate -> {
         i++
         val who = actor()
         expect(T.NEWLINE)
         list.add(
           if (t == T.activate) {
-            SeqStatement(type = "activeStart", signalType = LINETYPE.ACTIVE_START, actor = who.actor)
+            SeqStatement(
+              type = "activeStart",
+              signalType = LINETYPE.ACTIVE_START,
+              actor = who.actor,
+            )
           } else {
             SeqStatement(type = "activeEnd", signalType = LINETYPE.ACTIVE_END, actor = who.actor)
-          },
+          }
         )
       }
-      T.title, T.legacy_title -> {
+      T.title,
+      T.legacy_title -> {
         val title = texts[i++].jsSubstring(if (t == T.title) 6 else 7)
         db.setDiagramTitle(title)
         list.add(title)
@@ -387,21 +496,33 @@ fun parseSequence(src: String, db: SeqBuilder) {
         db.setAccDescription(value)
         list.add(value)
       }
-      T.loop, T.rect, T.opt, T.`break`, T.alt, T.par, T.par_over, T.critical, T.box -> {
+      T.loop,
+      T.rect,
+      T.opt,
+      T.`break`,
+      T.alt,
+      T.par,
+      T.par_over,
+      T.critical,
+      T.box -> {
         i++
         val text = expect(T.restOfLine)
         stack.add(frame)
-        frame = ParseFrame(
-          BLOCK[t],
-          text,
-          if (t == T.par_over) LINETYPE.PAR_OVER_START else LINETYPE.PAR_START,
-          arrayListOf<Any>(ArrayList<Any>()),
-          null,
-        )
+        frame =
+          ParseFrame(
+            BLOCK[t],
+            text,
+            if (t == T.par_over) LINETYPE.PAR_OVER_START else LINETYPE.PAR_START,
+            arrayListOf<Any>(ArrayList<Any>()),
+            null,
+          )
       }
-      T.`else`, T.and, T.option -> {
+      T.`else`,
+      T.and,
+      T.option -> {
         val kind = frame.kind
-        if (kind != (if (t == T.`else`) K.Alt else if (t == T.and) K.Par else K.Critical)) fail("'end'")
+        if (kind != (if (t == T.`else`) K.Alt else if (t == T.and) K.Par else K.Critical))
+          fail("'end'")
         i++
         val text = expect(T.restOfLine)
         val sections = frame.sections ?: ArrayList<Any>().also { frame.sections = it }

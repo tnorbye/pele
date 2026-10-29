@@ -35,7 +35,7 @@ fun buildRequirementGraph(model: RequirementModel): RequirementGraph {
         element = null,
         cssStyles = requirement.cssStyles,
         cssClasses = requirement.classes.joinToString(" "),
-      ),
+      )
     )
   }
   for (element in model.elements.values) {
@@ -46,18 +46,21 @@ fun buildRequirementGraph(model: RequirementModel): RequirementGraph {
         element = element,
         cssStyles = element.cssStyles,
         cssClasses = element.classes.joinToString(" "),
-      ),
+      )
     )
   }
-  val has = { id: String -> if (model.requirements.containsKey(id) || model.elements.containsKey(id)) id else null }
-  val edges = model.relations.mapIndexed { index, relation ->
-    GraphEdge(
-      id = "${relation.src}-${relation.dst}-$index",
-      start = has(relation.src),
-      end = has(relation.dst),
-      type = relation.type,
-      contains = relation.type == Relationships.CONTAINS,
-    )
+  val has = { id: String ->
+    if (model.requirements.containsKey(id) || model.elements.containsKey(id)) id else null
   }
+  val edges =
+    model.relations.mapIndexed { index, relation ->
+      GraphEdge(
+        id = "${relation.src}-${relation.dst}-$index",
+        start = has(relation.src),
+        end = has(relation.dst),
+        type = relation.type,
+        contains = relation.type == Relationships.CONTAINS,
+      )
+    }
   return RequirementGraph(nodes, edges, model.direction)
 }

@@ -62,7 +62,8 @@ private fun shapeOf(vertex: FlowNode): String {
     return "icon"
   }
   return when (vertex.type) {
-    "square", null -> "squareRect"
+    "square",
+    null -> "squareRect"
     "round" -> "roundedRect"
     else -> vertex.type!!
   }
@@ -70,8 +71,12 @@ private fun shapeOf(vertex: FlowNode): String {
 
 private fun arrows(type: String?): Pair<String, String> {
   when (type) {
-    "arrow_point", "arrow_circle", "arrow_cross" -> return Pair("none", type)
-    "double_arrow_point", "double_arrow_circle", "double_arrow_cross" -> {
+    "arrow_point",
+    "arrow_circle",
+    "arrow_cross" -> return Pair("none", type)
+    "double_arrow_point",
+    "double_arrow_circle",
+    "double_arrow_cross" -> {
       val single = type.jsReplace("double_", "")
       return Pair(single, single)
     }
@@ -108,8 +113,7 @@ fun buildFlowGraph(model: FlowDb, defaultCurve: String? = null): FlowGraph {
   for (sg in subgraphs) {
     val parent = subgraphParent[sg.id] ?: continue
     val kids = childrenOf[parent]
-    if (kids != null) kids.add(sg.id)
-    else childrenOf[parent] = arrayListOf(sg.id)
+    if (kids != null) kids.add(sg.id) else childrenOf[parent] = arrayListOf(sg.id)
   }
   var nextIndex = 0
   for (sg in subgraphs) {
@@ -175,19 +179,20 @@ fun buildFlowGraph(model: FlowDb, defaultCurve: String? = null): FlowGraph {
     val sg = subgraphs[i]
     if (hidden.contains(sg.id)) continue
     val collapsed = sg.metadata?.get("view") == "collapsed"
-    val node = GraphNode(
-      id = sg.id,
-      label = sg.title,
-      labelType = sg.labelType,
-      parentId = parentOf[sg.id],
-      cssStyles = ArrayList(),
-      cssCompiledStyles = compiled(sg.classes),
-      cssClasses = sg.classes.joinToString(" "),
-      shape = if (collapsed) "collapsedGroup" else "rect",
-      dir = sg.dir,
-      isGroup = !collapsed,
-      colorIndex = declarationIndex[sg.id],
-    )
+    val node =
+      GraphNode(
+        id = sg.id,
+        label = sg.title,
+        labelType = sg.labelType,
+        parentId = parentOf[sg.id],
+        cssStyles = ArrayList(),
+        cssCompiledStyles = compiled(sg.classes),
+        cssClasses = sg.classes.joinToString(" "),
+        shape = if (collapsed) "collapsedGroup" else "rect",
+        dir = sg.dir,
+        isGroup = !collapsed,
+        colorIndex = declarationIndex[sg.id],
+      )
     if (!collapsed) node.metadata = sg.metadata
     nodes.add(node)
     byId[sg.id] = node
@@ -203,34 +208,38 @@ fun buildFlowGraph(model: FlowDb, defaultCurve: String? = null): FlowGraph {
       continue
     }
     val isGroup = groups.contains(vertex.id)
-    val node = GraphNode(
-      id = vertex.id,
-      label = vertex.text,
-      labelType = vertex.labelType,
-      parentId = parentOf[vertex.id],
-      cssStyles = vertex.styles,
-      cssCompiledStyles = compiled(listOf("default", "node") + vertex.classes),
-      cssClasses = "default " + vertex.classes.joinToString(" "),
-      dir = vertex.dir,
-      link = vertex.link,
-      linkTarget = vertex.linkTarget,
-      tooltip = model.tooltips[vertex.id],
-      icon = vertex.icon,
-      pos = vertex.pos,
-      img = vertex.img,
-      assetWidth = vertex.assetWidth,
-      assetHeight = vertex.assetHeight,
-      constraint = vertex.constraint,
-      isGroup = isGroup,
-      shape = if (isGroup) "rect" else shapeOf(vertex),
-    )
+    val node =
+      GraphNode(
+        id = vertex.id,
+        label = vertex.text,
+        labelType = vertex.labelType,
+        parentId = parentOf[vertex.id],
+        cssStyles = vertex.styles,
+        cssCompiledStyles = compiled(listOf("default", "node") + vertex.classes),
+        cssClasses = "default " + vertex.classes.joinToString(" "),
+        dir = vertex.dir,
+        link = vertex.link,
+        linkTarget = vertex.linkTarget,
+        tooltip = model.tooltips[vertex.id],
+        icon = vertex.icon,
+        pos = vertex.pos,
+        img = vertex.img,
+        assetWidth = vertex.assetWidth,
+        assetHeight = vertex.assetHeight,
+        constraint = vertex.constraint,
+        isGroup = isGroup,
+        shape = if (isGroup) "rect" else shapeOf(vertex),
+      )
     nodes.add(node)
   }
 
   model.edges.forEachIndexed { index, raw ->
     val start = collapsedInto[raw.start] ?: raw.start
     val end = collapsedInto[raw.end] ?: raw.end
-    if (start == end && (collapsedInto.containsKey(raw.start) || collapsedInto.containsKey(raw.end))) return@forEachIndexed
+    if (
+      start == end && (collapsedInto.containsKey(raw.start) || collapsedInto.containsKey(raw.end))
+    )
+      return@forEachIndexed
 
     val (arrowStart, arrowEnd) = arrows(raw.type)
     val styles = ArrayList(model.defaultEdgeStyle ?: emptyList())
@@ -249,7 +258,9 @@ fun buildFlowGraph(model: FlowDb, defaultCurve: String? = null): FlowGraph {
         thickness = raw.stroke,
         pattern = raw.stroke,
         minlen = raw.length,
-        classes = if (raw.stroke == "invisible") "" else "edge-thickness-normal edge-pattern-solid flowchart-link",
+        classes =
+          if (raw.stroke == "invisible") ""
+          else "edge-thickness-normal edge-pattern-solid flowchart-link",
         arrowTypeStart = if (plain) "none" else arrowStart,
         arrowTypeEnd = if (plain) "none" else arrowEnd,
         cssCompiledStyles = compiled(raw.classes),
@@ -257,7 +268,7 @@ fun buildFlowGraph(model: FlowDb, defaultCurve: String? = null): FlowGraph {
         animate = raw.animate,
         animation = raw.animation,
         curve = orNull(raw.interpolate) ?: orNull(model.defaultInterpolate) ?: defaultCurve,
-      ),
+      )
     )
   }
 

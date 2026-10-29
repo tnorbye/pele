@@ -67,16 +67,17 @@ class ClassDb : ClassModel {
     val className = split.className
     val type = split.type
     if (classes.containsKey(className)) return
-    val node = ClassNode(
-      id = className,
-      type = type,
-      label = className,
-      cssClasses = "default",
-      methods = ArrayList(),
-      members = ArrayList(),
-      annotations = ArrayList(),
-      styles = ArrayList(),
-    )
+    val node =
+      ClassNode(
+        id = className,
+        type = type,
+        label = className,
+        cssClasses = "default",
+        methods = ArrayList(),
+        members = ArrayList(),
+        annotations = ArrayList(),
+        styles = ArrayList(),
+      )
     classes[className] = node
     tag(node, "default")
   }
@@ -87,7 +88,8 @@ class ClassDb : ClassModel {
   }
 
   // Returns the class for a name that may carry a generic type, creating it if needed.
-  // Mermaid throws a TypeError where this creates, as for an annotation on a class not yet declared.
+  // Mermaid throws a TypeError where this creates, as for an annotation on a class not yet
+  // declared.
   private fun ensure(id: String): ClassNode {
     addClass(id)
     return classes[splitName(id).className]!!
@@ -152,7 +154,8 @@ class ClassDb : ClassModel {
     return id
   }
 
-  fun cleanupLabel(label: String): String = (if (label.startsWith(":")) label.substring(1) else label).jsTrim()
+  fun cleanupLabel(label: String): String =
+    (if (label.startsWith(":")) label.substring(1) else label).jsTrim()
 
   fun setCssClass(ids: String, className: String) {
     for (id in ids.jsSplit(",")) {
@@ -174,7 +177,8 @@ class ClassDb : ClassModel {
         styleClass.styles.add(s)
       }
       // Mermaid tests `cssClasses.includes(id)`, which also matches part of a longer name
-      // (a classDef named `def` styles every class, through `default`). Whole names are compared here.
+      // (a classDef named `def` styles every class, through `default`). Whole names are compared
+      // here.
       val tagged = withCssClass[id] ?: continue
       val parts = style.flatMap { it.jsSplit(",") }
       for (node in tagged) for (part in parts) node.styles.add(part)
@@ -237,7 +241,8 @@ class ClassDb : ClassModel {
       return qualified
     }
 
-    // The enclosing namespace and its ancestors exist already, so only the parts of `id` are walked.
+    // The enclosing namespace and its ancestors exist already, so only the parts of `id` are
+    // walked.
     var parentId: String? = if (!prefix.isNullOrEmpty()) prefix else null
     var from = if (!prefix.isNullOrEmpty()) prefix.length + 1 else 0
     while (true) {
@@ -247,15 +252,16 @@ class ClassDb : ClassModel {
       var node = namespaces[current]
       if (node == null) {
         val part = qualified.jsSlice(from, if (leaf) qualified.length else dot)
-        node = NamespaceNode(
-          id = current,
-          label = if (leaf && !label.isNullOrEmpty()) label else part,
-          classes = LinkedHashMap(),
-          notes = LinkedHashMap(),
-          children = LinkedHashMap(),
-          parent = parentId,
-          explicit = leaf,
-        )
+        node =
+          NamespaceNode(
+            id = current,
+            label = if (leaf && !label.isNullOrEmpty()) label else part,
+            classes = LinkedHashMap(),
+            notes = LinkedHashMap(),
+            children = LinkedHashMap(),
+            parent = parentId,
+            explicit = leaf,
+          )
         namespaces[current] = node
       } else if (leaf) {
         node.explicit = true

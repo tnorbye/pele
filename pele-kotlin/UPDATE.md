@@ -137,6 +137,7 @@ node pele-kotlin/scripts/generate_urls.mjs
 
 ```sh
 cd pele-kotlin
+./gradlew ktfmtFormat                # format with ktfmt (Google style); CI runs ktfmtCheck
 scripts/check_port_rules.sh          # porting rules, headers, and the 1:1 file mapping; must print nothing
 node scripts/generate_goldens.mjs --sha256-only    # the checked-in goldens hold hashes only
 ./gradlew test testJdk17 testSmallStack # both JDKs, plus large flat inputs with a 1 MB stack

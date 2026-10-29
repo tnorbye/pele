@@ -27,18 +27,19 @@ private object T {
   const val newline = 5
 }
 
-val INFO_TOKENS: List<TokenType> = listOf(
-  keyword("showInfo"),
-  keyword("info"),
-  ACC_DESCR,
-  ACC_TITLE,
-  TITLE,
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-)
+val INFO_TOKENS: List<TokenType> =
+  listOf(
+    keyword("showInfo"),
+    keyword("info"),
+    ACC_DESCR,
+    ACC_TITLE,
+    TITLE,
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+  )
 
 class InfoAst(
   var title: String? = null,

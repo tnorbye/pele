@@ -54,7 +54,11 @@ class MindmapDb : MindmapModel, OutlineDb {
     while (depth > 0 && open[depth - 1].level >= relative) depth--
     val parent = open.getOrNull(depth - 1)
     if (parent == null && !isRoot) {
-      throw PeleError("There can be only one root. No parent could be found for (\"$descr\")", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "mindmap"))
+      throw PeleError(
+        "There can be only one root. No parent could be found for (\"$descr\")",
+        PeleErrorCode.SEMANTIC,
+        PeleErrorInfo(type = "mindmap"),
+      )
     }
     val node = MindmapNode(this.nodes.size, id, relative, descr, type, ArrayList(), isRoot)
     if (parent != null) {

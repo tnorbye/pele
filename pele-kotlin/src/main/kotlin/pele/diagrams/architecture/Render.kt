@@ -2,6 +2,9 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.architecture
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import pele.Config
 import pele.IconResolver
 import pele.RenderOptions
@@ -29,9 +32,6 @@ import pele.text.Style
 import pele.text.TextMeasurer
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.floor
 
 private const val STUB = 12.0
 private const val CORNER = 6.0
@@ -40,7 +40,13 @@ private const val DOT = 3.0
 private val DX = doubleArrayOf(-1.0, 1.0, 0.0, 0.0)
 private val DY = doubleArrayOf(0.0, 0.0, -1.0, 1.0)
 
-private fun setting(config: Config, key: String, fallback: Double, min: Double, max: Double): Double {
+private fun setting(
+  config: Config,
+  key: String,
+  fallback: Double,
+  min: Double,
+  max: Double,
+): Double {
   val section = config["architecture"]
   val value = if (section is Map<*, *>) section[key] else null
   return if (value is Double && value.isFinite()) minOf(max, maxOf(min, value)) else fallback
@@ -54,7 +60,13 @@ private fun rank(values: MutableList<Int>): Map<Int, Int> {
   return out
 }
 
-private fun iconSlot(name: String, x: Double, y: Double, side: Double, icons: IconResolver?): String =
+private fun iconSlot(
+  name: String,
+  x: Double,
+  y: Double,
+  side: Double,
+  icons: IconResolver?,
+): String =
   "<svg class=\"pele-icon\" data-icon=\"${escText(name)}\" x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(side)}\" height=\"${num(side)}\"" +
     " viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">${
       icons?.invoke(name) ?: builtinIcon(name)
@@ -85,7 +97,12 @@ private fun fit(label: Label, maxWidth: Double, maxLines: Int, measurer: TextMea
           var hi = span.text.length
           while (lo < hi) {
             val mid = (lo + hi + 1) shr 1
-            if (rest + measurer.width(span.text.jsSlice(0, mid), label.size, span.style) + dots <= maxWidth) lo = mid else hi = mid - 1
+            if (
+              rest + measurer.width(span.text.jsSlice(0, mid), label.size, span.style) + dots <=
+                maxWidth
+            )
+              lo = mid
+            else hi = mid - 1
           }
           val code = if (lo > 0) span.text.charCodeAt(lo - 1) else 0
           if (code >= 0xd800 && code <= 0xdbff) lo--
@@ -102,7 +119,12 @@ private fun fit(label: Label, maxWidth: Double, maxLines: Int, measurer: TextMea
     widths.add(width)
     widest = maxOf(widest, width)
   }
-  return label.copy(lines = lines, widths = widths, width = widest, height = lines.size * label.lineHeight)
+  return label.copy(
+    lines = lines,
+    widths = widths,
+    width = widest,
+    height = lines.size * label.lineHeight,
+  )
 }
 
 private class Port(
@@ -117,7 +139,8 @@ private class Port(
   var y1: Double,
   // How far short of the port an arrowhead stops: the radius of a junction's dot.
   var gap: Double,
-  // Set where a junction is reached through the border of its group: the line carries on to the junction.
+  // Set where a junction is reached through the border of its group: the line carries on to the
+  // junction.
   var wire: Boolean,
 )
 
@@ -138,7 +161,8 @@ private fun route(s: Port, e: Port): MutableList<Double> {
   if (sdx * edx + sdy * edy == 0.0) {
     val cx = if (sdx != 0.0) ex else sx
     val cy = if (sdx != 0.0) sy else ey
-    if ((cx - sx) * sdx + (cy - sy) * sdy > 0 && (cx - ex) * edx + (cy - ey) * edy > 0) return mutableListOf(sx, sy, cx, cy, ex, ey)
+    if ((cx - sx) * sdx + (cy - sy) * sdy > 0 && (cx - ex) * edx + (cy - ey) * edy > 0)
+      return mutableListOf(sx, sy, cx, cy, ex, ey)
     return if (sdx != 0.0) {
       mutableListOf(sx, sy, s1x, s1y, s1x, e1y, e1x, e1y, ex, ey)
     } else {
@@ -151,7 +175,8 @@ private fun route(s: Port, e: Port): MutableList<Double> {
     val ahead = (ex - sx) * sdx + (ey - sy) * sdy
     if (ahead > 0) {
       if (abs(offset) < 0.5) return mutableListOf(sx, sy, ex, ey)
-      // Turn midway between the two boxes, which is clear of both titles, when there is such a place.
+      // Turn midway between the two boxes, which is clear of both titles, when there is such a
+      // place.
       if (sideways) {
         val lo = if (sdx > 0) s.x1 else e.x1
         val hi = if (sdx > 0) e.x0 else s.x0
@@ -173,10 +198,14 @@ private fun route(s: Port, e: Port): MutableList<Double> {
   }
   // The straight way is blocked by one of the two nodes: go between them, or around both.
   if (sideways) {
-    val lane = if (s.y1 + STUB <= e.y0) (s.y1 + e.y0) / 2 else if (e.y1 + STUB <= s.y0) (e.y1 + s.y0) / 2 else maxOf(s.y1, e.y1) + STUB
+    val lane =
+      if (s.y1 + STUB <= e.y0) (s.y1 + e.y0) / 2
+      else if (e.y1 + STUB <= s.y0) (e.y1 + s.y0) / 2 else maxOf(s.y1, e.y1) + STUB
     return mutableListOf(sx, sy, s1x, sy, s1x, lane, e1x, lane, e1x, ey, ex, ey)
   }
-  val lane = if (s.x1 + STUB <= e.x0) (s.x1 + e.x0) / 2 else if (e.x1 + STUB <= s.x0) (e.x1 + s.x0) / 2 else maxOf(s.x1, e.x1) + STUB
+  val lane =
+    if (s.x1 + STUB <= e.x0) (s.x1 + e.x0) / 2
+    else if (e.x1 + STUB <= s.x0) (e.x1 + s.x0) / 2 else maxOf(s.x1, e.x1) + STUB
   return mutableListOf(sx, sy, sx, s1y, lane, s1y, lane, e1y, ex, e1y, ex, ey)
 }
 
@@ -194,7 +223,11 @@ private fun simplify(p: List<Double>): MutableList<Double> {
       i += 2
       continue
     }
-    if (n >= 4 && ((sameX && abs(out[n - 4] - out[n - 2]) < 0.01) || (sameY && abs(out[n - 3] - out[n - 1]) < 0.01))) {
+    if (
+      n >= 4 &&
+        ((sameX && abs(out[n - 4] - out[n - 2]) < 0.01) ||
+          (sameY && abs(out[n - 3] - out[n - 1]) < 0.01))
+    ) {
       out[n - 2] = x
       out[n - 1] = y
     } else {
@@ -245,10 +278,19 @@ private fun pathData(p: List<Double>, startTrim: Double, endTrim: Double): Strin
 fun renderArchitecture(model: ArchitectureModel, config: Config, options: RenderOptions): Rendered =
   tighten(options) { tight -> draw(model, config, options, tight) }
 
-private fun draw(model: ArchitectureModel, config: Config, options: RenderOptions, tight: Boolean): Rendered {
+private fun draw(
+  model: ArchitectureModel,
+  config: Config,
+  options: RenderOptions,
+  tight: Boolean,
+): Rendered {
   val iconSize = setting(config, "iconSize", 48.0, 8.0, 512.0)
   val size = setting(config, "fontSize", options.fontSize ?: 16.0, 4.0, 128.0)
-  val groupPad = minOf(setting(config, "padding", 20.0, 0.0, 256.0), if (tight) 12.0 else Double.POSITIVE_INFINITY)
+  val groupPad =
+    minOf(
+      setting(config, "padding", 20.0, 0.0, 256.0),
+      if (tight) 12.0 else Double.POSITIVE_INFINITY,
+    )
   val small = jsRound(size * 0.875)
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
   val pad = options.padding ?: 8.0
@@ -270,7 +312,8 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
   val wrap = if (tight) maxOf(iconSize, 64.0) else maxOf(iconSize * 2.25, 96.0)
   for (i in 0 until N) {
     val node = nodes[i]
-    val label = layoutLabel(if (node is ArchService) node.title else null, true, measurer, size, wrap)
+    val label =
+      layoutLabel(if (node is ArchService) node.title else null, true, measurer, size, wrap)
     labels.add(label)
     boxW[i] = maxOf(iconSize, 2 * ceil(label.width / 2))
     boxH[i] = iconSize + (if (label.height > 0) LABEL_GAP + label.height else 0.0)
@@ -363,7 +406,14 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
     c1[g] = colOf[grid.groupCol[g] + grid.groupCols[g] - 1] ?: 0
     r0[g] = rowOf[grid.groupRow[g]] ?: 0
     r1[g] = rowOf[grid.groupRow[g] + grid.groupRows[g] - 1] ?: 0
-    val label = layoutLabel(groups[g].title, true, measurer, size, if (tight) maxOf(80.0, titleRoom(options) / 2) else 320.0)
+    val label =
+      layoutLabel(
+        groups[g].title,
+        true,
+        measurer,
+        size,
+        if (tight) maxOf(80.0, titleRoom(options) / 2) else 320.0,
+      )
     groupLabels.add(label)
     val icon = if (!groups[g].icon.isNullOrEmpty()) badge else 0.0
     headW[g] = label.width + icon + (if (label.width > 0 && icon > 0) 6.0 else 0.0)
@@ -376,7 +426,8 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
     val bottom = groupPad + insB[g]
     if (headW[g] > 0) {
       var inner = left + right
-      for (c in c0[g]..c1[g]) inner += colW[c] + (if (c < c1[g]) colR[c] + gapX[c] + colL[c + 1] else 0.0)
+      for (c in c0[g]..c1[g]) inner +=
+        colW[c] + (if (c < c1[g]) colR[c] + gapX[c] + colL[c + 1] else 0.0)
       if (headW[g] + 20 > inner) right += ceil(headW[g] + 20 - inner)
     }
     insL[g] = left
@@ -424,7 +475,8 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
     val dy = DY[side]
     val cx = centerX(i)
     val y = Y[nodeRow[i]]
-    val p = Port(cx, y + half, dx, dy, cx - boxW[i] / 2, y, cx + boxW[i] / 2, y + boxH[i], 0.0, false)
+    val p =
+      Port(cx, y + half, dx, dy, cx - boxW[i] / 2, y, cx + boxW[i] / 2, y + boxH[i], 0.0, false)
     if (nodes[i].type == "junction") {
       p.x1 = cx
       p.x0 = p.x1
@@ -444,8 +496,7 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
       p.y1 = bottom(g)
       p.gap = 0.0
       p.wire = nodes[i].type == "junction"
-      if (dx != 0.0) p.x = if (dx < 0) p.x0 else p.x1
-      else p.y = if (dy < 0) p.y0 else p.y1
+      if (dx != 0.0) p.x = if (dx < 0) p.x0 else p.x1 else p.y = if (dy < 0) p.y0 else p.y1
     }
     return p
   }
@@ -483,10 +534,14 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
     val id = escText("${edge.lhsId}-${edge.rhsId}")
     edgesOut +=
       "<g class=\"pele-edge\" data-id=\"$id\">" +
-      "<path d=\"${pathData(points, if (edge.lhsInto == true && !s.wire) trimLength + s.gap else 0.0, if (edge.rhsInto == true && !e.wire) trimLength + e.gap else 0.0)}\"/>" +
-      (if (edge.lhsInto == true) marker("arrow_point", s.x + s.dx * s.gap, s.y + s.dy * s.gap, -s.dx, -s.dy, "var(--_l)") else "") +
-      (if (edge.rhsInto == true) marker("arrow_point", e.x + e.dx * e.gap, e.y + e.dy * e.gap, -e.dx, -e.dy, "var(--_l)") else "") +
-      "</g>"
+        "<path d=\"${pathData(points, if (edge.lhsInto == true && !s.wire) trimLength + s.gap else 0.0, if (edge.rhsInto == true && !e.wire) trimLength + e.gap else 0.0)}\"/>" +
+        (if (edge.lhsInto == true)
+          marker("arrow_point", s.x + s.dx * s.gap, s.y + s.dy * s.gap, -s.dx, -s.dy, "var(--_l)")
+        else "") +
+        (if (edge.rhsInto == true)
+          marker("arrow_point", e.x + e.dx * e.gap, e.y + e.dy * e.gap, -e.dx, -e.dy, "var(--_l)")
+        else "") +
+        "</g>"
     var best = -1
     var bestLength = -1.0
     var flat = -1
@@ -525,11 +580,20 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
       var y = (points[at + 1] + points[at + 3]) / 2
       val w = label.width + 8
       val upright = abs(points[at] - points[at + 2]) < 0.01
-      // On a short run next to a node the label would land on the node, so it moves off to the side.
+      // On a short run next to a node the label would land on the node, so it moves off to the
+      // side.
       for (p in listOf(s, e)) {
-        if (x + w / 2 <= p.x0 || x - w / 2 >= p.x1 || y + label.height / 2 <= p.y0 || y - label.height / 2 >= p.y1) continue
+        if (
+          x + w / 2 <= p.x0 ||
+            x - w / 2 >= p.x1 ||
+            y + label.height / 2 <= p.y0 ||
+            y - label.height / 2 >= p.y1
+        )
+          continue
         if (upright) x = if (x >= (p.x0 + p.x1) / 2) p.x1 + w / 2 + 4 else p.x0 - w / 2 - 4
-        else y = if (y >= (p.y0 + p.y1) / 2) p.y1 + label.height / 2 + 4 else p.y0 - label.height / 2 - 4
+        else
+          y =
+            if (y >= (p.y0 + p.y1) / 2) p.y1 + label.height / 2 + 4 else p.y0 - label.height / 2 - 4
       }
       minX = minOf(minX, x - w / 2)
       maxX = maxOf(maxX, x + w / 2)
@@ -553,7 +617,8 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
       val crossings = ArrayList<Double>()
       var i = 0
       while (i < runs.size) {
-        if (runs[i + 1] < band && runs[i + 2] > y && runs[i] > x && runs[i] < x + w) crossings.add(runs[i])
+        if (runs[i + 1] < band && runs[i + 2] > y && runs[i] > x && runs[i] < x + w)
+          crossings.add(runs[i])
         i += 3
       }
       crossings.sort()
@@ -570,13 +635,20 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
         head += iconSlot(group.icon, start, cy - badge / 2, badge, icons)
         textX += badge + 6
       }
-      head += labelSvg(label, textX + label.width / 2, cy, " class=\"pele-cluster-label\" fill=\"var(--_m)\"", icons)
+      head +=
+        labelSvg(
+          label,
+          textX + label.width / 2,
+          cy,
+          " class=\"pele-cluster-label\" fill=\"var(--_m)\"",
+          icons,
+        )
     }
     clusters +=
       "<g class=\"pele-cluster\" data-id=\"${escText(group.id)}\">" +
-      "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(bottom(g) - y)}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"$ROUNDED/>" +
-      head +
-      "</g>"
+        "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(w)}\" height=\"${num(bottom(g) - y)}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"$ROUNDED/>" +
+        head +
+        "</g>"
   }
 
   var nodesOut = ""
@@ -584,9 +656,11 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
   val textSize = maxOf(6.0, jsRound(size * 0.75))
   for (i in 0 until N) {
     val node = nodes[i]
-    val at = "data-id=\"${escText(node.id)}\" transform=\"translate(${num(centerX(i))},${num(Y[nodeRow[i]])})\""
+    val at =
+      "data-id=\"${escText(node.id)}\" transform=\"translate(${num(centerX(i))},${num(Y[nodeRow[i]])})\""
     if (node is ArchJunction) {
-      nodesOut += "<g class=\"pele-node pele-junction\" $at><circle cy=\"${num(half)}\" r=\"${jsStr(DOT)}\" fill=\"var(--_l)\"/></g>"
+      nodesOut +=
+        "<g class=\"pele-node pele-junction\" $at><circle cy=\"${num(half)}\" r=\"${jsStr(DOT)}\" fill=\"var(--_l)\"/></g>"
       continue
     }
     node as ArchService
@@ -596,17 +670,38 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
     } else if (!node.iconText.isNullOrEmpty()) {
       val text = layoutLabel(node.iconText, false, measurer, textSize, iconSize - 8)
       val lines = maxOf(1.0, floor((iconSize - 4) / text.lineHeight.jsOr { 1.0 })).toInt()
-      inner = labelSvg(fit(text, iconSize - 8, lines, measurer), 0.0, half, " class=\"pele-icon-text\" font-size=\"${jsStr(textSize)}\"", icons)
+      inner =
+        labelSvg(
+          fit(text, iconSize - 8, lines, measurer),
+          0.0,
+          half,
+          " class=\"pele-icon-text\" font-size=\"${jsStr(textSize)}\"",
+          icons,
+        )
     }
     nodesOut +=
       "<g class=\"pele-node pele-service\" $at>" +
-      "<rect x=\"${num(-half)}\" width=\"${num(iconSize)}\" height=\"${num(iconSize)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"$ROUNDED/>" +
-      inner +
-      labelSvg(labels[i], 0.0, iconSize + LABEL_GAP + labels[i].height / 2, " class=\"pele-label\"", icons) +
-      "</g>"
+        "<rect x=\"${num(-half)}\" width=\"${num(iconSize)}\" height=\"${num(iconSize)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"$ROUNDED/>" +
+        inner +
+        labelSvg(
+          labels[i],
+          0.0,
+          iconSize + LABEL_GAP + labels[i].height / 2,
+          " class=\"pele-label\"",
+          icons,
+        ) +
+        "</g>"
   }
 
-  val title = layoutLabel(model.title, false, measurer, size, if (tight) titleRoom(options) else 4000.0, Style.Bold)
+  val title =
+    layoutLabel(
+      model.title,
+      false,
+      measurer,
+      size,
+      if (tight) titleRoom(options) else 4000.0,
+      Style.Bold,
+    )
   val titleHeight = if (title.height > 0) title.height + 12 else 0.0
   val width = ceil(maxOf(maxX - minX, title.width) + 2 * pad)
   val height = ceil(maxY - minY + titleHeight + 2 * pad)
@@ -614,18 +709,28 @@ private fun draw(model: ArchitectureModel, config: Config, options: RenderOption
   val oy = jsRound(pad + titleHeight - minY)
   val body =
     (if (clusters != "") "<g class=\"pele-clusters\">$clusters</g>" else "") +
-      (if (edgesOut != "") "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\" stroke-linejoin=\"round\">$edgesOut</g>" else "") +
-      (if (labelsOut != "") "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>" else "") +
+      (if (edgesOut != "")
+        "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\" stroke-linejoin=\"round\">$edgesOut</g>"
+      else "") +
+      (if (labelsOut != "")
+        "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>"
+      else "") +
       (if (nodesOut != "") "<g class=\"pele-nodes\">$nodesOut</g>" else "")
-  val svg = svgDocument(
-    "architecture",
-    width,
-    height,
-    size,
-    options,
-    model,
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (body != "") "<g transform=\"translate(${jsStr(ox)},${jsStr(oy)})\">$body</g>" else ""),
-  )
+  val svg =
+    svgDocument(
+      "architecture",
+      width,
+      height,
+      size,
+      options,
+      model,
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        (if (body != "") "<g transform=\"translate(${jsStr(ox)},${jsStr(oy)})\">$body</g>" else ""),
+    )
   return Rendered(svg, width, height, ArrayList())
 }

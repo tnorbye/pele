@@ -95,7 +95,9 @@ class ArchitectureDb : ArchitectureModel {
     if (parent != null) {
       if (id == parent) fail("The $kind [$id] cannot be placed within itself")
       if (!registered.containsKey(parent)) {
-        fail("The $kind [$id]'s parent does not exist. Please make sure the parent is created before this $kind")
+        fail(
+          "The $kind [$id]'s parent does not exist. Please make sure the parent is created before this $kind"
+        )
       }
       if (registered[parent] == "node") fail("The $kind [$id]'s parent is not a group")
     }
@@ -123,18 +125,23 @@ class ArchitectureDb : ArchitectureModel {
     val ends = listOf(Triple("left", lhsId, edge.lhsGroup), Triple("right", rhsId, edge.rhsGroup))
     for ((side, id) in ends) {
       if (!registered.containsKey(id)) {
-        fail("The $side-hand id [$id] does not yet exist. Please create the service/group before declaring an edge to it.")
+        fail(
+          "The $side-hand id [$id] does not yet exist. Please create the service/group before declaring an edge to it."
+        )
       }
     }
     // Mermaid lets a group id through the check above and then fails with a TypeError.
     for ((side, id) in ends) {
-      if (!nodes.containsKey(id)) fail("The $side-hand id [$id] is a group. Add {group} to a service inside it instead.")
+      if (!nodes.containsKey(id))
+        fail("The $side-hand id [$id] is a group. Add {group} to a service inside it instead.")
     }
     val parent = nodes[lhsId]!!.`in`
     if (parent != null && parent == nodes[rhsId]!!.`in`) {
       for ((side, id, crosses) in ends) {
         if (crosses == true) {
-          fail("The $side-hand id [$id] is modified to traverse the group boundary, but the edge does not pass through two groups.")
+          fail(
+            "The $side-hand id [$id] is modified to traverse the group boundary, but the edge does not pass through two groups."
+          )
         }
       }
     }
@@ -142,7 +149,8 @@ class ArchitectureDb : ArchitectureModel {
   }
 
   fun addLayoutHint(hint: ArchLayoutHint) {
-    if (hint.members.size < 2) fail("An align directive requires at least two members; got ${hint.members.size}")
+    if (hint.members.size < 2)
+      fail("An align directive requires at least two members; got ${hint.members.size}")
     val seen = LinkedHashSet<String>()
     for (id in hint.members) {
       if (registered[id] != "node") {
@@ -164,7 +172,13 @@ fun populate(ast: ArchitectureAst, db: ArchitectureDb) {
   val title = ast.title
   if (!title.isNullOrEmpty()) db.title = title
   for (group in ast.groups) db.addGroup(group.id, group.icon, group.title, group.`in`)
-  for (service in ast.services) db.addService(service.id, service.icon, service.iconText, service.title, service.`in`)
+  for (service in ast.services) db.addService(
+    service.id,
+    service.icon,
+    service.iconText,
+    service.title,
+    service.`in`,
+  )
   for (junction in ast.junctions) db.addJunction(junction.id, junction.`in`)
   for (edge in ast.edges) {
     db.addEdge(
@@ -178,8 +192,10 @@ fun populate(ast: ArchitectureAst, db: ArchitectureDb) {
         rhsInto = edge.rhsInto,
         rhsGroup = edge.rhsGroup,
         title = edge.title,
-      ),
+      )
     )
   }
-  for (alignment in ast.alignments) db.addLayoutHint(ArchLayoutHint(alignment.direction, ArrayList(alignment.members)))
+  for (alignment in ast.alignments) db.addLayoutHint(
+    ArchLayoutHint(alignment.direction, ArrayList(alignment.members))
+  )
 }

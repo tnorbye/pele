@@ -29,7 +29,8 @@ private val RE_LEADING = JsRegExp("""^\s+""", "g")
 private val RE_INDENT = JsRegExp("""\n\s+""", "g")
 private val DAY_NAMES: Set<String> = WEEKDAYS.map { it.lowercase() }.toSet()
 
-// Scheduling walks tasks day by day and parses dates with a format the diagram supplies. This bounds the
+// Scheduling walks tasks day by day and parses dates with a format the diagram supplies. This
+// bounds the
 // total, in rough character operations, so a hostile diagram fails instead of hanging.
 private const val WORK_LIMIT = 4e8
 private const val DAY_STEP = 400
@@ -44,7 +45,8 @@ fun clock(now: Double? = null): Double {
 
 fun parseDuration(str: String): Pair<Double, DateUnit> {
   val statement = RE_DURATION.exec(str.jsTrim())
-  return if (statement != null) jsParseFloat(statement[1]!!) to statement[2]!! else Double.NaN to "ms"
+  return if (statement != null) jsParseFloat(statement[1]!!) to statement[2]!!
+  else Double.NaN to "ms"
 }
 
 private fun mergeTokens(existing: List<String>, txt: String): List<String> {
@@ -56,20 +58,26 @@ private fun mergeTokens(existing: List<String>, txt: String): List<String> {
 // A missing date compares as NaN, so no comparison with it holds.
 private fun timeOf(date: JsDate?): Double = date?.getTime() ?: Double.NaN
 
-class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttModel, GanttBuilder, Accessible {
+class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) :
+  GanttModel, GanttBuilder, Accessible {
   override val type = "gantt"
   override var title: String? = null
   override var accTitle: String? = null
     private set
+
   override var accDescr: String? = null
   override var dateFormat = ""
     private set
+
   override var axisFormat = ""
     private set
+
   override var tickInterval: String? = null
     private set
+
   override var todayMarker = ""
     private set
+
   override var includes: List<String> = ArrayList()
   override var excludes: List<String> = ArrayList()
   override var inclusiveEndDates = false
@@ -77,8 +85,10 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
   override var displayMode = ""
   override var weekday: String? = null
     private set
+
   override var weekend = "saturday"
     private set
+
   override val sections: MutableList<String> = ArrayList()
   override val links: MutableMap<String, String> = LinkedHashMap()
   override val tasks: MutableList<GanttTask> = ArrayList()
@@ -155,25 +165,26 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
 
   override fun addTask(descr: String, data: String) {
     val fields = (if (data.startsWith(":")) data.jsSlice(1) else data).jsSplit(",").toMutableList()
-    val task = GanttTask(
-      id = "",
-      task = descr,
-      section = currentSection,
-      startTime = null,
-      endTime = null,
-      renderEndTime = null,
-      manualEndTime = false,
-      processed = false,
-      active = false,
-      done = false,
-      crit = false,
-      milestone = false,
-      vert = false,
-      order = -1,
-      classes = ArrayList(),
-      prevTaskId = lastTaskId,
-      raw = GanttTaskRaw(data = data, start = null, end = ""),
-    )
+    val task =
+      GanttTask(
+        id = "",
+        task = descr,
+        section = currentSection,
+        startTime = null,
+        endTime = null,
+        renderEndTime = null,
+        manualEndTime = false,
+        processed = false,
+        active = false,
+        done = false,
+        crit = false,
+        milestone = false,
+        vert = false,
+        order = -1,
+        classes = ArrayList(),
+        prevTaskId = lastTaskId,
+        raw = GanttTaskRaw(data = data, start = null, end = ""),
+      )
 
     while (fields.size > 0) {
       val tag = RE_TAG.exec(fields[0]) ?: break
@@ -188,7 +199,11 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
     }
     // Mermaid fails with a TypeError on both of these.
     if (fields.size == 0) {
-      throw PeleError("Task \"${descr.jsTrim()}\" needs a duration or an end date.", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "gantt"))
+      throw PeleError(
+        "Task \"${descr.jsTrim()}\" needs a duration or an end date.",
+        PeleErrorCode.SEMANTIC,
+        PeleErrorInfo(type = "gantt"),
+      )
     }
     if (fields.size > 3) {
       throw PeleError(
@@ -231,24 +246,30 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
     for (id in ids.jsSplit(",")) byId[id]?.classes?.add(className)
   }
 
-  // Resolves every task's start and end, from scratch on each call. A task may refer to tasks defined
-  // after it, so, like Mermaid, this makes up to eleven passes, each of which schedules every task again.
+  // Resolves every task's start and end, from scratch on each call. A task may refer to tasks
+  // defined
+  // after it, so, like Mermaid, this makes up to eleven passes, each of which schedules every task
+  // again.
   override fun getTasks(now: Double?): List<GanttTask> {
     this.now = clock(now)
     work = 0.0
     includeSet = LinkedHashSet(includes)
     excludeSet = LinkedHashSet(excludes)
-    val weekendStart = if (weekend == "friday") 5.0 else if (weekend == "saturday") 6.0 else Double.NaN
+    val weekendStart =
+      if (weekend == "friday") 5.0 else if (weekend == "saturday") 6.0 else Double.NaN
     val weekends = excludeSet.contains("weekends")
-    excludedDays = BooleanArray(7) { day ->
-      val iso = if (day != 0) day else 7
-      (weekends && (iso.toDouble() == weekendStart || iso.toDouble() == weekendStart + 1)) ||
-        excludeSet.contains(WEEKDAYS[day].lowercase())
-    }
-    // A date written with only these tokens and separators can never read as a weekday name, so when
+    excludedDays =
+      BooleanArray(7) { day ->
+        val iso = if (day != 0) day else 7
+        (weekends && (iso.toDouble() == weekendStart || iso.toDouble() == weekendStart + 1)) ||
+          excludeSet.contains(WEEKDAYS[day].lowercase())
+      }
+    // A date written with only these tokens and separators can never read as a weekday name, so
+    // when
     // nothing else is excluded or included there is no need to format each day.
     datedTokens = includes.size > 0 || !RE_NUMERIC_FORMAT.test(dateFormat.jsTrim())
-    for (token in excludes) if (token != "weekends" && !DAY_NAMES.contains(token)) datedTokens = true
+    for (token in excludes) if (token != "weekends" && !DAY_NAMES.contains(token))
+      datedTokens = true
 
     for (task in tasks) {
       task.startTime = null
@@ -267,7 +288,8 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
     return tasks
   }
 
-  // Whether a day is excluded. A day matches a token by its weekday name, by its date as YYYY-MM-DD,
+  // Whether a day is excluded. A day matches a token by its weekday name, by its date as
+  // YYYY-MM-DD,
   // or by its date written in the chart's own format.
   fun isInvalidDate(date: JsDate): Boolean {
     val day = date.getDay()
@@ -282,7 +304,9 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
       formatted = format(date, template)
     }
     val text = formatted
-    val listed = { set: Set<String> -> set.contains(dateOnly) || (text != null && set.contains(text)) }
+    val listed = { set: Set<String> ->
+      set.contains(dateOnly) || (text != null && set.contains(text))
+    }
     if (listed(includeSet)) return false
     return weekday || listed(excludeSet)
   }
@@ -290,7 +314,11 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
   private fun spend(units: Double) {
     work += units
     if (work > WORK_LIMIT) {
-      throw PeleError("The gantt chart takes too much work to schedule.", PeleErrorCode.LIMIT, PeleErrorInfo(type = "gantt"))
+      throw PeleError(
+        "The gantt chart takes too much work to schedule.",
+        PeleErrorCode.LIMIT,
+        PeleErrorInfo(type = "gantt"),
+      )
     }
   }
 
@@ -352,7 +380,9 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
     }
     if (unknown != null) {
       val ids: List<String> = unknown
-      warn { "Gantt: \"$keyword\" refers to task ids that do not exist: ${ids.joinToString(", ")}." }
+      warn {
+        "Gantt: \"$keyword\" refers to task ids that do not exist: ${ids.joinToString(", ")}."
+      }
     }
     return found
   }
@@ -361,7 +391,8 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
     val str = raw.jsTrim()
     val template = dateFormat.jsTrim()
 
-    if ((template == "x" || template == "X") && RE_DIGITS.test(str)) return checked(JsDate(jsNumber(str)), str)
+    if ((template == "x" || template == "X") && RE_DIGITS.test(str))
+      return checked(JsDate(jsNumber(str)), str)
 
     val after = RE_AFTER.exec(str)
     if (after != null) {
@@ -376,7 +407,8 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
     val parsed = parse(str, template)
     if (parsed != null) return parsed
 
-    // What does not fit the format gets a second chance with the JavaScript date parser, as in Mermaid.
+    // What does not fit the format gets a second chance with the JavaScript date parser, as in
+    // Mermaid.
     val date = JsDate(str)
     if (!isValid(date) || date.getFullYear() < -10000 || date.getFullYear() > 10000) {
       throw PeleError("Invalid date:$str", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "gantt"))
@@ -385,7 +417,8 @@ class GanttDb(private val options: GanttDbOptions = GanttDbOptions()) : GanttMod
   }
 
   private fun checked(date: JsDate, str: String): JsDate {
-    if (!isValid(date)) throw PeleError("Invalid date:$str", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "gantt"))
+    if (!isValid(date))
+      throw PeleError("Invalid date:$str", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "gantt"))
     return date
   }
 

@@ -48,7 +48,8 @@ private val RE_KEYWORD = JsRegExp("""^\s*railroad-(ebnf-|abnf-|peg-)?beta""", "i
 fun notationOf(source: String): Notation? {
   val m = RE_KEYWORD.exec(source) ?: return null
   val infix = m[1]?.lowercase()
-  return if (infix == "ebnf-") "ebnf" else if (infix == "abnf-") "abnf" else if (infix == "peg-") "peg" else "railroad"
+  return if (infix == "ebnf-") "ebnf"
+  else if (infix == "abnf-") "abnf" else if (infix == "peg-") "peg" else "railroad"
 }
 
 private fun grammar(source: String, notation: Notation): Pair<Grammar<*>, List<RailroadRule>> {
@@ -72,7 +73,8 @@ private fun grammar(source: String, notation: Notation): Pair<Grammar<*>, List<R
   }
 }
 
-// Parses the text in one notation and loads the result into the model, as Mermaid's four parsers do.
+// Parses the text in one notation and loads the result into the model, as Mermaid's four parsers
+// do.
 fun populate(db: RailroadDb, source: String, notation: Notation) {
   val (ast, rules) = grammar(source, notation)
   db.notation = notation
@@ -83,8 +85,13 @@ fun populate(db: RailroadDb, source: String, notation: Notation) {
 }
 
 fun parseRailroad(source: String, title: String?): RailroadDb {
-  val notation = notationOf(source)
-    ?: throw PeleError("No railroad diagram keyword found.", PeleErrorCode.SYNTAX, PeleErrorInfo(type = "railroad"))
+  val notation =
+    notationOf(source)
+      ?: throw PeleError(
+        "No railroad diagram keyword found.",
+        PeleErrorCode.SYNTAX,
+        PeleErrorInfo(type = "railroad"),
+      )
   val db = RailroadDb()
   if (!title.isNullOrEmpty()) db.title = title
   populate(db, source, notation)

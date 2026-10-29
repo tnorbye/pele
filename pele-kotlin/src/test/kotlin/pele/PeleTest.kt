@@ -14,15 +14,21 @@ class PeleTest {
   fun hostConfigNumbersAreNumbers() {
     val source = "packet-beta\n0-15: \"Header\""
     val ints = render(source, RenderOptions(config = mapOf("packet" to mapOf("bitsPerRow" to 8))))
-    val doubles = render(source, RenderOptions(config = mapOf("packet" to mapOf("bitsPerRow" to 8.0))))
+    val doubles =
+      render(source, RenderOptions(config = mapOf("packet" to mapOf("bitsPerRow" to 8.0))))
     assertEquals(267.0 to 113.0, ints.width to ints.height)
     assertEquals(doubles.svg, ints.svg)
   }
 
   @Test
   fun keywordsAreNotMatchedBySpecialCaseLetters() {
-    assertEquals(16.0 to 16.0, render("stateDiagram-v2\nstate A <<forK>>").let { it.width to it.height })
-    val error = runCatching { render("gantt\nsectıon A\nt :a, 2024-01-01, 1d", RenderOptions(now = 1700000000000.0)) }
+    assertEquals(
+      16.0 to 16.0,
+      render("stateDiagram-v2\nstate A <<forK>>").let { it.width to it.height },
+    )
+    val error = runCatching {
+      render("gantt\nsectıon A\nt :a, 2024-01-01, 1d", RenderOptions(now = 1700000000000.0))
+    }
     assertEquals(PeleErrorCode.SYNTAX, (error.exceptionOrNull() as PeleError).code)
   }
 
@@ -43,20 +49,25 @@ class PeleTest {
   fun parsedModelsPreserveHostCallbacksAcrossNestedRendersAndFailures() {
     val source = "flowchart LR\nA[\"fa:fa-star \$\$x\$\$\"]"
     val model = parse(source)
-    val options = RenderOptions(
-      icons = { "<path d=\"M0,0H10\"/>" },
-      math = { _, _ -> MathMarkup.Svg("<path d=\"M0,0H30\"/>", 30.0, 18.0) },
-      measurer = TextMeasurer { text, size, style -> metricsMeasurer.width(text, size, style) * 1.2 },
-    )
+    val options =
+      RenderOptions(
+        icons = { "<path d=\"M0,0H10\"/>" },
+        math = { _, _ -> MathMarkup.Svg("<path d=\"M0,0H30\"/>", 30.0, 18.0) },
+        measurer =
+          TextMeasurer { text, size, style -> metricsMeasurer.width(text, size, style) * 1.2 },
+      )
     val expected = render(source, options).svg
     assertTrue(expected.contains("data-icon=\"fa:fa-star\""))
     assertEquals(expected, render(model, options).svg)
     var calls = 0
-    val nested = options.copy(math = { tex, size ->
-      calls++
-      render("pie\n\"A\": 1")
-      options.math!!(tex, size)
-    })
+    val nested =
+      options.copy(
+        math = { tex, size ->
+          calls++
+          render("pie\n\"A\": 1")
+          options.math!!(tex, size)
+        }
+      )
     assertEquals(expected, render(model, nested).svg)
     assertTrue(calls > 0)
     assertFailsWith<IllegalStateException> {
@@ -67,15 +78,17 @@ class PeleTest {
 
   @Test
   fun agentflowSemanticModelAndDiagnostics() {
-    val parsed = parse(
-      """
-      agentflow-beta TB
-        In@{ shape: input, label: "Prompt" }
-        Gate@{ shape: decision, label: "Valid?" }
-        Old@{ shape: stadium, label: "Legacy" }
-        In --> Gate --> Old
-      """.trimIndent(),
-    )
+    val parsed =
+      parse(
+        """
+        agentflow-beta TB
+          In@{ shape: input, label: "Prompt" }
+          Gate@{ shape: decision, label: "Valid?" }
+          Old@{ shape: stadium, label: "Legacy" }
+          In --> Gate --> Old
+        """
+          .trimIndent()
+      )
     val semantic = (parsed.model as pele.diagrams.agentflow.AgentflowModel).semanticModel()
     assertEquals("TB", semantic.direction)
     assertEquals(
@@ -98,7 +111,8 @@ class PeleTest {
     assertEquals("NaN", pele.svg.num(Double.NaN))
     assertEquals("Infinity", pele.svg.num(Double.POSITIVE_INFINITY))
     assertEquals("-Infinity", pele.svg.num(Double.NEGATIVE_INFINITY))
-    // A lone surrogate and C0 controls are dropped; a surrogate pair and tab, line feed and return stay.
+    // A lone surrogate and C0 controls are dropped; a surrogate pair and tab, line feed and return
+    // stay.
     assertEquals("Hi &amp; &lt;ok&gt;", pele.svg.esc("Hi \u0000\uD83D& <ok>"))
     assertEquals("\uD83D\uDE00\t\n\r", pele.svg.esc("\uD83D\uDE00\t\n\r\u007f\uDE00\uFFFE"))
     assertEquals("a\uD83D\uDE00b", pele.svg.stripInvalidXml("a\u0001\uD83D\uDE00\uD83Db"))
@@ -107,13 +121,20 @@ class PeleTest {
   @Test
   fun inputEdgeAndOutputLimitsRaiseLimitErrors() {
     // Messages from upstream in Node.
-    val tooLong = assertFailsWith<PeleError> { parse("flowchart LR\nA --> B", ParseOptions(limit = 5)) }
+    val tooLong =
+      assertFailsWith<PeleError> { parse("flowchart LR\nA --> B", ParseOptions(limit = 5)) }
     assertEquals(PeleErrorCode.LIMIT, tooLong.code)
     assertEquals("Diagram source is longer than the limit of 5 characters.", tooLong.message)
-    val tooManyEdges = assertFailsWith<PeleError> { render("flowchart LR\nA & B & C --> D & E & F", RenderOptions(maxEdges = 4)) }
+    val tooManyEdges =
+      assertFailsWith<PeleError> {
+        render("flowchart LR\nA & B & C --> D & E & F", RenderOptions(maxEdges = 4))
+      }
     assertEquals(PeleErrorCode.LIMIT, tooManyEdges.code)
     assertEquals("Edge limit exceeded. The limit is 4.", tooManyEdges.message)
-    val tooLarge = assertFailsWith<PeleError> { render("flowchart LR\nA --> B", RenderOptions(outputLimit = 20)) }
+    val tooLarge =
+      assertFailsWith<PeleError> {
+        render("flowchart LR\nA --> B", RenderOptions(outputLimit = 20))
+      }
     assertEquals(PeleErrorCode.LIMIT, tooLarge.code)
     assertEquals("Diagram output is longer than the limit of 20 characters.", tooLarge.message)
   }

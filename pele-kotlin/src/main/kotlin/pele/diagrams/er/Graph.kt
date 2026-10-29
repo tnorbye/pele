@@ -77,7 +77,7 @@ fun buildErGraph(model: ErModel): ErGraph {
         cssClasses = subgraph.classes.joinToString(" "),
         dir = subgraph.dir,
         labelType = subgraph.labelType,
-      ),
+      )
     )
   }
 
@@ -102,7 +102,7 @@ fun buildErGraph(model: ErModel): ErGraph {
         cssClasses = entity.cssClasses,
         dir = null,
         labelType = "markdown",
-      ),
+      )
     )
   }
 
@@ -116,7 +116,7 @@ fun buildErGraph(model: ErModel): ErGraph {
         arrowTypeStart = relationship.relSpec.cardB.lowercase(),
         arrowTypeEnd = relationship.relSpec.cardA.lowercase(),
         pattern = if (relationship.relSpec.relType == "IDENTIFYING") "solid" else "dashed",
-      ),
+      )
     )
   }
 

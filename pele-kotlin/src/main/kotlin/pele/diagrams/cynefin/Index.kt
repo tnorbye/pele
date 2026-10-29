@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val cynefin: Diagram<CynefinModel> = object : Diagram<CynefinModel> {
-  override val type = "cynefin"
+val cynefin: Diagram<CynefinModel> =
+  object : Diagram<CynefinModel> {
+    override val type = "cynefin"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): CynefinModel =
-    buildCynefin(parseCynefin(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): CynefinModel = buildCynefin(parseCynefin(source), title)
 
-  override fun render(model: CynefinModel, config: Config, options: RenderOptions): Rendered = renderCynefin(model, config, options)
-}
+    override fun render(model: CynefinModel, config: Config, options: RenderOptions): Rendered =
+      renderCynefin(model, config, options)
+  }

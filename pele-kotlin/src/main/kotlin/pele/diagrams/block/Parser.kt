@@ -33,7 +33,8 @@ private fun closeDocument(list: MutableList<Statement>): MutableList<Statement> 
   return out
 }
 
-// PORT: flattens one level where upstream leaves the lists to setHierarchy, which flattens them the same way.
+// PORT: flattens one level where upstream leaves the lists to setHierarchy, which flattens them the
+// same way.
 @Suppress("UNCHECKED_CAST")
 private fun blocksOf(list: List<Statement>): MutableList<Block> {
   val out = ArrayList<Block>()
@@ -81,13 +82,14 @@ fun parseBlock(src: String, db: BlockBuilder) {
   fun nodeStatement(): Statement {
     val first = node()
     val size = if (types[i] == T.SIZE) jsParseInt(texts[i++], 10) else 1.0
-    var from = Block(
-      id = first.id,
-      label = first.label,
-      type = db.typeStr2Type(first.typeStr),
-      directions = first.directions,
-      widthInColumns = size,
-    )
+    var from =
+      Block(
+        id = first.id,
+        label = first.label,
+        type = db.typeStr2Type(first.typeStr),
+        directions = first.directions,
+        widthInColumns = size,
+      )
     var chain: MutableList<Block>? = null
     while (types[i] == T.LINK || types[i] == T.START_LINK) {
       var label = ""
@@ -102,9 +104,20 @@ fun parseBlock(src: String, db: BlockBuilder) {
       val arrowTypeStart = db.edgeStrToEdgeStartData(link)
       val thickness = db.edgeStrToThickness(link)
       val pattern = db.edgeStrToPattern(link)
-      // Mermaid keeps only the last link of `A --> B --> C` and loses its start. Here every link counts.
-      if (chain == null) chain = arrayListOf(Block(id = from.id, label = from.label, type = from.type, directions = from.directions))
-      from = Block(id = to.id, label = to.label, type = db.typeStr2Type(to.typeStr), directions = to.directions)
+      // Mermaid keeps only the last link of `A --> B --> C` and loses its start. Here every link
+      // counts.
+      if (chain == null)
+        chain =
+          arrayListOf(
+            Block(id = from.id, label = from.label, type = from.type, directions = from.directions)
+          )
+      from =
+        Block(
+          id = to.id,
+          label = to.label,
+          type = db.typeStr2Type(to.typeStr),
+          directions = to.directions,
+        )
       val previous = chain[chain.size - 1].id
       chain.add(
         Block(
@@ -118,7 +131,7 @@ fun parseBlock(src: String, db: BlockBuilder) {
           directions = to.directions,
           arrowTypeEnd = arrowTypeEnd,
           arrowTypeStart = arrowTypeStart,
-        ),
+        )
       )
       chain.add(from)
     }
@@ -135,7 +148,15 @@ fun parseBlock(src: String, db: BlockBuilder) {
       T.COLUMNS -> list.add(Block(type = "column-setting", columns = jsParseInt(texts[i++], 10)))
       T.SPACE_BLOCK -> {
         val width = jsParseInt(texts[i++], 10)
-        list.add(Block(id = db.generateId(), type = "space", label = "", width = width, children = ArrayList()))
+        list.add(
+          Block(
+            id = db.generateId(),
+            type = "space",
+            label = "",
+            width = width,
+            children = ArrayList(),
+          )
+        )
       }
       T.KEY -> {
         i++
@@ -168,7 +189,7 @@ fun parseBlock(src: String, db: BlockBuilder) {
           } else {
             // PORT: spreading an array into an object leaves no named fields.
             Block(type = "composite", children = children)
-          },
+          }
         )
       }
       T.CLASSDEF -> {
@@ -184,7 +205,9 @@ fun parseBlock(src: String, db: BlockBuilder) {
       T.STYLE -> {
         i++
         val id = expect(T.STYLE_ENTITY_IDS).jsTrim()
-        list.add(Block(type = "applyStyles", id = id, stylesStr = expect(T.STYLE_DEFINITION_DATA).jsTrim()))
+        list.add(
+          Block(type = "applyStyles", id = id, stylesStr = expect(T.STYLE_DEFINITION_DATA).jsTrim())
+        )
       }
       T.EOF -> {
         if (open.size > 0) fail("$STATEMENT_START, 'end'")
@@ -192,7 +215,11 @@ fun parseBlock(src: String, db: BlockBuilder) {
         db.setHierarchy(closeDocument(list))
         return
       }
-      else -> fail(if (list.size == 0) STATEMENT_START else STATEMENT_START + (if (open.size > 0) ", 'end'" else ", 'EOF'"))
+      else ->
+        fail(
+          if (list.size == 0) STATEMENT_START
+          else STATEMENT_START + (if (open.size > 0) ", 'end'" else ", 'EOF'")
+        )
     }
   }
 }

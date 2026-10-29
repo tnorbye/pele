@@ -5,6 +5,7 @@ package pele.util
 import pele.js.JsRegExp
 import pele.js.fromCodePoint
 import pele.js.jsNumber
+import pele.js.jsOrdered
 import pele.js.jsParseInt
 import pele.js.jsReplace
 import pele.js.jsSplit
@@ -12,7 +13,6 @@ import pele.js.jsStr
 import pele.js.jsString
 import pele.js.jsTrim
 import pele.js.jsTrimStart
-import pele.js.jsOrdered
 
 // A small YAML reader covering what Mermaid feeds to js-yaml with the JSON schema:
 // block and flow collections, quoted and plain scalars, and block scalars.
@@ -25,7 +25,8 @@ class YamlError(message: String) : RuntimeException(message)
 
 // Thrown when a quoted scalar or flow collection runs past the text read so far.
 // Not an Error, so that throwing it does not capture a stack trace.
-private class Incomplete(override val message: String) : RuntimeException(message, null, false, false)
+private class Incomplete(override val message: String) :
+  RuntimeException(message, null, false, false)
 
 private const val MAX_DEPTH = 64
 
@@ -36,7 +37,8 @@ private fun assign(target: MutableMap<String, YamlValue>, key: String, value: Ya
 private val RE_CR = JsRegExp("""\r\n?""", "g")
 
 private class Reader(src: String) {
-  val lines: MutableList<String> = (if (src.contains('\r')) src.jsReplace(RE_CR, "\n") else src).jsSplit("\n").toMutableList()
+  val lines: MutableList<String> =
+    (if (src.contains('\r')) src.jsReplace(RE_CR, "\n") else src).jsSplit("\n").toMutableList()
   var i = 0
 
   fun skipBlank() {
@@ -51,7 +53,8 @@ private class Reader(src: String) {
     val line = lines[i]
     var k = 0
     while (k < line.length && line[k] == ' ') k++
-    if (k < line.length && line[k] == '\t') throw YamlError("YAML: tabs are not allowed for indentation")
+    if (k < line.length && line[k] == '\t')
+      throw YamlError("YAML: tabs are not allowed for indentation")
     return k
   }
 }
@@ -60,7 +63,8 @@ private val RE_INT = JsRegExp("""^[-+]?(?:0|[1-9][0-9]*)$""")
 private val RE_HEX = JsRegExp("""^[-+]?0x[0-9a-fA-F]+$""")
 private val RE_OCT = JsRegExp("""^[-+]?0o[0-7]+$""")
 private val RE_BIN = JsRegExp("""^[-+]?0b[01]+$""")
-private val RE_FLOAT = JsRegExp("""^[-+]?(?:[0-9][0-9]*(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][-+]?[0-9]+)?$""")
+private val RE_FLOAT =
+  JsRegExp("""^[-+]?(?:[0-9][0-9]*(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][-+]?[0-9]+)?$""")
 private val RE_KEY_START = JsRegExp("""[\s#:,[\]{}&*!|>'"%@`]""")
 
 private fun charAt(s: String, i: Int): Char? = if (i >= 0 && i < s.length) s[i] else null
@@ -69,7 +73,8 @@ private fun isBlank(ch: Char?): Boolean = ch == ' ' || ch == '\t' || ch == '\n' 
 
 private class SplitKey(val key: String, val length: Int)
 
-// Splits `key: rest` at the start of a line. Returns the raw key and the offset where the value starts.
+// Splits `key: rest` at the start of a line. Returns the raw key and the offset where the value
+// starts.
 private fun splitKey(line: String): SplitKey? {
   val first = charAt(line, 0)
   val end: Int
@@ -94,7 +99,8 @@ private fun splitKey(line: String): SplitKey? {
     if (charAt(line, colon) != ':') return null
   } else {
     if (first == null || RE_KEY_START.test(first.toString())) return null
-    if (first == '-' && (line.length < 2 || isBlank(line[1]) || line[1] == ':' || line[1] == '#')) return null
+    if (first == '-' && (line.length < 2 || isBlank(line[1]) || line[1] == ':' || line[1] == '#'))
+      return null
     colon = 1
     while (colon < line.length && line[colon] != ':' && line[colon] != '#') colon++
     if (charAt(line, colon) != ':') return null
@@ -129,25 +135,26 @@ private fun scalar(raw: String): YamlValue {
   return s
 }
 
-private val ESCAPES: Map<Char, String> = mapOf(
-  '0' to "\u0000",
-  'a' to "\u0007",
-  'b' to "\b",
-  't' to "\t",
-  'n' to "\n",
-  'v' to "\u000B",
-  'f' to "\u000C",
-  'r' to "\r",
-  'e' to "\u001b",
-  ' ' to " ",
-  '"' to "\"",
-  '/' to "/",
-  '\\' to "\\",
-  'N' to "\u0085",
-  '_' to " ",
-  'L' to " ",
-  'P' to " ",
-)
+private val ESCAPES: Map<Char, String> =
+  mapOf(
+    '0' to "\u0000",
+    'a' to "\u0007",
+    'b' to "\b",
+    't' to "\t",
+    'n' to "\n",
+    'v' to "\u000B",
+    'f' to "\u000C",
+    'r' to "\r",
+    'e' to "\u001b",
+    ' ' to " ",
+    '"' to "\"",
+    '/' to "/",
+    '\\' to "\\",
+    'N' to "\u0085",
+    '_' to " ",
+    'L' to " ",
+    'P' to " ",
+  )
 
 private val RE_NEWLINES = JsRegExp("""\n+""", "g")
 
@@ -166,7 +173,9 @@ private fun fold(text: String): String {
     if (i < last) while (to > from && (line[to - 1] == ' ' || line[to - 1] == '\t')) to--
     lines[i] = line.substring(from, to)
   }
-  return lines.joinToString("\n").jsReplace(RE_NEWLINES) { m -> if (m.value.length == 1) " " else "\n".repeat(m.value.length - 1) }
+  return lines.joinToString("\n").jsReplace(RE_NEWLINES) { m ->
+    if (m.value.length == 1) " " else "\n".repeat(m.value.length - 1)
+  }
 }
 
 private val RE_ESCAPED_BREAK = JsRegExp("""\\\n[ \t]*""", "g")
@@ -189,7 +198,8 @@ private fun unquoteDouble(body: String): String {
       val len = if (e == 'x') 2 else if (e == 'u') 4 else 8
       val code = jsParseInt(s.substring(minOf(i + 1, s.length), minOf(i + 1 + len, s.length)), 16)
       // PORT: String.fromCodePoint throws a RangeError for these.
-      if (code.isNaN() || code < 0 || code > 0x10ffff) throw YamlError("Invalid code point ${jsStr(code)}")
+      if (code.isNaN() || code < 0 || code > 0x10ffff)
+        throw YamlError("Invalid code point ${jsStr(code)}")
       out.append(fromCodePoint(code.toInt()))
       i += len
     } else if (e != null && e in ESCAPES) {
@@ -240,7 +250,8 @@ private fun flow(s: String, start: Int, stops: String, depth: Int = 0): Pair<Yam
     var separated = true
     while (true) {
       pos = skip(s, pos, false)
-      if (pos >= s.length) throw Incomplete("YAML: unexpected end of the stream within a flow collection")
+      if (pos >= s.length)
+        throw Incomplete("YAML: unexpected end of the stream within a flow collection")
       if (s[pos] == '}') return jsOrdered(out) to pos + 1
       entryStart(s[pos], separated)
       val (key, afterKey) = flow(s, pos, ":,}", depth + 1)
@@ -263,7 +274,8 @@ private fun flow(s: String, start: Int, stops: String, depth: Int = 0): Pair<Yam
     var separated = true
     while (true) {
       pos = skip(s, pos, false)
-      if (pos >= s.length) throw Incomplete("YAML: unexpected end of the stream within a flow collection")
+      if (pos >= s.length)
+        throw Incomplete("YAML: unexpected end of the stream within a flow collection")
       if (s[pos] == ']') return out to pos + 1
       entryStart(s[pos], separated)
       val (value, after) = flow(s, pos, ",]", depth + 1)
@@ -276,7 +288,8 @@ private fun flow(s: String, start: Int, stops: String, depth: Int = 0): Pair<Yam
   if (ch == '"') {
     var end = pos + 1
     while (end < s.length && s[end] != '"') end += if (s[end] == '\\') 2 else 1
-    if (end >= s.length) throw Incomplete("YAML: unexpected end of the stream within a double quoted scalar")
+    if (end >= s.length)
+      throw Incomplete("YAML: unexpected end of the stream within a double quoted scalar")
     return unquoteDouble(s.substring(pos + 1, end)) to end + 1
   }
   if (ch == '\'') {
@@ -288,13 +301,18 @@ private fun flow(s: String, start: Int, stops: String, depth: Int = 0): Pair<Yam
       }
       end++
     }
-    if (end >= s.length) throw Incomplete("YAML: unexpected end of the stream within a single quoted scalar")
+    if (end >= s.length)
+      throw Incomplete("YAML: unexpected end of the stream within a single quoted scalar")
     return fold(s.substring(pos + 1, end)).jsReplace(RE_QUOTES, "'") to end + 1
   }
   var end = pos
   while (end < s.length) {
     val c = s[end]
-    if (stops.contains(c) && (c != ':' || end + 1 >= s.length || RE_FLOW_STOP.test(s[end + 1].toString()))) break
+    if (
+      stops.contains(c) &&
+        (c != ':' || end + 1 >= s.length || RE_FLOW_STOP.test(s[end + 1].toString()))
+    )
+      break
     if (c == '#' && end > pos && isJsSpace(s[end - 1])) {
       val nl = s.indexOf('\n', end)
       return scalar(fold(s.substring(pos, end).jsTrim())) to (if (nl == -1) s.length else nl)
@@ -403,14 +421,20 @@ private fun inlineValue(r: Reader, rest: String, indent: Int): YamlValue {
           k = text.indexOf('\n', k + 1)
         }
         val lineEnd = text.indexOf('\n', end)
-        if (stripComment(text.substring(minOf(end, text.length), if (lineEnd == -1) text.length else lineEnd)).jsTrim() != "") {
+        if (
+          stripComment(
+              text.substring(minOf(end, text.length), if (lineEnd == -1) text.length else lineEnd)
+            )
+            .jsTrim() != ""
+        ) {
           throw YamlError("YAML: unexpected content after a value")
         }
         r.i = start + used
         return value
       } catch (err: Incomplete) {
         if (start + taken >= r.lines.size) throw YamlError(err.message)
-        val more = r.lines.subList(start + taken, minOf(r.lines.size, start + taken + batch)).toList()
+        val more =
+          r.lines.subList(start + taken, minOf(r.lines.size, start + taken + batch)).toList()
         text += "\n" + more.joinToString("\n")
         taken += more.size
         batch *= 2
@@ -493,7 +517,13 @@ private fun block(r: Reader, minIndent: Int, depth: Int = 0): YamlValue {
         val next = r.indent()
         val nextLine = r.lines[r.i].substring(next)
         val seq = isSeqLine(nextLine)
-        assign(out, key, if (next > indent || (seq && next == indent)) block(r, if (seq) indent else indent + 1, depth + 1) else null)
+        assign(
+          out,
+          key,
+          if (next > indent || (seq && next == indent))
+            block(r, if (seq) indent else indent + 1, depth + 1)
+          else null,
+        )
       } else {
         assign(out, key, null)
       }

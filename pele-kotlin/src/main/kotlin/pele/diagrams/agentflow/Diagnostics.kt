@@ -19,26 +19,29 @@ object AgentflowWarning {
   const val FLOW_NO_INPUT = "FLOW_NO_INPUT"
 
   // Object.values order.
-  val values: List<DiagnosticId> = listOf(
-    SHAPE_UNSUPPORTED,
-    SHAPE_REMOVED,
-    EDGE_OPERATOR_UNSUPPORTED,
-    REFERENCE_EDGE_LABEL_REJECTED,
-    CONNECTOR_REF_UNRESOLVED,
-    CONNECTOR_REF_NOT_A_CONNECTOR,
-    METADATA_KEY_MISAPPLIED,
-    DUPLICATE_ID_NODE,
-    RESERVED_SYNTHETIC_ID,
-    CONTAINMENT_VIOLATION,
-    EDGE_SEMANTIC_CONTRADICTION,
-    FLOW_NO_INPUT,
-  )
+  val values: List<DiagnosticId> =
+    listOf(
+      SHAPE_UNSUPPORTED,
+      SHAPE_REMOVED,
+      EDGE_OPERATOR_UNSUPPORTED,
+      REFERENCE_EDGE_LABEL_REJECTED,
+      CONNECTOR_REF_UNRESOLVED,
+      CONNECTOR_REF_NOT_A_CONNECTOR,
+      METADATA_KEY_MISAPPLIED,
+      DUPLICATE_ID_NODE,
+      RESERVED_SYNTHETIC_ID,
+      CONTAINMENT_VIOLATION,
+      EDGE_SEMANTIC_CONTRADICTION,
+      FLOW_NO_INPUT,
+    )
 }
 
-val EMITTED: Set<DiagnosticId> = linkedSetOf(
-  "SHAPE_UNSUPPORTED",
-  "SHAPE_REMOVED",
-  "CONTAINMENT_VIOLATION",
-)
+val EMITTED: Set<DiagnosticId> =
+  linkedSetOf(
+    "SHAPE_UNSUPPORTED",
+    "SHAPE_REMOVED",
+    "CONTAINMENT_VIOLATION",
+  )
 
-val RESERVED: Set<DiagnosticId> = AgentflowWarning.values.filter { id -> !EMITTED.contains(id) }.toCollection(LinkedHashSet())
+val RESERVED: Set<DiagnosticId> =
+  AgentflowWarning.values.filter { id -> !EMITTED.contains(id) }.toCollection(LinkedHashSet())

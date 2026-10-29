@@ -54,38 +54,43 @@ private object T {
 
 private val ID = TokenType(name = "ID", pattern = JsRegExp("""[\w]([-\w]*\w)?""", "y"))
 
-private fun word(text: String): TokenType = TokenType(name = text, pattern = text, longer = listOf(ID))
+private fun word(text: String): TokenType =
+  TokenType(name = text, pattern = text, longer = listOf(ID))
 
 // The direction letters come before identifiers and have no longer alternative, so Mermaid
 // reads an id that starts with L, R, T or B as a direction followed by the rest.
-val ARCHITECTURE_TOKENS: List<TokenType> = listOf(
-  word("architecture-beta"),
-  word("junction"),
-  word("service"),
-  word("column"),
-  word("group"),
-  word("align"),
-  word("row"),
-  TokenType(name = "--", pattern = "--", longer = listOf(YAML)),
-  word("in"),
-  TokenType(name = ":", pattern = ":"),
-  TokenType(name = "-", pattern = "-", longer = listOf(YAML)),
-  TokenType(name = "ARROW_DIRECTION", pattern = JsRegExp("""L|R|T|B""", "y")),
-  TokenType(name = "ARROW_GROUP", pattern = JsRegExp("""\{group\}""", "y")),
-  TokenType(name = "ARROW_INTO", pattern = JsRegExp("""<|>""", "y")),
-  ACC_DESCR,
-  ACC_TITLE,
-  titleBefore("""[-\w]*\w"""),
-  STRING,
-  ID,
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-  TokenType(name = "ARCH_ICON", pattern = JsRegExp("""\([\w-:]+\)""", "y")),
-  TokenType(name = "ARCH_TITLE", pattern = JsRegExp("""\[(?:"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|[^\[\]\r\n]+)\]""", "y")),
-)
+val ARCHITECTURE_TOKENS: List<TokenType> =
+  listOf(
+    word("architecture-beta"),
+    word("junction"),
+    word("service"),
+    word("column"),
+    word("group"),
+    word("align"),
+    word("row"),
+    TokenType(name = "--", pattern = "--", longer = listOf(YAML)),
+    word("in"),
+    TokenType(name = ":", pattern = ":"),
+    TokenType(name = "-", pattern = "-", longer = listOf(YAML)),
+    TokenType(name = "ARROW_DIRECTION", pattern = JsRegExp("""L|R|T|B""", "y")),
+    TokenType(name = "ARROW_GROUP", pattern = JsRegExp("""\{group\}""", "y")),
+    TokenType(name = "ARROW_INTO", pattern = JsRegExp("""<|>""", "y")),
+    ACC_DESCR,
+    ACC_TITLE,
+    titleBefore("""[-\w]*\w"""),
+    STRING,
+    ID,
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+    TokenType(name = "ARCH_ICON", pattern = JsRegExp("""\([\w-:]+\)""", "y")),
+    TokenType(
+      name = "ARCH_TITLE",
+      pattern = JsRegExp("""\[(?:"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|[^\[\]\r\n]+)\]""", "y"),
+    ),
+  )
 
 // 'L' | 'R' | 'T' | 'B'
 typealias Side = String
@@ -139,20 +144,25 @@ class ArchitectureAst(
   val alignments: MutableList<AlignmentAst> = ArrayList(),
 )
 
-private val RE_ESCAPED_DOUBLE = JsRegExp("""\\"""" , "g")
+private val RE_ESCAPED_DOUBLE = JsRegExp("""\\"""", "g")
 private val RE_ESCAPED_SINGLE = JsRegExp("""\\'""", "g")
 
 // Mermaid's ArchitectureValueConverter for ARCH_TITLE.
 private fun labelValue(text: String): String {
   var result = text.jsSlice(1, -1).jsTrim()
-  if ((result.startsWith("\"") && result.endsWith("\"")) || (result.startsWith("'") && result.endsWith("'"))) {
-    result = result.jsSlice(1, -1).jsReplace(RE_ESCAPED_DOUBLE, "\"").jsReplace(RE_ESCAPED_SINGLE, "'")
+  if (
+    (result.startsWith("\"") && result.endsWith("\"")) ||
+      (result.startsWith("'") && result.endsWith("'"))
+  ) {
+    result =
+      result.jsSlice(1, -1).jsReplace(RE_ESCAPED_DOUBLE, "\"").jsReplace(RE_ESCAPED_SINGLE, "'")
   }
   return result.jsTrim()
 }
 
 fun parseArchitecture(src: String): ArchitectureAst {
-  val r = Reader(tokenize(src, ARCHITECTURE_TOKENS, "architecture"), ARCHITECTURE_TOKENS, "architecture")
+  val r =
+    Reader(tokenize(src, ARCHITECTURE_TOKENS, "architecture"), ARCHITECTURE_TOKENS, "architecture")
   val ast = ArchitectureAst()
 
   fun `is`(kind: Int): Boolean = r.kinds.getOrNull(r.i) == kind
@@ -214,7 +224,9 @@ fun parseArchitecture(src: String): ArchitectureAst {
         r.expect(T.colon)
         val rhsId = r.expect(T.id)
         val rhsGroup = r.accept(T.arrowGroup)
-        ast.edges.add(EdgeAst(lhsId, lhsGroup, lhsDir, lhsInto, title, rhsInto, rhsDir, rhsId, rhsGroup))
+        ast.edges.add(
+          EdgeAst(lhsId, lhsGroup, lhsDir, lhsInto, title, rhsInto, rhsDir, rhsId, rhsGroup)
+        )
       }
       T.align -> {
         r.i++
@@ -224,7 +236,8 @@ fun parseArchitecture(src: String): ArchitectureAst {
         while (`is`(T.id)) members.add(r.take())
         ast.alignments.add(AlignmentAst(direction, members))
       }
-      else -> r.fail("a group, a service, a junction, an edge, an alignment, a title, or a line break")
+      else ->
+        r.fail("a group, a service, a junction, an edge, an alignment, a title, or a line break")
     }
     endOfLine()
   }

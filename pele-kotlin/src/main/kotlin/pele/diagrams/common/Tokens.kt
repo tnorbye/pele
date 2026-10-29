@@ -63,15 +63,24 @@ private val tables = WeakIdentityMap<List<TokenType>, Table>()
 
 private fun prepare(types: List<TokenType>): Table {
   val every = IntArray(types.size) { it }
-  val starting = Array(128) { c ->
-    val ch = c.toChar()
-    every.filter { k ->
-      val type = types[k]
-      val pattern = type.pattern
-      if (pattern is String) pattern.isNotEmpty() && pattern[0] == ch else type.first == null || type.first.contains(ch)
-    }.toIntArray()
-  }
-  val table = Table(starting, every, types.map { type -> type.longer?.map { alt -> types.indexOf(alt) }?.toIntArray() })
+  val starting =
+    Array(128) { c ->
+      val ch = c.toChar()
+      every
+        .filter { k ->
+          val type = types[k]
+          val pattern = type.pattern
+          if (pattern is String) pattern.isNotEmpty() && pattern[0] == ch
+          else type.first == null || type.first.contains(ch)
+        }
+        .toIntArray()
+    }
+  val table =
+    Table(
+      starting,
+      every,
+      types.map { type -> type.longer?.map { alt -> types.indexOf(alt) }?.toIntArray() },
+    )
   tables[types] = table
   return table
 }
@@ -88,26 +97,27 @@ fun tokenize(src: String, types: List<TokenType>, diagram: String): Tokens {
   val scanners = arrayOfNulls<Scanner>(types.size)
   val n = src.length
 
-  val match = fun(k: Int, p: Int): Int {
-    if (dead[k]) return -1
-    val type = types[k]
-    val previous = if (kinds.isEmpty()) -1 else kinds[kinds.size - 1]
-    if (type.match != null) return type.match.invoke(src, p, previous)
-    if (type.scanner != null) {
-      val s = scanners[k] ?: type.scanner.invoke().also { scanners[k] = it }
-      return s(src, p, previous)
+  val match =
+    fun(k: Int, p: Int): Int {
+      if (dead[k]) return -1
+      val type = types[k]
+      val previous = if (kinds.isEmpty()) -1 else kinds[kinds.size - 1]
+      if (type.match != null) return type.match.invoke(src, p, previous)
+      if (type.scanner != null) {
+        val s = scanners[k] ?: type.scanner.invoke().also { scanners[k] = it }
+        return s(src, p, previous)
+      }
+      val pattern = type.pattern
+      if (pattern is String) return if (src.startsWith(pattern, p)) p + pattern.length else -1
+      pattern as JsRegExp
+      pattern.lastIndex = p
+      if (pattern.test(src)) return pattern.lastIndex
+      if (type.opener != null) {
+        type.opener.lastIndex = p
+        if (type.opener.test(src)) dead[k] = true
+      }
+      return -1
     }
-    val pattern = type.pattern
-    if (pattern is String) return if (src.startsWith(pattern, p)) p + pattern.length else -1
-    pattern as JsRegExp
-    pattern.lastIndex = p
-    if (pattern.test(src)) return pattern.lastIndex
-    if (type.opener != null) {
-      type.opener.lastIndex = p
-      if (type.opener.test(src)) dead[k] = true
-    }
-    return -1
-  }
 
   var p = 0
   scan@ while (p < n) {
@@ -143,25 +153,30 @@ fun tokenize(src: String, types: List<TokenType>, diagram: String): Tokens {
   return Tokens(kinds, starts, ends, src)
 }
 
-val ACC_DESCR = TokenType(
-  name = "ACC_DESCR",
-  pattern = JsRegExp("""[\t ]*accDescr(?:[\t ]*:([^\n\r]*?(?=%%)|[^\n\r]*)|\s*{([^}]*)})""", "y"),
-  first = "\t a",
-)
-val ACC_TITLE = TokenType(
-  name = "ACC_TITLE",
-  pattern = JsRegExp("""[\t ]*accTitle[\t ]*:(?:[^\n\r]*?(?=%%)|[^\n\r]*)""", "y"),
-  first = "\t a",
-)
-val TITLE = TokenType(
-  name = "TITLE",
-  pattern = JsRegExp("""[\t ]*title(?:[\t ][^\n\r]*?(?=%%)|[\t ][^\n\r]*|)""", "y"),
-  first = "\t t",
-)
+val ACC_DESCR =
+  TokenType(
+    name = "ACC_DESCR",
+    pattern = JsRegExp("""[\t ]*accDescr(?:[\t ]*:([^\n\r]*?(?=%%)|[^\n\r]*)|\s*{([^}]*)})""", "y"),
+    first = "\t a",
+  )
+val ACC_TITLE =
+  TokenType(
+    name = "ACC_TITLE",
+    pattern = JsRegExp("""[\t ]*accTitle[\t ]*:(?:[^\n\r]*?(?=%%)|[^\n\r]*)""", "y"),
+    first = "\t a",
+  )
+val TITLE =
+  TokenType(
+    name = "TITLE",
+    pattern = JsRegExp("""[\t ]*title(?:[\t ][^\n\r]*?(?=%%)|[\t ][^\n\r]*|)""", "y"),
+    first = "\t t",
+  )
 
 // `rest` matches a name suffix so `title` does not split longer names.
 fun titleBefore(rest: String): TokenType =
-  TITLE.copy(pattern = JsRegExp("""[\t ]*title(?:[\t ][^\n\r]*?(?=%%)|[\t ][^\n\r]*|(?!$rest))""", "y"))
+  TITLE.copy(
+    pattern = JsRegExp("""[\t ]*title(?:[\t ][^\n\r]*?(?=%%)|[\t ][^\n\r]*|(?!$rest))""", "y")
+  )
 
 // PORT: Java's repeated alternation uses one stack frame per character. Scan flat strings.
 internal fun quotedEnd(src: String, at: Int, previous: Int): Int {
@@ -173,36 +188,52 @@ internal fun quotedEnd(src: String, at: Int, previous: Int): Int {
     if (c == quote) return i
     if (c == '\\') {
       val escaped = src.getOrNull(i) ?: return -1
-      if (escaped == '\n' || escaped == '\r' || escaped == '\u2028' || escaped == '\u2029') return -1
+      if (escaped == '\n' || escaped == '\r' || escaped == '\u2028' || escaped == '\u2029')
+        return -1
       i++
     }
   }
   return -1
 }
 
-val STRING = TokenType(name = "STRING", pattern = JsRegExp("""\"([^"\\]|\\.)*"|'([^'\\]|\\.)*'""", "y"), first = "\"'", match = ::quotedEnd)
+val STRING =
+  TokenType(
+    name = "STRING",
+    pattern = JsRegExp("""\"([^"\\]|\\.)*"|'([^'\\]|\\.)*'""", "y"),
+    first = "\"'",
+    match = ::quotedEnd,
+  )
 val NEWLINE = TokenType(name = "NEWLINE", pattern = JsRegExp("""\r?\n""", "y"), first = "\r\n")
-val WHITESPACE = TokenType(name = "WHITESPACE", pattern = JsRegExp("""[\t ]+""", "y"), hidden = true, first = "\t ")
-val YAML = TokenType(
-  name = "YAML",
-  pattern = JsRegExp("""---[\t ]*\r?\n(?:[\S\s]*?\r?\n)?---(?:\r?\n|(?!\S))""", "y"),
-  hidden = true,
-  opener = JsRegExp("""---[\t ]*\r?\n""", "y"),
-  first = "-",
-)
-val DIRECTIVE = TokenType(
-  name = "DIRECTIVE",
-  pattern = JsRegExp("""[\t ]*%%{[\S\s]*?}%%(?:\r?\n|(?!\S))""", "y"),
-  hidden = true,
-  opener = JsRegExp("""[\t ]*%%{""", "y"),
-  first = "\t %",
-)
-val SINGLE_LINE_COMMENT = TokenType(
-  name = "SINGLE_LINE_COMMENT",
-  pattern = JsRegExp("""[\t ]*%%[^\n\r]*""", "y"),
-  first = "\t %",
-  hidden = true,
-)
+val WHITESPACE =
+  TokenType(
+    name = "WHITESPACE",
+    pattern = JsRegExp("""[\t ]+""", "y"),
+    hidden = true,
+    first = "\t ",
+  )
+val YAML =
+  TokenType(
+    name = "YAML",
+    pattern = JsRegExp("""---[\t ]*\r?\n(?:[\S\s]*?\r?\n)?---(?:\r?\n|(?!\S))""", "y"),
+    hidden = true,
+    opener = JsRegExp("""---[\t ]*\r?\n""", "y"),
+    first = "-",
+  )
+val DIRECTIVE =
+  TokenType(
+    name = "DIRECTIVE",
+    pattern = JsRegExp("""[\t ]*%%{[\S\s]*?}%%(?:\r?\n|(?!\S))""", "y"),
+    hidden = true,
+    opener = JsRegExp("""[\t ]*%%{""", "y"),
+    first = "\t %",
+  )
+val SINGLE_LINE_COMMENT =
+  TokenType(
+    name = "SINGLE_LINE_COMMENT",
+    pattern = JsRegExp("""[\t ]*%%[^\n\r]*""", "y"),
+    first = "\t %",
+    hidden = true,
+  )
 
 // Mermaid ends a keyword only at whitespace, a comment, or the end of input.
 fun keyword(word: String): TokenType =
@@ -237,15 +268,16 @@ fun accDescrValue(text: String): String {
     .jsReplace(RE_BREAKS, "\n")
 }
 
-private val ESCAPES = mapOf(
-  'b' to "\b",
-  'f' to "\u000C",
-  'n' to "\n",
-  'r' to "\r",
-  't' to "\t",
-  'v' to "\u000B",
-  '0' to "\u0000",
-)
+private val ESCAPES =
+  mapOf(
+    'b' to "\b",
+    'f' to "\u000C",
+    'n' to "\n",
+    'r' to "\r",
+    't' to "\t",
+    'v' to "\u000B",
+    '0' to "\u0000",
+  )
 
 fun stringValue(text: String): String {
   if (!text.contains('\\')) return text.jsSlice(1, -1)
@@ -274,7 +306,8 @@ class Reader(
   var i = 0
   val kinds: List<Int> = tokens.kinds
 
-  val kind: Int get() = kinds.getOrElse(i) { UNDEFINED_KIND }
+  val kind: Int
+    get() = kinds.getOrElse(i) { UNDEFINED_KIND }
 
   fun text(index: Int = i): String = tokens.src.jsSlice(tokens.starts[index], tokens.ends[index])
 

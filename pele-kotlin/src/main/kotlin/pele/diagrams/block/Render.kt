@@ -2,6 +2,11 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.block
 
+import java.util.IdentityHashMap
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.sign
+import kotlin.math.sqrt
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -42,11 +47,6 @@ import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import java.util.IdentityHashMap
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.sign
-import kotlin.math.sqrt
 
 private const val GAP = 12.0
 private const val WRAP = 200.0
@@ -55,36 +55,40 @@ private const val SHAPE_ATTRS = " fill=\"var(--_s)\" stroke=\"var(--_b)\""
 private const val LINE_ATTRS = " stroke=\"var(--_b)\""
 private val NO_CLASSES: List<String> = emptyList()
 private val NO_BLOCKS: List<Block> = emptyList()
-private val NO_HEIGHTS: MutableList<Double> = ArrayList() // PORT-OK: a sentinel that is never written to
-private val NO_GAPS: MutableList<Double?> = ArrayList() // PORT-OK: a sentinel that is never written to
+private val NO_HEIGHTS: MutableList<Double> =
+  ArrayList() // PORT-OK: a sentinel that is never written to
+private val NO_GAPS: MutableList<Double?> =
+  ArrayList() // PORT-OK: a sentinel that is never written to
 private val DEFAULT_CLASS = listOf("default")
 
 // Checking every edge against every block is quadratic, so large diagrams route without it.
 private const val OBSTACLE_BUDGET = 2_000_000.0
 private const val LABEL_GAP = 4.0
 
-private val SHAPES: Map<String, String> = mapOf(
-  "square" to "rect",
-  "round" to "rounded",
-  "circle" to "circle",
-  "doublecircle" to "dbl-circ",
-  "diamond" to "diam",
-  "hexagon" to "hex",
-  "stadium" to "stadium",
-  "subroutine" to "fr-rect",
-  "cylinder" to "cyl",
-  "rect_left_inv_arrow" to "odd",
-  "lean_right" to "lean-r",
-  "lean_left" to "lean-l",
-  "trapezoid" to "trap-b",
-  "inv_trapezoid" to "trap-t",
-)
+private val SHAPES: Map<String, String> =
+  mapOf(
+    "square" to "rect",
+    "round" to "rounded",
+    "circle" to "circle",
+    "doublecircle" to "dbl-circ",
+    "diamond" to "diam",
+    "hexagon" to "hex",
+    "stadium" to "stadium",
+    "subroutine" to "fr-rect",
+    "cylinder" to "cyl",
+    "rect_left_inv_arrow" to "odd",
+    "lean_right" to "lean-r",
+    "lean_left" to "lean-l",
+    "trapezoid" to "trap-b",
+    "inv_trapezoid" to "trap-t",
+  )
 
 // Shapes that keep their own size in a larger cell, where the others stretch to fill it.
 private val FIXED: Set<String> = setOf("circle", "dbl-circ", "diam")
 
 // Shapes that only widen, because their slants and curves are set by their height.
-private val WIDE: Set<String> = setOf("stadium", "hex", "odd", "lean-r", "lean-l", "trap-b", "trap-t")
+private val WIDE: Set<String> =
+  setOf("stadium", "hex", "odd", "lean-r", "lean-l", "trap-b", "trap-t")
 
 private object Kind {
   const val Leaf = 0
@@ -109,17 +113,18 @@ private class View(
   head: Double,
   nw: Double,
   nh: Double,
-) : Cell(
-  columns = columns,
-  span = span,
-  space = space,
-  head = head,
-  nw = nw,
-  nh = nh,
-  heights = NO_HEIGHTS,
-  rowGaps = NO_GAPS,
-  colGaps = NO_GAPS,
-) {
+) :
+  Cell(
+    columns = columns,
+    span = span,
+    space = space,
+    head = head,
+    nw = nw,
+    nh = nh,
+    heights = NO_HEIGHTS,
+    rowGaps = NO_GAPS,
+    colGaps = NO_GAPS,
+  ) {
   // Size as drawn, which for a fixed shape is smaller than its cell.
   var bw: Double = 0.0
   var bh: Double = 0.0
@@ -159,7 +164,8 @@ private fun edgeY(v: View, x: Double, sign: Double): Double {
   return v.y + sign * reach
 }
 
-// Where a horizontal line at y meets the outline, right of the center (sign 1) or left of it (sign -1).
+// Where a horizontal line at y meets the outline, right of the center (sign 1) or left of it (sign
+// -1).
 private fun edgeX(v: View, y: Double, sign: Double): Double {
   val hw = v.bw / 2
   val hh = v.bh / 2
@@ -180,8 +186,14 @@ private fun border(v: View, tx: Double, ty: Double, out: MutableList<Double>) {
   val hh = v.bh / 2
   var k: Double
   if (isRound(v)) k = hw / jsHypot(dx, dy).jsOr { 1.0 }
-  else if (v.kind == Kind.Leaf && v.shape == "diam") k = 1 / (abs(dx) / hw + abs(dy) / hh).jsOr { 1.0 }
-  else k = minOf(if (dx == 0.0) Double.POSITIVE_INFINITY else hw / abs(dx), if (dy == 0.0) Double.POSITIVE_INFINITY else hh / abs(dy))
+  else if (v.kind == Kind.Leaf && v.shape == "diam")
+    k = 1 / (abs(dx) / hw + abs(dy) / hh).jsOr { 1.0 }
+  else
+    k =
+      minOf(
+        if (dx == 0.0) Double.POSITIVE_INFINITY else hw / abs(dx),
+        if (dy == 0.0) Double.POSITIVE_INFINITY else hh / abs(dy),
+      )
   if (k == Double.POSITIVE_INFINITY) k = 0.0
   out.add(v.x + dx * k)
   out.add(v.y + dy * k)
@@ -192,9 +204,11 @@ private fun crossesBox(x1: Double, y1: Double, x2: Double, y2: Double, v: View):
   val r = v.x + v.bw / 2 - 1
   val t = v.y - v.bh / 2 + 1
   val b = v.y + v.bh / 2 - 1
-  if ((x1 < l && x2 < l) || (x1 > r && x2 > r) || (y1 < t && y2 < t) || (y1 > b && y2 > b)) return false
+  if ((x1 < l && x2 < l) || (x1 > r && x2 > r) || (y1 < t && y2 < t) || (y1 > b && y2 > b))
+    return false
   if (x1 == x2 || y1 == y2) return true
-  // The segment is diagonal and its bounding box overlaps: the box is hit unless all four corners are on one side.
+  // The segment is diagonal and its bounding box overlaps: the box is hit unless all four corners
+  // are on one side.
   val dx = x2 - x1
   val dy = y2 - y1
   fun side(x: Double, y: Double): Double = sign(dx * (y - y1) - dy * (x - x1))
@@ -218,7 +232,8 @@ private fun hits(points: DoubleArray, s: View, t: View, obstacles: List<View>): 
   return count
 }
 
-// A straight line where the two blocks share a row or a column, otherwise one bend between facing sides.
+// A straight line where the two blocks share a row or a column, otherwise one bend between facing
+// sides.
 private fun routeEdge(s: View, t: View, shift: Double, obstacles: List<View>?): DoubleArray {
   val sl = s.x - s.bw / 2
   val sr = s.x + s.bw / 2
@@ -245,10 +260,14 @@ private fun routeEdge(s: View, t: View, shift: Double, obstacles: List<View>?): 
     val right = outer.x + outer.bw / 2 - (inner.x + inner.bw / 2)
     val least = minOf(up, down, left, right)
     val points: DoubleArray
-    if (least == down) points = doubleArrayOf(inner.x, edgeY(inner, inner.x, 1.0), inner.x, outer.y + outer.bh / 2)
-    else if (least == up) points = doubleArrayOf(inner.x, edgeY(inner, inner.x, -1.0), inner.x, outer.y - outer.bh / 2)
-    else if (least == right) points = doubleArrayOf(edgeX(inner, inner.y, 1.0), inner.y, outer.x + outer.bw / 2, inner.y)
-    else points = doubleArrayOf(edgeX(inner, inner.y, -1.0), inner.y, outer.x - outer.bw / 2, inner.y)
+    if (least == down)
+      points = doubleArrayOf(inner.x, edgeY(inner, inner.x, 1.0), inner.x, outer.y + outer.bh / 2)
+    else if (least == up)
+      points = doubleArrayOf(inner.x, edgeY(inner, inner.x, -1.0), inner.x, outer.y - outer.bh / 2)
+    else if (least == right)
+      points = doubleArrayOf(edgeX(inner, inner.y, 1.0), inner.y, outer.x + outer.bw / 2, inner.y)
+    else
+      points = doubleArrayOf(edgeX(inner, inner.y, -1.0), inner.y, outer.x - outer.bw / 2, inner.y)
     return if (inner === s) points else doubleArrayOf(points[2], points[3], points[0], points[1])
   }
   if (overX) {
@@ -316,14 +335,16 @@ private fun trace(p: DoubleArray, startTrimIn: Double, endTrimIn: Double): EdgeP
   var d = "M${num(sx + ax * startTrim)},${num(sy + ay * startTrim)}"
   if (n == 6) {
     val r = maxOf(0.0, minOf(CORNER, first - startTrim, last - endTrim))
-    d += "L${num(p[2] - ax * r)},${num(p[3] - ay * r)}Q${num(p[2])},${num(p[3])} ${num(p[2] + bx * r)},${num(p[3] + by * r)}"
+    d +=
+      "L${num(p[2] - ax * r)},${num(p[3] - ay * r)}Q${num(p[2])},${num(p[3])} ${num(p[2] + bx * r)},${num(p[3] + by * r)}"
   }
   d += "L${num(ex - bx * endTrim)},${num(ey - by * endTrim)}"
   return EdgePath(d, null, sx, sy, -ax, -ay, ex, ey, bx, by)
 }
 
 // A self-loop is an arc around the top right corner of the block, or around the matching point on a
-// round or diamond outline. Gives the arc's center and radius and the angles where it leaves and returns.
+// round or diamond outline. Gives the arc's center and radius and the angles where it leaves and
+// returns.
 private fun loopArc(v: View, k: Int): DoubleArray {
   val hw = v.bw / 2
   val hh = v.bh / 2
@@ -332,7 +353,8 @@ private fun loopArc(v: View, k: Int): DoubleArray {
     val px = v.x + hw * SQRT1_2
     val py = v.y - hw * SQRT1_2
     val half = 2 * StrictMath.asin(minOf(1.0, r / (2 * hw)))
-    fun angle(at: Double): Double = StrictMath.atan2(v.y - hw * StrictMath.sin(at) - py, v.x + hw * StrictMath.cos(at) - px)
+    fun angle(at: Double): Double =
+      StrictMath.atan2(v.y - hw * StrictMath.sin(at) - py, v.x + hw * StrictMath.cos(at) - px)
     return doubleArrayOf(px, py, r, angle(Math.PI / 4 + half), angle(Math.PI / 4 - half))
   }
   if (v.kind == Kind.Leaf && v.shape == "diam") {
@@ -364,11 +386,13 @@ private fun loopPath(v: View, k: Int, startTrim: Double, endTrim: Double): EdgeP
   val sy = py + r * StrictMath.sin(a1)
   val ex = px + r * StrictMath.cos(a2)
   val ey = py + r * StrictMath.sin(a2)
-  // Each marker lies along the chord it covers, so it follows the curve instead of the tangent at its tip.
+  // Each marker lies along the chord it covers, so it follows the curve instead of the tangent at
+  // its tip.
   val sl = jsHypot(sx - x1, sy - y1)
   val el = jsHypot(ex - x2, ey - y2)
   return EdgePath(
-    d = "M${num(x1)},${num(y1)}A${num(r)},${num(r)} 0 ${if (sweep > Math.PI) 1 else 0} 1 ${num(x2)},${num(y2)}",
+    d =
+      "M${num(x1)},${num(y1)}A${num(r)},${num(r)} 0 ${if (sweep > Math.PI) 1 else 0} 1 ${num(x2)},${num(y2)}",
     sx = sx,
     sy = sy,
     sdx = if (sl > 0) (sx - x1) / sl else StrictMath.sin(a1),
@@ -383,7 +407,15 @@ private fun loopPath(v: View, k: Int, startTrim: Double, endTrim: Double): EdgeP
 private val SPOTS = listOf(0.5, 0.3, 0.7, 0.15, 0.85)
 
 // PORT: obstacles are Views and TitleBoxes.
-private fun covers(x: Double, y: Double, w: Double, h: Double, s: View, t: View, obstacles: List<Any>?): Boolean {
+private fun covers(
+  x: Double,
+  y: Double,
+  w: Double,
+  h: Double,
+  s: View,
+  t: View,
+  obstacles: List<Any>?,
+): Boolean {
   if (obstacles == null) return false
   for (v in obstacles) {
     if (v === s || v === t) continue
@@ -408,8 +440,17 @@ private fun covers(x: Double, y: Double, w: Double, h: Double, s: View, t: View,
   return false
 }
 
-// Picks the point on a leg where a label of the given size covers no block other than the two it joins.
-private fun labelSpot(p: DoubleArray, at: Int, w: Double, h: Double, s: View, t: View, obstacles: List<View>?): Double {
+// Picks the point on a leg where a label of the given size covers no block other than the two it
+// joins.
+private fun labelSpot(
+  p: DoubleArray,
+  at: Int,
+  w: Double,
+  h: Double,
+  s: View,
+  t: View,
+  obstacles: List<View>?,
+): Double {
   if (obstacles == null) return 0.5
   for (spot in SPOTS) {
     val x = p[at] + (p[at + 2] - p[at]) * spot
@@ -419,9 +460,17 @@ private fun labelSpot(p: DoubleArray, at: Int, w: Double, h: Double, s: View, t:
   return 0.5
 }
 
-// Stacks overlapping labels along their shared line, if they fit between its markers and cover no other block or title.
+// Stacks overlapping labels along their shared line, if they fit between its markers and cover no
+// other block or title.
 // Returns the extra length needed to fit the labels.
-private fun stackLabels(stack: List<Int>, routes: List<Route>, legs: Array<DoubleArray?>, s: View, t: View, obstacles: List<Any>?): Double {
+private fun stackLabels(
+  stack: List<Int>,
+  routes: List<Route>,
+  legs: Array<DoubleArray?>,
+  s: View,
+  t: View,
+  obstacles: List<Any>?,
+): Double {
   val vertical = legs[stack[0]]!![0] == legs[stack[0]]!![2]
   var lo = Double.NEGATIVE_INFINITY
   var hi = Double.POSITIVE_INFINITY
@@ -436,7 +485,11 @@ private fun stackLabels(stack: List<Int>, routes: List<Route>, legs: Array<Doubl
     need += (if (vertical) p.label.height else p.label.width + 8) + LABEL_GAP
     for (b in 0 until a) {
       val q = routes[stack[b]]
-      if (abs(p.lx - q.lx) < (p.label.width + q.label.width) / 2 + 8 && abs(p.ly - q.ly) < (p.label.height + q.label.height) / 2) crowded = true
+      if (
+        abs(p.lx - q.lx) < (p.label.width + q.label.width) / 2 + 8 &&
+          abs(p.ly - q.ly) < (p.label.height + q.label.height) / 2
+      )
+        crowded = true
     }
   }
   if (!crowded) return 0.0
@@ -449,20 +502,37 @@ private fun stackLabels(stack: List<Int>, routes: List<Route>, legs: Array<Doubl
     val ly = routes[i].ly
     val size = if (vertical) label.height else label.width + 8
     val at = next + size / 2
-    if (covers(if (vertical) lx else at, if (vertical) at else ly, label.width + 8, label.height, s, t, obstacles)) return 0.0
+    if (
+      covers(
+        if (vertical) lx else at,
+        if (vertical) at else ly,
+        label.width + 8,
+        label.height,
+        s,
+        t,
+        obstacles,
+      )
+    )
+      return 0.0
     along.add(at)
     next += size + LABEL_GAP
   }
   stack.forEachIndexed { k, i ->
-    if (vertical) routes[i].ly = along[k]
-    else routes[i].lx = along[k]
+    if (vertical) routes[i].ly = along[k] else routes[i].lx = along[k]
   }
   return 0.0
 }
 
 // Widens the gap in the blocks' nearest shared container.
 // `base` keeps the gaps as they were when the labels were measured.
-private fun widen(parents: Map<Int, View>, s: View, t: View, vertical: Boolean, short: Double, base: IdentityHashMap<MutableList<Double?>, MutableList<Double?>>): Boolean {
+private fun widen(
+  parents: Map<Int, View>,
+  s: View,
+  t: View,
+  vertical: Boolean,
+  short: Double,
+  base: IdentityHashMap<MutableList<Double?>, MutableList<Double?>>,
+): Boolean {
   val chain = HashSet<View>()
   var cv: View? = s
   while (cv != null) {
@@ -503,14 +573,23 @@ fun renderBlock(model: BlockModel, config: Config, options: RenderOptions): Rend
   return tighten(options) { tight -> draw(model, config, options, tight) }
 }
 
-private fun draw(model: BlockModel, config: Config, options: RenderOptions, tight: Boolean): Rendered {
+private fun draw(
+  model: BlockModel,
+  config: Config,
+  options: RenderOptions,
+  tight: Boolean,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val edgeSize = jsRound(size * 0.875)
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
   val pad = options.padding ?: 8.0
   val icons = options.icons
   val configured = (config["block"] as? Map<*, *>)?.get("padding")
-  val gap = minOf(if (configured is Double && configured >= 0) minOf(configured, 200.0) else GAP, if (tight) 6.0 else Double.POSITIVE_INFINITY)
+  val gap =
+    minOf(
+      if (configured is Double && configured >= 0) minOf(configured, 200.0) else GAP,
+      if (tight) 6.0 else Double.POSITIVE_INFINITY,
+    )
   val wrap = if (tight) 80.0 else WRAP
 
   fun styleOf(block: Block): ResolvedStyle {
@@ -520,7 +599,8 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
       for (style in styles) for (part in style.jsSplit(";")) declarations.add(part)
     }
     val blockClasses = block.classes
-    for (name in if (blockClasses != null && blockClasses.size > 0) blockClasses else DEFAULT_CLASS) {
+    for (name in
+      if (blockClasses != null && blockClasses.size > 0) blockClasses else DEFAULT_CLASS) {
       val def = model.classes[name]
       if (def != null) add(def.styles)
     }
@@ -548,7 +628,15 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
       label = layoutLabel(null, false, measurer, fontSize, wrap)
     } else if (type == "composite") {
       kind = Kind.Composite
-      label = layoutLabel(block.label, false, measurer, fontSize, if (tight) titleRoom(options) else 4000.0, textStyle)
+      label =
+        layoutLabel(
+          block.label,
+          false,
+          measurer,
+          fontSize,
+          if (tight) titleRoom(options) else 4000.0,
+          textStyle,
+        )
       head = if (label.height > 0) label.height + 4 else 0.0
       nw = label.width + 2 * gap
       nh = head + 2 * gap
@@ -556,7 +644,10 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
       kind = Kind.Arrow
       label = layoutLabel(block.label, false, measurer, fontSize, wrap, textStyle)
       var blank = true
-      for (line in label.lines) for (part in line) if (part.icon != null || part.text.jsTrim() != "") blank = false
+      for (line in label.lines) for (part in line) if (
+        part.icon != null || part.text.jsTrim() != ""
+      )
+        blank = false
       mask = arrowMask(block.directions)
       val s = if (blank) arrowSize(mask, 0.0, 0.0) else arrowSize(mask, label.width, label.height)
       nw = s.w
@@ -633,7 +724,10 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
       }
       if (v.kind == Kind.Leaf && v.shape == "cyl") v.dy = minOf(12.0, maxOf(6.0, v.bw / 14)) / 2
       if (v.kind == Kind.Leaf || v.kind == Kind.Arrow) obstacles.add(v)
-      else if (v.head > 0) titles.add(TitleBox(v.x, v.y - v.h / 2 + (v.head + gap) / 2 + 2, v.label.width, v.label.height))
+      else if (v.head > 0)
+        titles.add(
+          TitleBox(v.x, v.y - v.h / 2 + (v.head + gap) / 2 + 2, v.label.width, v.label.height)
+        )
     }
     return content
   }
@@ -654,7 +748,8 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
     ends.add(Pair(s, t))
     drawn.add(edge)
   }
-  val check: List<View>? = if (drawn.size.toDouble() * obstacles.size <= OBSTACLE_BUDGET) obstacles else null
+  val check: List<View>? =
+    if (drawn.size.toDouble() * obstacles.size <= OBSTACLE_BUDGET) obstacles else null
   val routes = ArrayList<Route>()
   val stacks = LinkedHashMap<Long, MutableList<Int>>()
   val legs = arrayOfNulls<DoubleArray>(drawn.size)
@@ -686,14 +781,15 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
         val firstLeg = abs(points[2] - points[0]) + abs(points[3] - points[1])
         val lastLeg = abs(points[n - 2] - points[n - 4]) + abs(points[n - 1] - points[n - 3])
         val at = if (n == 6 && lastLeg > firstLeg) 2 else 0
-        val spot = if (label.width > 0) labelSpot(points, at, label.width + 8, label.height, s, t, check) else 0.5
+        val spot =
+          if (label.width > 0) labelSpot(points, at, label.width + 8, label.height, s, t, check)
+          else 0.5
         lx = points[at] + (points[at + 2] - points[at]) * spot
         ly = points[at + 1] + (points[at + 3] - points[at + 1]) * spot
         if (label.width > 0 && total > 1) {
           legs[i] = points.copyOfRange(at, at + 4)
           val stack = stacks[key]
-          if (stack != null) stack.add(i)
-          else stacks[key] = arrayListOf(i)
+          if (stack != null) stack.add(i) else stacks[key] = arrayListOf(i)
         }
       }
       routes.add(Route(drawn[i], points, if (s === t) k + 1 else 0, label, lx, ly))
@@ -702,7 +798,8 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
 
   fun settle(grow: Boolean): Boolean {
     route()
-    val blocked: List<Any>? = if (check != null) ArrayList<Any>(check).also { it.addAll(titles) } else null
+    val blocked: List<Any>? =
+      if (check != null) ArrayList<Any>(check).also { it.addAll(titles) } else null
     val base = IdentityHashMap<MutableList<Double?>, MutableList<Double?>>()
     var grown = false
     for (stack in stacks.values) {
@@ -712,7 +809,13 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
       val short = stackLabels(stack, routes, legs, s, t, blocked)
       val vertical = legs[stack[0]]!![0] == legs[stack[0]]!![2]
       // Keep columns narrow to fit the host in tight layouts.
-      if (grow && short > 0 && (vertical || !tight) && widen(parents, s, t, vertical, ceil(short), base)) grown = true
+      if (
+        grow &&
+          short > 0 &&
+          (vertical || !tight) &&
+          widen(parents, s, t, vertical, ceil(short), base)
+      )
+        grown = true
     }
     return grown
   }
@@ -725,7 +828,9 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
         val pw = (p.label.width + 8) / 2
         val qw = (q.label.width + 8) / 2
         val w = minOf(p.lx + pw, q.lx + qw) - maxOf(p.lx - pw, q.lx - qw)
-        val h = minOf(p.ly + p.label.height / 2, q.ly + q.label.height / 2) - maxOf(p.ly - p.label.height / 2, q.ly - q.label.height / 2)
+        val h =
+          minOf(p.ly + p.label.height / 2, q.ly + q.label.height / 2) -
+            maxOf(p.ly - p.label.height / 2, q.ly - q.label.height / 2)
         if (p.label.width > 0 && q.label.width > 0 && w > 0 && h > 0) area += w * h
       }
     }
@@ -760,7 +865,8 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
   if (settle(drawn.size.toDouble() * drawn.size <= OBSTACLE_BUDGET)) {
     val before = overlap()
     val narrow = bound()
-    // A container stretched by its row gives some of a new gap back, so the gap may take a few rounds.
+    // A container stretched by its row gives some of a new gap back, so the gap may take a few
+    // rounds.
     var grown = true
     var round = 0
     while (round < 3 && grown) {
@@ -768,7 +874,8 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
       grown = settle(round < 2)
       round++
     }
-    // The drawing only grows if that leaves less of the labels covering each other, and within maxWidth.
+    // The drawing only grows if that leaves less of the labels covering each other, and within
+    // maxWidth.
     val wide = bound()
     val maxWidth = options.maxWidth
     val room = if (maxWidth != null && maxWidth > 0) maxWidth else Double.POSITIVE_INFINITY
@@ -806,23 +913,35 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
     val id = escText(v.block.id!!)
     if (v.kind == Kind.Composite) {
       val top = v.y - v.h / 2
-      if (paints(v.style.shape)) fills.add(Fill(doubleArrayOf(v.x - v.w / 2, top, v.x + v.w / 2, top + v.h), v.style.shape))
+      if (paints(v.style.shape))
+        fills.add(Fill(doubleArrayOf(v.x - v.w / 2, top, v.x + v.w / 2, top + v.h), v.style.shape))
       clusters +=
         "<g class=\"pele-cluster$classes\" data-id=\"$id\">" +
-        "<rect x=\"${num(v.x - v.w / 2)}\" y=\"${num(top)}\" width=\"${num(v.w)}\" height=\"${num(v.h)}\" fill=\"var(--_a)\"${if (setsFill(v.style.shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"${rounded(v.style.shape)}/>" +
-        labelSvg(v.label, v.x, top + (v.head + gap) / 2 + 2, " class=\"pele-cluster-label\"${inkFill(v.style, "var(--_m)")}${v.style.text}", icons) +
-        "</g>"
+          "<rect x=\"${num(v.x - v.w / 2)}\" y=\"${num(top)}\" width=\"${num(v.w)}\" height=\"${num(v.h)}\" fill=\"var(--_a)\"${if (setsFill(v.style.shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"${rounded(v.style.shape)}/>" +
+          labelSvg(
+            v.label,
+            v.x,
+            top + (v.head + gap) / 2 + 2,
+            " class=\"pele-cluster-label\"${inkFill(v.style, "var(--_m)")}${v.style.text}",
+            icons,
+          ) +
+          "</g>"
       continue
     }
     val arrow = v.kind == Kind.Arrow
     nodes +=
       "<g class=\"pele-node pele-shape-${if (arrow) "block-arrow" else v.shape}$classes\" data-id=\"$id\" transform=\"translate(${num(v.x)},${num(v.y)})\">" +
-      (
-        if (arrow) drawArrow(v.mask, v.bw, v.bh, SHAPE_ATTRS + v.style.shape)
-        else drawShape(v.shape, v.bw, v.bh, SHAPE_ATTRS + v.style.shape, LINE_ATTRS + v.style.line)
+        (if (arrow) drawArrow(v.mask, v.bw, v.bh, SHAPE_ATTRS + v.style.shape)
+        else
+          drawShape(v.shape, v.bw, v.bh, SHAPE_ATTRS + v.style.shape, LINE_ATTRS + v.style.line)) +
+        labelSvg(
+          v.label,
+          v.dx,
+          v.dy,
+          " class=\"pele-label\"${if (arrow || shapeFilled(v.shape)) inkFill(v.style) else ""}${v.style.text}",
+          icons,
         ) +
-      labelSvg(v.label, v.dx, v.dy, " class=\"pele-label\"${if (arrow || shapeFilled(v.shape)) inkFill(v.style) else ""}${v.style.text}", icons) +
-      "</g>"
+        "</g>"
   }
 
   var casings = ""
@@ -852,10 +971,24 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
     val id = escText(edge.id!!)
     edges +=
       "<g class=\"pele-edge\" data-id=\"$id\"${if (!over.isNullOrEmpty()) " stroke=\"$over\"" else ""}>" +
-      "<path d=\"${path.d}\"${if (edge.thickness == "thick") " stroke-width=\"2.5\"" else ""}${if (edge.pattern == "dotted") " stroke-dasharray=\"3 4\"" else ""}/>" +
-      marker(startType, path.sx, path.sy, path.sdx, path.sdy, if (!over.isNullOrEmpty()) over else "var(--_l)") +
-      marker(endType, path.ex, path.ey, path.edx, path.edy, if (!over.isNullOrEmpty()) over else "var(--_l)") +
-      "</g>"
+        "<path d=\"${path.d}\"${if (edge.thickness == "thick") " stroke-width=\"2.5\"" else ""}${if (edge.pattern == "dotted") " stroke-dasharray=\"3 4\"" else ""}/>" +
+        marker(
+          startType,
+          path.sx,
+          path.sy,
+          path.sdx,
+          path.sdy,
+          if (!over.isNullOrEmpty()) over else "var(--_l)",
+        ) +
+        marker(
+          endType,
+          path.ex,
+          path.ey,
+          path.edx,
+          path.edy,
+          if (!over.isNullOrEmpty()) over else "var(--_l)",
+        ) +
+        "</g>"
     if (label.width > 0) {
       val x = routes[i].lx + ox
       val y = routes[i].ly + oy
@@ -863,20 +996,30 @@ private fun draw(model: BlockModel, config: Config, options: RenderOptions, tigh
     }
   }
 
-  val svg = svgDocument(
-    "block",
-    width,
-    height,
-    size,
-    options,
-    model,
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (clusters != "") "<g class=\"pele-clusters\">$clusters</g>" else "") +
-      casingsSvg(casings) +
-      (if (edges != "") "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edges</g>" else "") +
-      "<g class=\"pele-nodes\">$nodes</g>" +
-      (if (labels != "") "<g class=\"pele-edge-labels\" font-size=\"${jsStr(edgeSize)}\">$labels</g>" else ""),
-  )
+  val svg =
+    svgDocument(
+      "block",
+      width,
+      height,
+      size,
+      options,
+      model,
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        (if (clusters != "") "<g class=\"pele-clusters\">$clusters</g>" else "") +
+        casingsSvg(casings) +
+        (if (edges != "")
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edges</g>"
+        else "") +
+        "<g class=\"pele-nodes\">$nodes</g>" +
+        (if (labels != "")
+          "<g class=\"pele-edge-labels\" font-size=\"${jsStr(edgeSize)}\">$labels</g>"
+        else ""),
+    )
 
   return Rendered(svg, width, height, ArrayList())
 }

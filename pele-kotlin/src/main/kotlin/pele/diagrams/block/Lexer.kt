@@ -37,7 +37,8 @@ private val DIRECTIONS = listOf("right", "left", "x", "y", "up", "down")
 // Characters that end a node id: ( ) [ { } < > - : = and whitespace.
 private val ID_STOP: IntArray = run {
   val table = IntArray(128)
-  for (c in intArrayOf(9, 10, 11, 12, 13, 32, 40, 41, 45, 58, 60, 61, 62, 91, 123, 125)) table[c] = 1
+  for (c in intArrayOf(9, 10, 11, 12, 13, 32, 40, 41, 45, 58, 60, 61, 62, 91, 123, 125)) table[c] =
+    1
   table
 }
 
@@ -84,7 +85,8 @@ fun tokenize(src: String): Tokens {
     while (q < n && isWord(src.charCodeAt(q))) q++
     return q
   }
-  fun keyword(text: String): Boolean = src.startsWith(text, p) && !isWord(src.charCodeAt(p + text.length))
+  fun keyword(text: String): Boolean =
+    src.startsWith(text, p) && !isWord(src.charCodeAt(p + text.length))
 
   fun quote(): Boolean {
     if (src.charCodeAt(p + 1) == 96) {
@@ -173,7 +175,8 @@ fun tokenize(src: String): Tokens {
       if (src.startsWith("columns", p)) {
         q = ws(p + 7)
         if (q > p + 7) {
-          if (src.startsWith("auto", q) && !isWord(src.charCodeAt(q + 4))) return put(T.COLUMNS, "-1", q + 4)
+          if (src.startsWith("auto", q) && !isWord(src.charCodeAt(q + 4)))
+            return put(T.COLUMNS, "-1", q + 4)
           val e = digits(q)
           if (e > q) return put(T.COLUMNS, src.jsSlice(q, e), e)
         }
@@ -246,7 +249,9 @@ fun tokenize(src: String): Tokens {
       return link()
     } else if (c == 40) {
       val d = src.charCodeAt(p + 1)
-      val len = if (d == 45 || d == 91) 2 else if (d == 40) (if (src.charCodeAt(p + 2) == 40) 3 else 2) else 1
+      val len =
+        if (d == 45 || d == 91) 2
+        else if (d == 40) (if (src.charCodeAt(p + 2) == 40) 3 else 2) else 1
       push(S.NODE)
       return emit(T.NODE_DSTART, p + len)
     } else if (c == 41 || c == 123) {
@@ -258,7 +263,10 @@ fun tokenize(src: String): Tokens {
     } else if (c == 91) {
       val d = src.charCodeAt(p + 1)
       push(S.NODE)
-      return emit(T.NODE_DSTART, if (d == 91 || d == 124 || d == 40 || d == 92 || d == 47) p + 2 else p + 1)
+      return emit(
+        T.NODE_DSTART,
+        if (d == 91 || d == 124 || d == 40 || d == 92 || d == 47) p + 2 else p + 1,
+      )
     } else if (c == 58) {
       val e = digits(p + 1)
       if (e > p + 1) return put(T.SIZE, src.jsSlice(p + 1, e), e)

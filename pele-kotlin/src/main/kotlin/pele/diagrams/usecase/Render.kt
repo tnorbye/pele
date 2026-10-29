@@ -2,6 +2,11 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.usecase
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 import pele.Config
 import pele.IconResolver
 import pele.RenderOptions
@@ -39,9 +44,9 @@ import pele.svg.fillUnder
 import pele.svg.hollowOn
 import pele.svg.inkFill
 import pele.svg.labelSvg
+import pele.svg.markCrossings
 import pele.svg.marker
 import pele.svg.markerTrim
-import pele.svg.markCrossings
 import pele.svg.num
 import pele.svg.paints
 import pele.svg.resolveStyle
@@ -52,16 +57,11 @@ import pele.svg.svgDocument
 import pele.svg.titleLabel
 import pele.text.Label
 import pele.text.Style
+import pele.text.TextMeasurer
 import pele.text.defaultMeasurer
 import pele.text.labelLine
 import pele.text.layoutLabel
 import pele.text.lineMiddle
-import pele.text.TextMeasurer
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sqrt
 
 private const val NODE_SEP = 32.0
 private const val EDGE_SEP = 16.0
@@ -113,7 +113,8 @@ private val RE_RELATIONSHIP = JsRegExp("""^default relationship relationship-\S+
 
 // A plain label is shown as written: no tags, no markdown, no `\n` breaks. Its markup characters
 // are handed to the label parser as character references, which it turns back into characters.
-private fun literal(text: String): String = text.jsReplace(RE_MARKUP) { m -> "&#${m.value.charCodeAt(0)};" }
+private fun literal(text: String): String =
+  text.jsReplace(RE_MARKUP) { m -> "&#${m.value.charCodeAt(0)};" }
 
 private fun text(
   raw: String?,
@@ -122,7 +123,15 @@ private fun text(
   size: Double,
   wrap: Double,
   base: Int = 0,
-): Label = layoutLabel(if (!raw.isNullOrEmpty() && !markdown) literal(raw) else raw, markdown, measurer, size, wrap, base)
+): Label =
+  layoutLabel(
+    if (!raw.isNullOrEmpty() && !markdown) literal(raw) else raw,
+    markdown,
+    measurer,
+    size,
+    wrap,
+    base,
+  )
 
 // The point of a node's outline on one of its four sides (0 top, 1 right, 2 bottom, 3 left),
 // `along` away from the middle of that side. Lines meet an actor at its figure, not at its label.
@@ -140,7 +149,8 @@ private fun anchor(view: View, c: CNode, side: Int, along: Double): Pair<Double,
     val span = (if (upright) view.h else view.w) / 2
     reach *= sqrt(max(1 - StrictMath.pow(along / span, 2.0), 0.0))
   }
-  return if (upright) Pair(c.x + sign * reach, c.y + middle + along) else Pair(c.x + along, c.y + sign * reach)
+  return if (upright) Pair(c.x + sign * reach, c.y + middle + along)
+  else Pair(c.x + along, c.y + sign * reach)
 }
 
 // How much of a side edges may spread over.
@@ -168,13 +178,11 @@ private fun attachEnds(cedges: List<CEdge>, cnodes: List<CNode>, views: List<Vie
     val dy = route[at + 1] - c.y
     val side: Int
     if (abs(abs(dy) - c.h / 2) < 0.5) side = if (dy < 0) 0 else 2
-    else if (abs(abs(dx) - c.w / 2) < 0.5) side = if (dx < 0) 3 else 1
-    else return
+    else if (abs(abs(dx) - c.w / 2) < 0.5) side = if (dx < 0) 3 else 1 else return
     val key = index * 4 + side
     val end = End(route, at, route[next + (if ((side and 1) != 0) 1 else 0)])
     val list = sides[key]
-    if (list != null) list.add(end)
-    else sides[key] = arrayListOf(end)
+    if (list != null) list.add(end) else sides[key] = arrayListOf(end)
   }
   for (e in cedges) {
     val last = e.route.size - 3
@@ -208,7 +216,15 @@ private fun extension(x: Double, y: Double, dx: Double, dy: Double, color: Strin
 
 private fun trim(type: String): Double = if (type == "extension") EXTENSION else markerTrim(type)
 
-private fun mark(type: String, x: Double, y: Double, dx: Double, dy: Double, color: String, stroke: String? = null): String =
+private fun mark(
+  type: String,
+  x: Double,
+  y: Double,
+  dx: Double,
+  dy: Double,
+  color: String,
+  stroke: String? = null,
+): String =
   if (type == "extension") extension(x, y, dx, dy, color)
   else if (stroke == null) marker(type, x, y, dx, dy, color)
   else marker(type, x, y, dx, dy, color, stroke)
@@ -224,23 +240,26 @@ private fun figure(view: View, icons: IconResolver?): String {
     radius = 8.0
     out =
       "<circle cy=\"-21\" r=\"8\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"$shape/>" +
-      "<path d=\"M-20,-9H20V0H5.5L20,15.5L12,25.5L0,12L-12,25.5L-20,15.5L-5.5,0H-20Z\" fill=\"var(--_bg)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"$shape/>"
+        "<path d=\"M-20,-9H20V0H5.5L20,15.5L12,25.5L0,12L-12,25.5L-20,15.5L-5.5,0H-20Z\" fill=\"var(--_bg)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"$shape/>"
   } else if (node.actorType == "awesome") {
-    out = "<path d=\"M0,-30A11,11 0 1 1 0,-8A11,11 0 1 1 0,-30ZM-20,25C-20,9 -12,-3 0,-3C12,-3 20,9 20,25C20,28 18,30 15,30H-15C-18,30 -20,28 -20,25Z\" fill=\"var(--_b)\"$shape/>"
+    out =
+      "<path d=\"M0,-30A11,11 0 1 1 0,-8A11,11 0 1 1 0,-30ZM-20,25C-20,9 -12,-3 0,-3C12,-3 20,9 20,25C20,28 18,30 15,30H-15C-18,30 -20,28 -20,25Z\" fill=\"var(--_b)\"$shape/>"
   } else if (node.actorType == "icon") {
     head = -14.0
     radius = 12.0
     out =
       "<rect x=\"-22\" y=\"-26\" width=\"44\" height=\"44\"${rounded(SHAPE_ATTRS + shape)}/>" +
-      "<svg class=\"pele-icon\" data-icon=\"${escText(node.icon ?: "")}\" x=\"-14\" y=\"-18\" width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">${
+        "<svg class=\"pele-icon\" data-icon=\"${escText(node.icon ?: "")}\" x=\"-14\" y=\"-18\" width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">${
         icons?.invoke(node.icon ?: "") ?: ""
       }</svg>"
   } else {
-    out = "<circle cy=\"-21\" r=\"9\"$SHAPE_ATTRS$shape/><path d=\"M0,-12V10M-14,-3H14M0,10L-12,30M0,10L12,30\"$line/>"
+    out =
+      "<circle cy=\"-21\" r=\"9\"$SHAPE_ATTRS$shape/><path d=\"M0,-12V10M-14,-3H14M0,10L-12,30M0,10L12,30\"$line/>"
   }
   if (node.business == true) {
     // The slash of a business actor: a chord across the lower right of the head.
-    out += "<path class=\"pele-business\" d=\"M${num(0.12 * radius)},${num(head + 0.99 * radius)}L${num(0.92 * radius)},${
+    out +=
+      "<path class=\"pele-business\" d=\"M${num(0.12 * radius)},${num(head + 0.99 * radius)}L${num(0.92 * radius)},${
       num(head - 0.39 * radius)
     }\"$line/>"
   }
@@ -253,7 +272,12 @@ fun renderUsecase(model: UsecaseModel, config: Config, options: RenderOptions): 
 }
 
 // `turned` draws a diagram that runs across as one that runs down.
-private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, turned: Boolean): Rendered {
+private fun draw(
+  model: UsecaseModel,
+  config: Config,
+  options: RenderOptions,
+  turned: Boolean,
+): Rendered {
   val graph = buildUsecaseGraph(model)
   val size = options.fontSize ?: 16.0
   val small = jsRound(size * 0.875)
@@ -270,12 +294,25 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
   graph.nodes.forEachIndexed { i, node -> index[node.id] = i }
 
   for (node in graph.nodes) {
-    val style = resolveStyle(if (node.cssStyles.size > 0) node.cssCompiledStyles + node.cssStyles else node.cssCompiledStyles)
+    val style =
+      resolveStyle(
+        if (node.cssStyles.size > 0) node.cssCompiledStyles + node.cssStyles
+        else node.cssCompiledStyles
+      )
     val base = (if (style.bold) Style.Bold else 0) or (if (style.italic) Style.Italic else 0)
     val fontSize = style.fontSize ?: size
     val markdown = node.labelType == "markdown"
-    val stereotype = text(if (!node.stereotype.isNullOrEmpty()) "«${node.stereotype}»" else node.stereotype, false, measurer, tiny, 200.0, base)
-    val view = View(node, Kind.Box, style, stereotype, stereotype, 0.0, 0.0, ArrayList(), 0.0, 0.0, 0)
+    val stereotype =
+      text(
+        if (!node.stereotype.isNullOrEmpty()) "«${node.stereotype}»" else node.stereotype,
+        false,
+        measurer,
+        tiny,
+        200.0,
+        base,
+      )
+    val view =
+      View(node, Kind.Box, style, stereotype, stereotype, 0.0, 0.0, ArrayList(), 0.0, 0.0, 0)
     val c: CNode
     if (node.isGroup) {
       view.kind = Kind.Boundary
@@ -285,7 +322,9 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
       c.isGroup = true
       c.padX = GROUP_PAD
       c.padBottom = GROUP_PAD
-      c.padTop = if (node.boundaryType == "package") titleH + 2 * TAB_PAD + 16 else if (titleH > 0) titleH + 16 else GROUP_PAD
+      c.padTop =
+        if (node.boundaryType == "package") titleH + 2 * TAB_PAD + 16
+        else if (titleH > 0) titleH + 16 else GROUP_PAD
       c.minW = view.label.width + 2 * GROUP_PAD
     } else {
       if (node.jsonRows != null) {
@@ -303,7 +342,12 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
         // The root of an empty object has a value and no key, and then there is no key column.
         if (view.keyW > 0) view.keyW += 2 * CELL_PAD
         view.headH = max(view.label.height, jsRound(fontSize * 1.5)) + ROW_PAD
-        view.w = jsMax(view.label.width + 2 * CELL_PAD, if (view.rows.size > 0) view.keyW + valueW + 2 * CELL_PAD else 0.0, 72.0)
+        view.w =
+          jsMax(
+            view.label.width + 2 * CELL_PAD,
+            if (view.rows.size > 0) view.keyW + valueW + 2 * CELL_PAD else 0.0,
+            72.0,
+          )
         view.h += view.headH
       } else if (!node.actorType.isNullOrEmpty()) {
         view.kind = Kind.Actor
@@ -311,12 +355,21 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
         view.w = jsMax(FIGURE_W, view.label.width, stereotype.width)
         view.h = FIGURE_H + FIGURE_GAP + stereotype.height + view.label.height
       } else {
-        view.label = text(node.label, markdown, measurer, if (node.shape == "note") small else fontSize, 180.0, base)
+        view.label =
+          text(
+            node.label,
+            markdown,
+            measurer,
+            if (node.shape == "note") small else fontSize,
+            180.0,
+            base,
+          )
         val tw = max(view.label.width, stereotype.width)
         val th = view.label.height + stereotype.height
         if (node.shape == "usecaseEllipse" || node.shape == "usecaseBusiness") {
           view.kind = Kind.Ellipse
-          // An oval needs more room around its text than a box, and a business oval room for its slash.
+          // An oval needs more room around its text than a box, and a business oval room for its
+          // slash.
           view.w = max(tw + 2 * node.padding + (if (node.business == true) 16 else 4), 88.0)
           view.h = max(th + 28, 48.0)
         } else if (node.shape == "note") {
@@ -345,7 +398,14 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
     val dst = index[edge.end]
     if (src == null || dst == null) continue
     val semantic = edge.relationshipType == "include" || edge.relationshipType == "extend"
-    val label = text(if (semantic) "«${edge.label}»" else edge.label, edge.labelType == "markdown", measurer, small, 200.0)
+    val label =
+      text(
+        if (semantic) "«${edge.label}»" else edge.label,
+        edge.labelType == "markdown",
+        measurer,
+        small,
+        200.0,
+      )
     if (src == dst) {
       // A self-relationship loops out across the flow, and the node's box grows to hold it.
       views[src].loops++
@@ -364,21 +424,22 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
         route = ArrayList(),
         labelX = 0.0,
         labelY = 0.0,
-      ),
+      )
     )
   }
 
-  val layout = compoundLayout(
-    cnodes,
-    cedges,
-    rootDir,
-    LayeredOptions(
-      nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
-      edgeSep = EDGE_SEP,
-      rankSep = numberOption(config, "rankSpacing", RANK_SEP),
-      portSep = 20.0,
-    ),
-  )
+  val layout =
+    compoundLayout(
+      cnodes,
+      cedges,
+      rootDir,
+      LayeredOptions(
+        nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
+        edgeSep = EDGE_SEP,
+        rankSep = numberOption(config, "rankSpacing", RANK_SEP),
+        portSep = 20.0,
+      ),
+    )
 
   val title = titleLabel(model.title, measurer, size, 4000.0)
   val titleHeight = if (title.height > 0) title.height + 12 else 0.0
@@ -414,7 +475,8 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
       val x = c.x - c.w / 2
       val y = c.y - c.h / 2
       if (paints(shape)) fills.add(Fill(doubleArrayOf(x, y, x + c.w, y + c.h), shape))
-      val box = " fill=\"var(--_a)\"${if (setsFill(shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"$shape"
+      val box =
+        " fill=\"var(--_a)\"${if (setsFill(shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"$shape"
       val titleAttrs = " class=\"pele-cluster-label\"$muted$textAttrs"
       val body: String
       if (node.boundaryType == "package") {
@@ -422,12 +484,18 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
         val tabH = view.label.height + 2 * TAB_PAD
         body =
           "<rect class=\"pele-boundary-tab\" x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(tabW)}\" height=\"${num(tabH)}\"$box/>" +
-          "<rect x=\"${num(x)}\" y=\"${num(y + tabH)}\" width=\"${num(c.w)}\" height=\"${num(c.h - tabH)}\"$box/>" +
-          labelSvg(view.label, x + tabW / 2, y + tabH / 2, titleAttrs, icons)
+            "<rect x=\"${num(x)}\" y=\"${num(y + tabH)}\" width=\"${num(c.w)}\" height=\"${num(c.h - tabH)}\"$box/>" +
+            labelSvg(view.label, x + tabW / 2, y + tabH / 2, titleAttrs, icons)
       } else {
         body =
           "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(c.w)}\" height=\"${num(c.h)}\"${rounded(box)}/>" +
-          labelSvg(view.label, titleX(c, view.label.width, crossings), y + 8 + view.label.height / 2, titleAttrs, icons)
+            labelSvg(
+              view.label,
+              titleX(c, view.label.width, crossings),
+              y + 8 + view.label.height / 2,
+              titleAttrs,
+              icons,
+            )
       }
       clusters += "<g class=\"pele-cluster pele-boundary$classes\" data-id=\"$id\">$body</g>"
       continue
@@ -441,8 +509,20 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
       val stereotypeY = top + FIGURE_H + FIGURE_GAP + view.stereotype.height / 2
       body =
         "<g class=\"pele-actor-figure\" transform=\"translate(0,${num(top + FIGURE_H / 2)})\">${figure(view, icons)}</g>" +
-        labelSvg(view.stereotype, 0.0, stereotypeY, " class=\"pele-stereotype\" font-size=\"${jsStr(tiny)}\" fill=\"var(--_m)\"", icons) +
-        labelSvg(view.label, 0.0, h / 2 - view.label.height / 2, " class=\"pele-label\"$textAttrs", icons)
+          labelSvg(
+            view.stereotype,
+            0.0,
+            stereotypeY,
+            " class=\"pele-stereotype\" font-size=\"${jsStr(tiny)}\" fill=\"var(--_m)\"",
+            icons,
+          ) +
+          labelSvg(
+            view.label,
+            0.0,
+            h / 2 - view.label.height / 2,
+            " class=\"pele-label\"$textAttrs",
+            icons,
+          )
     } else if (view.kind == Kind.Json) {
       kind = "pele-json"
       val x0 = -w / 2
@@ -453,15 +533,33 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
       for ((key, value) in view.rows) {
         val rowH = jsMax(key.height, value.height, jsRound(small * 1.5)) + ROW_PAD
         cells +=
-          labelSvg(key, x0 + CELL_PAD + key.width / 2, y + rowH / 2, " class=\"pele-json-key\"$muted", icons) +
-          leftLabel(value, x0 + view.keyW + CELL_PAD, y + rowH / 2, " class=\"pele-json-value\"$color$textAttrs", icons)
+          labelSvg(
+            key,
+            x0 + CELL_PAD + key.width / 2,
+            y + rowH / 2,
+            " class=\"pele-json-key\"$muted",
+            icons,
+          ) +
+            leftLabel(
+              value,
+              x0 + view.keyW + CELL_PAD,
+              y + rowH / 2,
+              " class=\"pele-json-value\"$color$textAttrs",
+              icons,
+            )
         y += rowH
       }
       body =
         "<rect x=\"${num(x0)}\" y=\"${num(-h / 2)}\" width=\"${num(w)}\" height=\"${num(h)}\"${rounded(SHAPE_ATTRS + shape)}/>" +
-        "<path class=\"pele-json-lines\" d=\"$lines\" fill=\"none\" stroke=\"var(--_b)\"${view.style.line}/>" +
-        labelSvg(view.label, 0.0, -h / 2 + view.headH / 2, " class=\"pele-label\" font-weight=\"var(--_hw)\"$color$textAttrs", icons) +
-        "<g font-size=\"${jsStr(small)}\">$cells</g>"
+          "<path class=\"pele-json-lines\" d=\"$lines\" fill=\"none\" stroke=\"var(--_b)\"${view.style.line}/>" +
+          labelSvg(
+            view.label,
+            0.0,
+            -h / 2 + view.headH / 2,
+            " class=\"pele-label\" font-weight=\"var(--_hw)\"$color$textAttrs",
+            icons,
+          ) +
+          "<g font-size=\"${jsStr(small)}\">$cells</g>"
     } else {
       val labelY = view.stereotype.height / 2
       var outline: String
@@ -469,11 +567,13 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
         kind = "pele-usecase"
         outline = "<ellipse rx=\"${num(w / 2)}\" ry=\"${num(h / 2)}\"$SHAPE_ATTRS$shape/>"
         if (node.business == true) {
-          // The slash of a business use case, cutting off the right end of the oval beside the text.
+          // The slash of a business use case, cutting off the right end of the oval beside the
+          // text.
           val from = w / 2 - 15
           val to = w / 2 - 5
           val arc = { at: Double -> (h / 2) * sqrt(1 - StrictMath.pow(at / (w / 2), 2.0)) }
-          outline += "<path class=\"pele-business\" d=\"M${num(from)},${num(arc(from))}L${num(to)},${num(-arc(to))}\" fill=\"none\" stroke=\"var(--_b)\"${view.style.line}/>"
+          outline +=
+            "<path class=\"pele-business\" d=\"M${num(from)},${num(arc(from))}L${num(to)},${num(-arc(to))}\" fill=\"none\" stroke=\"var(--_b)\"${view.style.line}/>"
         }
       } else if (node.shape == "note") {
         kind = "pele-note"
@@ -481,29 +581,31 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
         val b = h / 2
         outline =
           "<path d=\"M${num(-r)},${num(-b)}H${num(r - FOLD)}L${num(r)},${num(FOLD - b)}V${num(b)}H${num(-r)}Z\" fill=\"var(--_a)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"$shape/>" +
-          "<path d=\"M${num(r - FOLD)},${num(-b)}V${num(FOLD - b)}H${num(r)}\" fill=\"none\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"${view.style.line}/>"
+            "<path d=\"M${num(r - FOLD)},${num(-b)}V${num(FOLD - b)}H${num(r)}\" fill=\"none\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"${view.style.line}/>"
       } else {
         kind = "pele-usecase"
-        outline = "<rect x=\"${num(-w / 2)}\" y=\"${num(-h / 2)}\" width=\"${num(w)}\" height=\"${num(h)}\"${rounded(SHAPE_ATTRS + shape)}/>"
+        outline =
+          "<rect x=\"${num(-w / 2)}\" y=\"${num(-h / 2)}\" width=\"${num(w)}\" height=\"${num(h)}\"${rounded(SHAPE_ATTRS + shape)}/>"
       }
       body =
         outline +
-        labelSvg(
-          view.stereotype,
-          0.0,
-          -view.label.height / 2,
-          " class=\"pele-stereotype\" font-size=\"${jsStr(tiny)}\"$muted",
-          icons,
-        ) +
-        labelSvg(
-          view.label,
-          0.0,
-          labelY,
-          " class=\"pele-label\"${if (node.shape == "note") " font-size=\"${jsStr(small)}\"" else ""}$color$textAttrs",
-          icons,
-        )
+          labelSvg(
+            view.stereotype,
+            0.0,
+            -view.label.height / 2,
+            " class=\"pele-stereotype\" font-size=\"${jsStr(tiny)}\"$muted",
+            icons,
+          ) +
+          labelSvg(
+            view.label,
+            0.0,
+            labelY,
+            " class=\"pele-label\"${if (node.shape == "note") " font-size=\"${jsStr(small)}\"" else ""}$color$textAttrs",
+            icons,
+          )
     }
-    nodesOut += "<g class=\"pele-node $kind$classes\" data-id=\"$id\" transform=\"translate(${num(c.x)},${num(c.y)})\">$body</g>"
+    nodesOut +=
+      "<g class=\"pele-node $kind$classes\" data-id=\"$id\" transform=\"translate(${num(c.x)},${num(c.y)})\">$body</g>"
   }
 
   var casings = ""
@@ -515,7 +617,9 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
     val edge = drawn[i]
     val label = edgeLabels[i]
     val style =
-      if (edge.style.size > 0 || edge.cssCompiledStyles.size > 0) resolveStyle(edge.cssCompiledStyles + edge.style) else null
+      if (edge.style.size > 0 || edge.cssCompiledStyles.size > 0)
+        resolveStyle(edge.cssCompiledStyles + edge.style)
+      else null
     val startType = edge.arrowTypeStart
     val endType = edge.arrowTypeEnd
     val path: EdgePath
@@ -544,17 +648,19 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
       val sy = if (sideways) ay + uy * st else ay - uy * st
       val ex = bx + ux * et
       val ey = by + uy * et
-      path = EdgePath(
-        d = "M${num(sx)},${num(sy)}C${out(ax, ay, -1.0, reach)} ${out(bx, by, 1.0, reach)} ${num(ex)},${num(ey)}",
-        sx = ax,
-        sy = ay,
-        sdx = if (sideways) ux else -ux,
-        sdy = if (sideways) -uy else uy,
-        ex = bx,
-        ey = by,
-        edx = -ux,
-        edy = -uy,
-      )
+      path =
+        EdgePath(
+          d =
+            "M${num(sx)},${num(sy)}C${out(ax, ay, -1.0, reach)} ${out(bx, by, 1.0, reach)} ${num(ex)},${num(ey)}",
+          sx = ax,
+          sy = ay,
+          sdx = if (sideways) ux else -ux,
+          sdy = if (sideways) -uy else uy,
+          ex = bx,
+          ey = by,
+          edx = -ux,
+          edy = -uy,
+        )
       if (sideways) {
         ce.labelX = c.x
         ce.labelY = max(ay, by) + reach * 0.75 + 6 + label.height / 2
@@ -566,47 +672,74 @@ private fun draw(model: UsecaseModel, config: Config, options: RenderOptions, tu
       if (ce.route.size < 6) continue
       path = routePath(ce.route, null, trim(startType), trim(endType))
     }
-    val under = fillUnder(path.d, doubleArrayOf(path.sx, path.sy, path.ex, path.ey), fills, path.tokens)
+    val under =
+      fillUnder(path.d, doubleArrayOf(path.sx, path.sy, path.ex, path.ey), fills, path.tokens)
     val over: String? = if (under is Fill) edgeInk(under, style?.line ?: "") else under as String?
-    val color = if (!over.isNullOrEmpty()) over else if (!style?.stroke.isNullOrEmpty()) esc(style!!.stroke!!) else "var(--_l)"
+    val color =
+      if (!over.isNullOrEmpty()) over
+      else if (!style?.stroke.isNullOrEmpty()) esc(style!!.stroke!!) else "var(--_l)"
     if (over == "") {
       val bg = "var(--_bg)"
-      casings += casing(
-        path.d,
-        mark(startType, path.sx, path.sy, path.sdx, path.sdy, bg, bg) + mark(endType, path.ex, path.ey, path.edx, path.edy, bg, bg),
-        style?.line ?: "",
-      )
+      casings +=
+        casing(
+          path.d,
+          mark(startType, path.sx, path.sy, path.sdx, path.sdy, bg, bg) +
+            mark(endType, path.ex, path.ey, path.edx, path.edy, bg, bg),
+          style?.line ?: "",
+        )
     }
     // Mermaid animates these dashes. A still picture keeps the dashes.
-    val dashes = if (edge.internal) "2 3" else if (edge.pattern == "dotted") "5 4" else if (edge.animate) "9 5" else ""
-    val marks = mark(startType, path.sx, path.sy, path.sdx, path.sdy, color) + mark(endType, path.ex, path.ey, path.edx, path.edy, color)
+    val dashes =
+      if (edge.internal) "2 3"
+      else if (edge.pattern == "dotted") "5 4" else if (edge.animate) "9 5" else ""
+    val marks =
+      mark(startType, path.sx, path.sy, path.sdx, path.sdy, color) +
+        mark(endType, path.ex, path.ey, path.edx, path.edy, color)
     edgesOut +=
       "<g class=\"pele-edge pele-${edge.relationshipType}${classNames(edge.classes.jsReplace(RE_RELATIONSHIP, ""))}\" data-id=\"${escText(edge.id)}\"${if (!over.isNullOrEmpty()) " stroke=\"$over\"" else ""}${style?.line ?: ""}>" +
-      "<path d=\"${path.d}\"${if (dashes.isNotEmpty()) " stroke-dasharray=\"$dashes\"" else ""}/>" +
-      (if (under != null && !over.isNullOrEmpty()) hollowOn(marks, under as Fill) else marks) +
-      "</g>"
+        "<path d=\"${path.d}\"${if (dashes.isNotEmpty()) " stroke-dasharray=\"$dashes\"" else ""}/>" +
+        (if (under != null && !over.isNullOrEmpty()) hollowOn(marks, under as Fill) else marks) +
+        "</g>"
     if (label.width > 0) {
       val x = ce.labelX
       val y = ce.labelY
       val semantic = edge.relationshipType == "include" || edge.relationshipType == "extend"
-      labelsOut += edgeLabelSvg(edge.id, label, x, y, (if (semantic) " fill=\"var(--_m)\"" else "") + (style?.text ?: ""), icons)
+      labelsOut +=
+        edgeLabelSvg(
+          edge.id,
+          label,
+          x,
+          y,
+          (if (semantic) " fill=\"var(--_m)\"" else "") + (style?.text ?: ""),
+          icons,
+        )
     }
   }
 
-  val svg = svgDocument(
-    "usecase",
-    width,
-    height,
-    size,
-    options,
-    model,
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
-      casingsSvg(casings) +
-      (if (edgesOut.isNotEmpty()) "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>" else "") +
-      (if (labelsOut.isNotEmpty()) "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>" else "") +
-      "<g class=\"pele-nodes\">$nodesOut</g>",
-  )
+  val svg =
+    svgDocument(
+      "usecase",
+      width,
+      height,
+      size,
+      options,
+      model,
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
+        casingsSvg(casings) +
+        (if (edgesOut.isNotEmpty())
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>"
+        else "") +
+        (if (labelsOut.isNotEmpty())
+          "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>"
+        else "") +
+        "<g class=\"pele-nodes\">$nodesOut</g>",
+    )
 
   return Rendered(svg, width, height, ArrayList())
 }
@@ -618,7 +751,8 @@ private fun titleX(c: CNode, width: Double, crossings: Map<Double, List<Double>>
   if (width == 0.0 || xs == null) return c.x
   val left = c.x - c.w / 2 + 6
   val right = c.x + c.w / 2 - 6
-  val cuts = xs.filter { x -> x > left && x < right }.sortedWith { a, b -> cmp(a - b) }.toMutableList()
+  val cuts =
+    xs.filter { x -> x > left && x < right }.sortedWith { a, b -> cmp(a - b) }.toMutableList()
   cuts.add(right)
   val need = width / 2 + 6
   var best = c.x
@@ -641,11 +775,24 @@ private fun titleX(c: CNode, width: Double, crossings: Map<Double, List<Double>>
   return best
 }
 
-private fun leftLabel(label: Label, x: Double, cy: Double, attrs: String, icons: IconResolver?): String {
+private fun leftLabel(
+  label: Label,
+  x: Double,
+  cy: Double,
+  attrs: String,
+  icons: IconResolver?,
+): String {
   if (label.lines.size < 2) return labelSvg(label, x + label.width / 2, cy, attrs, icons)
   var out = ""
   for (i in label.lines.indices) {
-    out += labelSvg(labelLine(label, i), x + label.widths[i] / 2, cy - label.height / 2 + lineMiddle(label, i), attrs, icons)
+    out +=
+      labelSvg(
+        labelLine(label, i),
+        x + label.widths[i] / 2,
+        cy - label.height / 2 + lineMiddle(label, i),
+        attrs,
+        icons,
+      )
   }
   return out
 }

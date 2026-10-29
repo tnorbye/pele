@@ -44,7 +44,13 @@ fun parseGenericTypes(input: String): String {
   var i = 0
   while (i < sets.size) {
     var set = sets[i]
-    if (set == "," && i > 0 && i + 1 < sets.size && tildes(sets[i - 1]) == 1 && tildes(sets[i + 1]) == 1) {
+    if (
+      set == "," &&
+        i > 0 &&
+        i + 1 < sets.size &&
+        tildes(sets[i - 1]) == 1 &&
+        tildes(sets[i + 1]) == 1
+    ) {
       set = sets[i - 1] + "," + sets[i + 1]
       i++
       output.removeAt(output.size - 1)

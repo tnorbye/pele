@@ -47,7 +47,9 @@ fun buildHierarchy(items: List<TreemapItem>): List<TreemapNode> {
     if (item.cssCompiledStyles != null) node.cssCompiledStyles = item.cssCompiledStyles
     if (leaf && item.value != null) node.value = item.value
 
-    while (stack.size > 0 && stack[stack.size - 1].level >= item.level) stack.removeAt(stack.size - 1)
+    while (stack.size > 0 && stack[stack.size - 1].level >= item.level) stack.removeAt(
+      stack.size - 1
+    )
     if (stack.size == 0) roots.add(node) else stack[stack.size - 1].node.children!!.add(node)
     if (!leaf) stack.add(Level(node, item.level))
   }
@@ -70,7 +72,11 @@ fun buildTreemap(ast: TreemapAst, title: String?): TreemapModel {
       classes[row.className] = styles
     }
     // An escaped comma stays in the value; the others separate declarations.
-    val text = (row.styleText ?: "").jsReplace(RE_ESCAPED_COMMA, "§§§").jsReplace(RE_COMMA, ";").jsReplace(RE_MARK, ",")
+    val text =
+      (row.styleText ?: "")
+        .jsReplace(RE_ESCAPED_COMMA, "§§§")
+        .jsReplace(RE_COMMA, ";")
+        .jsReplace(RE_MARK, ",")
     for (style in text.jsSplit(";")) styles.add(style)
   }
 
@@ -87,15 +93,17 @@ fun buildTreemap(ast: TreemapAst, title: String?): TreemapModel {
         value = if (item is LeafAst) item.value else null,
         classSelector = item.classSelector,
         cssCompiledStyles = if (styles != null && styles.size > 0) styles else null,
-      ),
+      )
     )
   }
 
   return TreemapModel(
     type = "treemap",
     title = if (!ast.title.isNullOrEmpty()) ast.title else title,
-    accTitle = if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
-    accDescr = if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
+    accTitle =
+      if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
+    accDescr =
+      if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
     roots = buildHierarchy(items),
     classes = classes,
   )

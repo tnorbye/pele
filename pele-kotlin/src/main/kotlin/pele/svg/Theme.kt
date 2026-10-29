@@ -32,7 +32,8 @@ fun setsFill(shape: String): Boolean = RE_SETS_FILL.test(shape)
 
 fun rounded(attrs: String): String {
   val at = attrs.indexOf(" style=\"")
-  return if (at < 0) attrs + ROUNDED else "${attrs.jsSlice(0, at + 8)}rx:var(--_r);${attrs.jsSlice(at + 8)}"
+  return if (at < 0) attrs + ROUNDED
+  else "${attrs.jsSlice(0, at + 8)}rx:var(--_r);${attrs.jsSlice(at + 8)}"
 }
 
 // The color of what a diagram marks as critical. It is not one of the series colors, as a theme
@@ -40,10 +41,12 @@ fun rounded(attrs: String): String {
 const val CRITICAL = "var(--pele-critical,#e45756)"
 
 // A list of font names, quoted or not, and nothing that could end the declaration it is put in.
-private const val FAMILY = """(?:"[^"'\\\n<>{}();:@]*"|'[^"'\\\n<>{}();:@]*'|[\p{L}\p{N}_-][\p{L}\p{N}_ .-]*)"""
+private const val FAMILY =
+  """(?:"[^"'\\\n<>{}();:@]*"|'[^"'\\\n<>{}();:@]*'|[\p{L}\p{N}_-][\p{L}\p{N}_ .-]*)"""
 private val RE_FAMILIES = JsRegExp("""^\s*$FAMILY(?:\s*,\s*$FAMILY)*\s*$""", "u")
 
-private fun families(list: String?, generic: String): String = if (!list.isNullOrEmpty() && RE_FAMILIES.test(list)) list else generic
+private fun families(list: String?, generic: String): String =
+  if (!list.isNullOrEmpty() && RE_FAMILIES.test(list)) list else generic
 
 // The fonts the labels were measured in are the ones they are drawn in, unless the page names
 // others. The rest of what text inherits is pinned, as none of it was measured.
@@ -52,34 +55,37 @@ fun fontStyle(size: Double, family: String?, mono: String?): String =
     "letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;" +
     "font-family:var(--pele-font,${families(family, "sans-serif")})"
 
-private val SHAPE_PROPS = setOf(
-  "fill",
-  "fill-opacity",
-  "stroke",
-  "stroke-width",
-  "stroke-dasharray",
-  "stroke-dashoffset",
-  "stroke-linecap",
-  "stroke-linejoin",
-  "stroke-opacity",
-  "opacity",
-  "rx",
-  "ry",
-)
+private val SHAPE_PROPS =
+  setOf(
+    "fill",
+    "fill-opacity",
+    "stroke",
+    "stroke-width",
+    "stroke-dasharray",
+    "stroke-dashoffset",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-opacity",
+    "opacity",
+    "rx",
+    "ry",
+  )
 
-private val TEXT_PROPS = setOf(
-  "color",
-  "font-size",
-  "font-family",
-  "font-weight",
-  "font-style",
-  "text-decoration",
-  "letter-spacing",
-  "word-spacing",
-  "opacity",
-)
+private val TEXT_PROPS =
+  setOf(
+    "color",
+    "font-size",
+    "font-family",
+    "font-weight",
+    "font-style",
+    "text-decoration",
+    "letter-spacing",
+    "word-spacing",
+    "opacity",
+  )
 
-private val RE_UNSAFE = JsRegExp("""url\s*\(|expression\s*\(|javascript:|[<>{};\\]|@import|image-set|\/\*""", "i")
+private val RE_UNSAFE =
+  JsRegExp("""url\s*\(|expression\s*\(|javascript:|[<>{};\\]|@import|image-set|\/\*""", "i")
 
 class ResolvedStyle(
   val shape: String,
@@ -91,15 +97,16 @@ class ResolvedStyle(
   val fontSize: Double?,
 )
 
-private val NONE = ResolvedStyle(
-  shape = "",
-  line = "",
-  text = "",
-  stroke = null,
-  bold = false,
-  italic = false,
-  fontSize = null,
-)
+private val NONE =
+  ResolvedStyle(
+    shape = "",
+    line = "",
+    text = "",
+    stroke = null,
+    bold = false,
+    italic = false,
+    fontSize = null,
+  )
 
 private val RE_IMPORTANT = JsRegExp("!important", "gi")
 private val RE_PX = JsRegExp("""^[\d.]+(px)?$""")
@@ -113,10 +120,7 @@ fun resolveStyle(declarations: List<String>): ResolvedStyle {
     val at = decl.indexOf(':')
     if (at <= 0) continue
     val prop = decl.jsSlice(0, at).jsTrim().lowercase()
-    val value = decl
-      .jsSlice(at + 1)
-      .jsReplace(RE_IMPORTANT, "")
-      .jsTrim()
+    val value = decl.jsSlice(at + 1).jsReplace(RE_IMPORTANT, "").jsTrim()
     if (value == "" || RE_UNSAFE.test(value) || hasInvalidXml(value)) continue
     if (prop in SHAPE_PROPS) shape[prop] = value
     if (prop in TEXT_PROPS) text[if (prop == "color") "fill" else prop] = value
@@ -138,7 +142,10 @@ fun resolveStyle(declarations: List<String>): ResolvedStyle {
     line = if (lineCss.isNotEmpty()) " style=\"${esc(lineCss.toString())}\"" else "",
     text = if (textCss.isNotEmpty()) " style=\"${esc(textCss.toString())}\"" else "",
     stroke = shape["stroke"],
-    bold = weight == "bold" || weight == "bolder" || (if (weight == null) Double.NaN else jsNumber(weight)) >= 600,
+    bold =
+      weight == "bold" ||
+        weight == "bolder" ||
+        (if (weight == null) Double.NaN else jsNumber(weight)) >= 600,
     italic = text["font-style"] == "italic",
     fontSize = if (px != null && px > 0 && px <= 200) px else null,
   )
@@ -151,7 +158,8 @@ fun classNames(raw: String): String {
   return if (cleaned == "") "" else " $cleaned"
 }
 
-private val SERIES = listOf("#4c78a8", "#f58518", "#54a24b", "#e45756", "#72b7b2", "#eeca3b", "#b279a2", "#9d755d")
+private val SERIES =
+  listOf("#4c78a8", "#f58518", "#54a24b", "#e45756", "#72b7b2", "#eeca3b", "#b279a2", "#9d755d")
 
 // Color for the nth data series in a chart, cycling through eight tokens.
 fun seriesColor(index: Int): String {

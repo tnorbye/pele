@@ -50,7 +50,8 @@ fun cleanupComments(textIn: String, steps: MutableList<List<Edit>>? = null): Str
 
 private val RE_CRLF = JsRegExp("""\r\n?""", "g")
 
-fun normalizeLineBreaks(text: String): String = if (text.contains('\r')) text.jsReplace(RE_CRLF, "\n") else text
+fun normalizeLineBreaks(text: String): String =
+  if (text.contains('\r')) text.jsReplace(RE_CRLF, "\n") else text
 
 private fun isLineBreak(ch: Char?): Boolean = ch == '\n' || ch == '\r'
 
@@ -60,7 +61,8 @@ private fun charAt(s: String, i: Int): Char? = if (i >= 0 && i < s.length) s[i] 
 
 private class FrontMatter(val indent: String, val body: String, val length: Int)
 
-// Finds a `---` fenced YAML block at the start of the text the way Mermaid's front matter regex does.
+// Finds a `---` fenced YAML block at the start of the text the way Mermaid's front matter regex
+// does.
 private fun matchFrontMatter(text: String): FrontMatter? {
   var cursor = 0
   while (cursor < text.length && isSpace(text[cursor]) && !isLineBreak(text[cursor])) cursor++
@@ -118,11 +120,9 @@ private fun matchFrontMatter(text: String): FrontMatter? {
   return null
 }
 
-@Suppress("UNCHECKED_CAST")
-fun isRecord(value: Any?): Boolean = value is MutableMap<*, *>
+@Suppress("UNCHECKED_CAST") fun isRecord(value: Any?): Boolean = value is MutableMap<*, *>
 
-@Suppress("UNCHECKED_CAST")
-private fun asConfig(value: Any?): Config = value as Config
+@Suppress("UNCHECKED_CAST") private fun asConfig(value: Any?): Config = value as Config
 
 private fun merge(target: Config, source: Config): Config {
   for (key in jsKeys(source)) {
@@ -161,7 +161,13 @@ internal fun directiveMatches(text: String): List<JsMatch> {
     val body = if (word == null) text.substring(start, end) else null
     while (end < text.length && isSpace(text[end])) end++
     if (text.startsWith("}%%", end)) end += 3
-    matches.add(JsMatch(head.index, text, listOf(text.substring(head.index, end), head[1], head[2], word?.value, body)))
+    matches.add(
+      JsMatch(
+        head.index,
+        text,
+        listOf(text.substring(head.index, end), head[1], head[2], word?.value, body),
+      )
+    )
     at = end
   }
   return matches
@@ -200,9 +206,10 @@ fun preprocess(source: String, steps: MutableList<List<Edit>>? = null): Preproce
   // A tag needs a closing bracket, so nothing after the last one can match.
   val lastClose = if (text.contains('<')) text.lastIndexOf('>') else -1
   if (lastClose > 0) {
-    text = text.substring(0, lastClose + 1).jsReplace(RE_HTML_TAG) { m ->
-      "<" + m[1] + m[2]!!.jsReplace(RE_ATTR, "='$1'") + ">"
-    } + text.substring(lastClose + 1)
+    text =
+      text.substring(0, lastClose + 1).jsReplace(RE_HTML_TAG) { m ->
+        "<" + m[1] + m[2]!!.jsReplace(RE_ATTR, "='$1'") + ">"
+      } + text.substring(lastClose + 1)
   }
 
   val config: Config = LinkedHashMap()
@@ -211,13 +218,14 @@ fun preprocess(source: String, steps: MutableList<List<Edit>>? = null): Preproce
 
   val front = if (text.contains("---")) matchFrontMatter(text) else null
   if (front != null) {
-    val body = if (front.indent.isNotEmpty()) {
-      front.body
-        .jsSplit("\n")
-        .joinToString("\n") { line -> if (line.startsWith(front.indent)) line.substring(front.indent.length) else line }
-    } else {
-      front.body
-    }
+    val body =
+      if (front.indent.isNotEmpty()) {
+        front.body.jsSplit("\n").joinToString("\n") { line ->
+          if (line.startsWith(front.indent)) line.substring(front.indent.length) else line
+        }
+      } else {
+        front.body
+      }
     val parsed: YamlValue
     try {
       parsed = parseYaml(body)
@@ -229,7 +237,9 @@ fun preprocess(source: String, steps: MutableList<List<Edit>>? = null): Preproce
       if (isTruthy(p["title"])) title = jsString(p["title"])
       if (isRecord(p["config"])) merge(config, asConfig(p["config"]))
       if (isTruthy(p["displayMode"])) {
-        val gantt = if (isRecord(config["gantt"])) asConfig(config["gantt"]) else LinkedHashMap<String, YamlValue>().also { config["gantt"] = it }
+        val gantt =
+          if (isRecord(config["gantt"])) asConfig(config["gantt"])
+          else LinkedHashMap<String, YamlValue>().also { config["gantt"] = it }
         gantt["displayMode"] = jsString(p["displayMode"])
       }
     }
@@ -260,7 +270,11 @@ private fun recording(steps: MutableList<List<Edit>>?): MutableList<Edit>? {
 // Does what Mermaid's `text.replace(/keyword.*:\S*#.*;/g, drop the last character)` does:
 // on a line where the keyword is followed by a colon, a color-like `#`, and later a semicolon,
 // the last semicolon goes. Mermaid's regex backtracks without bound; this is one pass.
-private fun dropColorSemicolons(text: String, keyword: String, steps: MutableList<List<Edit>>?): String {
+private fun dropColorSemicolons(
+  text: String,
+  keyword: String,
+  steps: MutableList<List<Edit>>?,
+): String {
   val edits = recording(steps)
   var from = text.indexOf(keyword)
   if (from == -1) return text

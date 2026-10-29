@@ -18,7 +18,8 @@ private const val CAP = 6.0
 private const val SHAPE = " fill=\"var(--_s)\" stroke=\"var(--_b)\""
 private const val LINE = " fill=\"none\" stroke=\"var(--_b)\""
 
-private val KINDS = setOf("participant", "actor", "boundary", "control", "entity", "database", "collections", "queue")
+private val KINDS =
+  setOf("participant", "actor", "boundary", "control", "entity", "database", "collections", "queue")
 private val FIGURES = setOf("actor", "boundary", "control", "entity", "database")
 
 class ActorSize(val w: Double, val h: Double)
@@ -28,9 +29,18 @@ fun actorKind(type: String): String = if (KINDS.contains(type)) type else "parti
 // A figure stands above its label. The other kinds hold the label inside.
 fun isFigure(kind: String): Boolean = FIGURES.contains(kind)
 
-fun actorSize(kind: String, label: Label, minW: Double, minH: Double, paddingX: Double = PAD_X): ActorSize {
+fun actorSize(
+  kind: String,
+  label: Label,
+  minW: Double,
+  minH: Double,
+  paddingX: Double = PAD_X,
+): ActorSize {
   if (isFigure(kind)) {
-    return ActorSize(maxOf(40.0, label.width + 8), GLYPH + (if (label.height > 0) GLYPH_GAP + label.height else 0.0))
+    return ActorSize(
+      maxOf(40.0, label.width + 8),
+      GLYPH + (if (label.height > 0) GLYPH_GAP + label.height else 0.0),
+    )
   }
   val extra = if (kind == "collections") STACK else if (kind == "queue") 2 * CAP else 0.0
   return ActorSize(
@@ -46,7 +56,7 @@ private fun figure(kind: String, cx: Double, top: Double): String {
     "actor" ->
       return "<circle cx=\"$x\" cy=\"${y(7.0)}\" r=\"6\"$SHAPE/>" +
         "<path d=\"M$x,${y(13.0)}V${y(24.0)}M${num(cx - 10)},${y(17.0)}H${num(cx + 10)}M${num(cx - 8)},${y(34.0)}L$x,${y(24.0)}L${num(
-          cx + 8,
+          cx + 8
         )},${y(34.0)}\"$LINE/>"
     "boundary" ->
       return "<path d=\"M${num(cx - 19)},${y(6.0)}V${y(28.0)}M${num(cx - 19)},${y(17.0)}H${num(cx - 8)}\"$LINE/>" +
@@ -55,7 +65,8 @@ private fun figure(kind: String, cx: Double, top: Double): String {
       return "<circle cx=\"$x\" cy=\"${y(21.0)}\" r=\"11\"$SHAPE/>" +
         "<path d=\"M${num(cx + 5)},${y(5.0)}L${num(cx - 1)},${y(10.0)}L${num(cx + 5)},${y(15.0)}\"$LINE/>"
     "entity" ->
-      return "<circle cx=\"$x\" cy=\"${y(15.0)}\" r=\"11\"$SHAPE/>" + "<path d=\"M${num(cx - 11)},${y(30.0)}H${num(cx + 11)}\"$LINE/>"
+      return "<circle cx=\"$x\" cy=\"${y(15.0)}\" r=\"11\"$SHAPE/>" +
+        "<path d=\"M${num(cx - 11)},${y(30.0)}H${num(cx + 11)}\"$LINE/>"
     else -> {
       val l = num(cx - 14)
       val r = num(cx + 14)
@@ -80,14 +91,17 @@ fun drawActor(
   val h = size.h
   val text = " class=\"pele-label\""
   if (isFigure(kind)) {
-    return figure(kind, cx, top) + labelSvg(label, cx, top + GLYPH + GLYPH_GAP + label.height / 2, text + ink, icons)
+    return figure(kind, cx, top) +
+      labelSvg(label, cx, top + GLYPH + GLYPH_GAP + label.height / 2, text + ink, icons)
   }
   val left = cx - w / 2
   if (kind == "collections") {
     val bw = w - STACK
     val bh = h - STACK
-    val back = "<rect x=\"${num(left + STACK)}\" y=\"${num(top)}\" width=\"${num(bw)}\" height=\"${num(bh)}\"$SHAPE$ROUNDED/>"
-    val front = "<rect x=\"${num(left)}\" y=\"${num(top + STACK)}\" width=\"${num(bw)}\" height=\"${num(bh)}\"$SHAPE$ROUNDED/>"
+    val back =
+      "<rect x=\"${num(left + STACK)}\" y=\"${num(top)}\" width=\"${num(bw)}\" height=\"${num(bh)}\"$SHAPE$ROUNDED/>"
+    val front =
+      "<rect x=\"${num(left)}\" y=\"${num(top + STACK)}\" width=\"${num(bw)}\" height=\"${num(bh)}\"$SHAPE$ROUNDED/>"
     return back + front + labelSvg(label, left + bw / 2, top + STACK + bh / 2, text, icons)
   }
   if (kind == "queue") {

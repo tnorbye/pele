@@ -38,7 +38,9 @@ class PreprocessResult(
   val columns: Map<Int, (Int) -> Int>,
 )
 
-fun isBoxDrawingFormat(lines: List<String>): Boolean = lines.any { line -> ALL_BOX_CHARS.test(line) }
+fun isBoxDrawingFormat(lines: List<String>): Boolean = lines.any { line ->
+  ALL_BOX_CHARS.test(line)
+}
 
 private fun inferSegmentWidth(contentLines: List<String>): Int {
   for (line in contentLines) {
@@ -63,7 +65,11 @@ fun lineStart(text: String, line: Int): Int {
 
 private fun fail(input: String, index: Int, message: String): Nothing {
   val line = locate(input, lineStart(input, index + 1)).line
-  throw PeleError("Line $line: $message", PeleErrorCode.SYNTAX, PeleErrorInfo(type = "treeView", line = line))
+  throw PeleError(
+    "Line $line: $message",
+    PeleErrorCode.SYNTAX,
+    PeleErrorInfo(type = "treeView", line = line),
+  )
 }
 
 // Undo four-space tab expansion.
@@ -92,7 +98,9 @@ fun preprocessBoxDrawing(input: String): PreprocessResult {
   }
   if (keywordIdx == -1) return PreprocessResult(input, lineMap, columns)
 
-  val passes = { line: String -> line.jsTrim() == "" || COMMENT_LINE.test(line) || METADATA_LINE.test(line) }
+  val passes = { line: String ->
+    line.jsTrim() == "" || COMMENT_LINE.test(line) || METADATA_LINE.test(line)
+  }
 
   val contentLines = ArrayList<String>()
   for (i in keywordIdx + 1 until lines.size) {
@@ -127,7 +135,12 @@ fun preprocessBoxDrawing(input: String): PreprocessResult {
       while (pos < normalized.length && DASH_CHAR.test(normalized[pos].toString())) pos++
       while (pos < normalized.length && normalized[pos] == ' ') pos++
       val content = normalized.jsSlice(pos).jsTrimEnd()
-      if (content.isEmpty()) fail(input, i, "Empty node — expected a filename or directory name after the box-drawing prefix")
+      if (content.isEmpty())
+        fail(
+          input,
+          i,
+          "Empty node — expected a filename or directory name after the box-drawing prefix",
+        )
       val indent = INDENT_UNIT.repeat(depth)
       val endPos = pos
       keep(indent + content, i) { at -> beforeTabs(line, endPos + maxOf(at - indent.length, 0)) }

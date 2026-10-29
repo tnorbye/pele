@@ -2,6 +2,8 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.sequence
 
+import kotlin.math.ceil
+import kotlin.math.floor
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -30,8 +32,6 @@ import pele.text.Style
 import pele.text.TextMeasurer
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.ceil
-import kotlin.math.floor
 
 private object Head {
   const val None = 0
@@ -51,43 +51,45 @@ private class LineStyle(
   val bottom: Boolean,
 )
 
-private val STYLES: Array<LineStyle?> = arrayOfNulls<LineStyle>(64).also { styles ->
-  fun style(type: Int, dotted: Boolean, head: Int, ends: Int = 1, bottom: Boolean = false) {
-    styles[type] = LineStyle(dotted, head, ends != 1, ends != 0, bottom)
+private val STYLES: Array<LineStyle?> =
+  arrayOfNulls<LineStyle>(64).also { styles ->
+    fun style(type: Int, dotted: Boolean, head: Int, ends: Int = 1, bottom: Boolean = false) {
+      styles[type] = LineStyle(dotted, head, ends != 1, ends != 0, bottom)
+    }
+    style(LINETYPE.SOLID, false, Head.Arrow)
+    style(LINETYPE.DOTTED, true, Head.Arrow)
+    style(LINETYPE.SOLID_CROSS, false, Head.Cross)
+    style(LINETYPE.DOTTED_CROSS, true, Head.Cross)
+    style(LINETYPE.SOLID_OPEN, false, Head.None)
+    style(LINETYPE.DOTTED_OPEN, true, Head.None)
+    style(LINETYPE.SOLID_POINT, false, Head.Open)
+    style(LINETYPE.DOTTED_POINT, true, Head.Open)
+    style(LINETYPE.BIDIRECTIONAL_SOLID, false, Head.Arrow, 2)
+    style(LINETYPE.BIDIRECTIONAL_DOTTED, true, Head.Arrow, 2)
+    for (dotted in listOf(false, true)) {
+      val d = if (dotted) 10 else 0
+      style(LINETYPE.SOLID_TOP + d, dotted, Head.HalfSolid)
+      style(LINETYPE.SOLID_BOTTOM + d, dotted, Head.HalfSolid, 1, true)
+      style(LINETYPE.STICK_TOP + d, dotted, Head.HalfStick)
+      style(LINETYPE.STICK_BOTTOM + d, dotted, Head.HalfStick, 1, true)
+      style(LINETYPE.SOLID_ARROW_TOP_REVERSE + d, dotted, Head.HalfSolid, 0)
+      style(LINETYPE.SOLID_ARROW_BOTTOM_REVERSE + d, dotted, Head.HalfSolid, 0, true)
+      style(LINETYPE.STICK_ARROW_TOP_REVERSE + d, dotted, Head.HalfStick, 0)
+      style(LINETYPE.STICK_ARROW_BOTTOM_REVERSE + d, dotted, Head.HalfStick, 0, true)
+    }
   }
-  style(LINETYPE.SOLID, false, Head.Arrow)
-  style(LINETYPE.DOTTED, true, Head.Arrow)
-  style(LINETYPE.SOLID_CROSS, false, Head.Cross)
-  style(LINETYPE.DOTTED_CROSS, true, Head.Cross)
-  style(LINETYPE.SOLID_OPEN, false, Head.None)
-  style(LINETYPE.DOTTED_OPEN, true, Head.None)
-  style(LINETYPE.SOLID_POINT, false, Head.Open)
-  style(LINETYPE.DOTTED_POINT, true, Head.Open)
-  style(LINETYPE.BIDIRECTIONAL_SOLID, false, Head.Arrow, 2)
-  style(LINETYPE.BIDIRECTIONAL_DOTTED, true, Head.Arrow, 2)
-  for (dotted in listOf(false, true)) {
-    val d = if (dotted) 10 else 0
-    style(LINETYPE.SOLID_TOP + d, dotted, Head.HalfSolid)
-    style(LINETYPE.SOLID_BOTTOM + d, dotted, Head.HalfSolid, 1, true)
-    style(LINETYPE.STICK_TOP + d, dotted, Head.HalfStick)
-    style(LINETYPE.STICK_BOTTOM + d, dotted, Head.HalfStick, 1, true)
-    style(LINETYPE.SOLID_ARROW_TOP_REVERSE + d, dotted, Head.HalfSolid, 0)
-    style(LINETYPE.SOLID_ARROW_BOTTOM_REVERSE + d, dotted, Head.HalfSolid, 0, true)
-    style(LINETYPE.STICK_ARROW_TOP_REVERSE + d, dotted, Head.HalfStick, 0)
-    style(LINETYPE.STICK_ARROW_BOTTOM_REVERSE + d, dotted, Head.HalfStick, 0, true)
-  }
-}
 
-private val FRAME_KIND: Map<Int, String> = mapOf(
-  LINETYPE.LOOP_START to "loop",
-  LINETYPE.ALT_START to "alt",
-  LINETYPE.OPT_START to "opt",
-  LINETYPE.PAR_START to "par",
-  LINETYPE.PAR_OVER_START to "par",
-  LINETYPE.CRITICAL_START to "critical",
-  LINETYPE.BREAK_START to "break",
-  LINETYPE.RECT_START to "rect",
-)
+private val FRAME_KIND: Map<Int, String> =
+  mapOf(
+    LINETYPE.LOOP_START to "loop",
+    LINETYPE.ALT_START to "alt",
+    LINETYPE.OPT_START to "opt",
+    LINETYPE.PAR_START to "par",
+    LINETYPE.PAR_OVER_START to "par",
+    LINETYPE.CRITICAL_START to "critical",
+    LINETYPE.BREAK_START to "break",
+    LINETYPE.RECT_START to "rect",
+  )
 
 private const val MSG_PAD = 12.0
 private const val SELF_W = 28.0
@@ -113,7 +115,8 @@ class Numbering(
   val visible: Boolean,
 )
 
-fun isLineMessage(type: Int?): Boolean = type != null && type >= 0 && type < STYLES.size && STYLES[type] != null
+fun isLineMessage(type: Int?): Boolean =
+  type != null && type >= 0 && type < STYLES.size && STYLES[type] != null
 
 // Counts message lines the way Mermaid's renderer does while it draws.
 fun numberMessages(messages: List<SeqMessage>, always: Boolean): Numbering {
@@ -191,16 +194,32 @@ private class BoxRun(
   var grow: Double,
 )
 
-private val NO_LABEL = Label(lines = emptyList(), widths = emptyList(), width = 0.0, height = 0.0, size = 0.0, lineHeight = 0.0)
+private val NO_LABEL =
+  Label(
+    lines = emptyList(),
+    widths = emptyList(),
+    width = 0.0,
+    height = 0.0,
+    size = 0.0,
+    lineHeight = 0.0,
+  )
 
 private fun option(conf: Map<String, Any?>, key: String, fallback: Double): Double {
   val value = conf[key]
   return if (value is Double && value >= 0 && value <= 2000) value else fallback
 }
 
-private fun half(x: Double, y: Double, dir: Double, up: Double, stick: Boolean, color: String): String {
+private fun half(
+  x: Double,
+  y: Double,
+  dir: Double,
+  up: Double,
+  stick: Boolean,
+  color: String,
+): String {
   val bx = num(x - dir * ARROW)
-  if (stick) return "<path class=\"pele-marker\" d=\"M${num(x)},${num(y)}L$bx,${num(y + up * 5)}\"/>"
+  if (stick)
+    return "<path class=\"pele-marker\" d=\"M${num(x)},${num(y)}L$bx,${num(y + up * 5)}\"/>"
   return "<path class=\"pele-marker\" d=\"M${num(x)},${num(y)}L$bx,${num(y + up * 4.5)}V${num(y)}Z\" fill=\"$color\" stroke=\"none\"/>"
 }
 
@@ -211,7 +230,7 @@ private fun head(type: Int, x: Double, y: Double, dir: Double, up: Double, color
     Head.Cross -> marker("arrow_cross", x, y, dir, 0.0, color)
     Head.Open ->
       "<path class=\"pele-marker\" d=\"M${num(x - dir * ARROW)},${num(y - 4.5)}L${num(x)},${num(y)}L${num(x - dir * ARROW)},${num(
-        y + 4.5,
+        y + 4.5
       )}\" stroke-linejoin=\"round\"/>"
     Head.HalfSolid -> half(x, y, dir, up, false, color)
     Head.HalfStick -> half(x, y, dir, up, true, color)
@@ -219,12 +238,20 @@ private fun head(type: Int, x: Double, y: Double, dir: Double, up: Double, color
   }
 }
 
-private fun trim(type: Int): Double = if (type == Head.Arrow) ARROW - 1 else if (type == Head.Cross) 4.0 else 0.0
+private fun trim(type: Int): Double =
+  if (type == Head.Arrow) ARROW - 1 else if (type == Head.Cross) 4.0 else 0.0
 
 fun renderSequence(db: SeqDb, config: Config, options: RenderOptions): Rendered =
   tighten(options) { tight -> draw(db, config, options, tight) }
 
-private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boolean, hold: Double = 0.0, byNeed: Boolean = true): Rendered {
+private fun draw(
+  db: SeqDb,
+  config: Config,
+  options: RenderOptions,
+  tight: Boolean,
+  hold: Double = 0.0,
+  byNeed: Boolean = true,
+): Rendered {
   @Suppress("UNCHECKED_CAST")
   val conf: Map<String, Any?> = (config["sequence"] as? Map<String, Any?>) ?: emptyMap()
   val size = options.fontSize ?: 16.0
@@ -232,23 +259,37 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
   val tiny = jsRound(size * 0.75)
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
   val monospaced = options.monospace != null && options.monospace.contains("messages")
-  val messageMeasurer: TextMeasurer = if (monospaced) TextMeasurer { t, s, style -> measurer.width(t, s, style or Style.Mono) } else measurer
+  val messageMeasurer: TextMeasurer =
+    if (monospaced) TextMeasurer { t, s, style -> measurer.width(t, s, style or Style.Mono) }
+    else measurer
   val icons = options.icons
   val pad = options.padding ?: 8.0
   val mirror = conf["mirrorActors"] != false
   val rightAngles = conf["rightAngles"] == true
-  val actorMargin = minOf(option(conf, "actorMargin", 40.0), if (tight) 8.0 else Double.POSITIVE_INFINITY)
+  val actorMargin =
+    minOf(option(conf, "actorMargin", 40.0), if (tight) 8.0 else Double.POSITIVE_INFINITY)
   val minW = minOf(option(conf, "width", 64.0), if (tight) 48.0 else Double.POSITIVE_INFINITY)
   val minH = option(conf, "height", jsRound(size * 1.5) + 20)
-  val wrapW = minOf(
-    option(conf, "width", 160.0),
-    if (tight) maxOf(32.0, ((options.maxWidth ?: 320.0) - 2 * pad) / maxOf(1.0, db.actors.size.toDouble()) - actorMargin - 24) else Double.POSITIVE_INFINITY,
-  )
-  // Mermaid's default of 35 corresponds to Pele's default gap. Other values move it by the difference.
+  val wrapW =
+    minOf(
+      option(conf, "width", 160.0),
+      if (tight)
+        maxOf(
+          32.0,
+          ((options.maxWidth ?: 320.0) - 2 * pad) / maxOf(1.0, db.actors.size.toDouble()) -
+            actorMargin -
+            24,
+        )
+      else Double.POSITIVE_INFINITY,
+    )
+  // Mermaid's default of 35 corresponds to Pele's default gap. Other values move it by the
+  // difference.
   val msgGap = maxOf(4.0, 14 + option(conf, "messageMargin", 35.0) - 35)
-  val notePad = minOf(option(conf, "noteMargin", 10.0), if (tight) 6.0 else Double.POSITIVE_INFINITY)
+  val notePad =
+    minOf(option(conf, "noteMargin", 10.0), if (tight) 6.0 else Double.POSITIVE_INFINITY)
   val boxPad = minOf(option(conf, "boxMargin", 10.0), if (tight) 6.0 else Double.POSITIVE_INFINITY)
-  val align = if (conf["messageAlign"] == "left") -1 else if (conf["messageAlign"] == "right") 1 else 0
+  val align =
+    if (conf["messageAlign"] == "left") -1 else if (conf["messageAlign"] == "right") 1 else 0
 
   val msgPad = if (tight) 6.0 else MSG_PAD
   val noteOver = if (tight) 8.0 else NOTE_OVER
@@ -257,11 +298,19 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
   val messages = db.messages
   val count = messages.size
   val numbering = numberMessages(messages, conf["showSequenceNumbers"] == true)
-  fun text(raw: String?, fontSize: Double, wrap: Boolean, width: Double = wrapW, by: TextMeasurer = measurer): Label {
-    val label = layoutLabel(raw, false, by, fontSize, if (tight || wrap) width else Double.POSITIVE_INFINITY)
+  fun text(
+    raw: String?,
+    fontSize: Double,
+    wrap: Boolean,
+    width: Double = wrapW,
+    by: TextMeasurer = measurer,
+  ): Label {
+    val label =
+      layoutLabel(raw, false, by, fontSize, if (tight || wrap) width else Double.POSITIVE_INFINITY)
     return if (tight) breakLabel(label, by, maxOf(120.0, width)) else label
   }
-  fun messageText(raw: String, wrap: Boolean, width: Double = wrapW): Label = text(raw, small, wrap, width, messageMeasurer)
+  fun messageText(raw: String, wrap: Boolean, width: Double = wrapW): Label =
+    text(raw, small, wrap, width, messageMeasurer)
 
   var used: MutableSet<String?>? = null
   if (conf["hideUnusedParticipants"] == true) {
@@ -275,7 +324,8 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
 
   val nextLine = IntArray(count + 1)
   nextLine[count] = -1
-  for (i in count - 1 downTo 0) nextLine[i] = if (isLineMessage(messages[i].type)) i else nextLine[i + 1]
+  for (i in count - 1 downTo 0) nextLine[i] =
+    if (isLineMessage(messages[i].type)) i else nextLine[i + 1]
 
   val cols = ArrayList<Column>()
   val colOf = LinkedHashMap<String, Int>()
@@ -288,7 +338,8 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     var createAt = if (created == null) -1 else nextLine[minOf(created, count)]
     if (createAt >= 0 && messages[createAt].to != id) createAt = -1
     var destroyAt = if (destroyed == null) -1 else nextLine[minOf(destroyed, count)]
-    if (destroyAt >= 0 && messages[destroyAt].to != id && messages[destroyAt].from != id) destroyAt = -1
+    if (destroyAt >= 0 && messages[destroyAt].to != id && messages[destroyAt].from != id)
+      destroyAt = -1
     colOf[id] = cols.size
     cols.add(
       Column(
@@ -304,12 +355,13 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
         lifeStart = 0.0,
         lifeEnd = -1.0,
         activations = ArrayList(),
-      ),
+      )
     )
   }
   val last = cols.size - 1
 
-  // Widths between lifelines. Every message and note says how far apart the lifelines it touches must be.
+  // Widths between lifelines. Every message and note says how far apart the lifelines it touches
+  // must be.
   val needs = LinkedHashMap<Int, Double>()
   fun need(lo: Int, hi: Int, width: Double) {
     if (lo < 0 || hi > last) return
@@ -317,7 +369,8 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     if ((needs[key] ?: 0.0) < width) needs[key] = width
   }
   fun badgeWidth(i: Int): Double =
-    if (numbering.shown[i]) maxOf(BADGE_H, measurer.width(jsStr(numbering.index[i]), tiny, 0) + 8) else 0.0
+    if (numbering.shown[i]) maxOf(BADGE_H, measurer.width(jsStr(numbering.index[i]), tiny, 0) + 8)
+    else 0.0
 
   val views = arrayOfNulls<View>(count)
   val sized = arrayOfNulls<MutableMap<Double, Label>>(count)
@@ -367,7 +420,12 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
         need(
           minOf(a, b),
           maxOf(a, b),
-          (if (tight) minOf(label.width, maxOf(16.0, wrapW - 16)) else label.width) + 2 * msgPad + ACT_W + badge + created + central,
+          (if (tight) minOf(label.width, maxOf(16.0, wrapW - 16)) else label.width) +
+            2 * msgPad +
+            ACT_W +
+            badge +
+            created +
+            central,
         )
         views[i] = View(V.Line, a, b, label, 0.0, 0.0)
       }
@@ -386,10 +444,19 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
   for (i in 0 until last) {
     val left = cols[i]
     val right = cols[i + 1]
-    val boxed = if (left.actor.box !== right.actor.box) (if (left.actor.box != null) boxPad else 0.0) + (if (right.actor.box != null) boxPad else 0.0) else 0.0
-    gaps[i] = maxOf(left.size.w / 2 + right.size.w / 2 + actorMargin + boxed, needs[i * cols.size + i + 1] ?: 0.0)
+    val boxed =
+      if (left.actor.box !== right.actor.box)
+        (if (left.actor.box != null) boxPad else 0.0) +
+          (if (right.actor.box != null) boxPad else 0.0)
+      else 0.0
+    gaps[i] =
+      maxOf(
+        left.size.w / 2 + right.size.w / 2 + actorMargin + boxed,
+        needs[i * cols.size + i + 1] ?: 0.0,
+      )
   }
-  // A message across several lifelines widens each gap it crosses by an equal share of what is missing.
+  // A message across several lifelines widens each gap it crosses by an equal share of what is
+  // missing.
   class Span(val lo: Int, val hi: Int, val width: Double)
   val spans = ArrayList<Span>()
   for ((key, width) in needs) {
@@ -415,7 +482,9 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
   }
   place()
   for (run in runs) {
-    val inner = cols[run.last].x + cols[run.last].size.w / 2 - (cols[run.first].x - cols[run.first].size.w / 2)
+    val inner =
+      cols[run.last].x + cols[run.last].size.w / 2 -
+        (cols[run.first].x - cols[run.first].size.w / 2)
     run.grow = maxOf(0.0, (run.title.width - inner) / 2)
     if (run.grow == 0.0) continue
     if (run.first > 0) gaps[run.first - 1] += run.grow
@@ -428,10 +497,11 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     if (x0 < minX) minX = x0
     if (x1 > maxX) maxX = x1
   }
-  fun boxEdges(run: BoxRun): Pair<Double, Double> = Pair(
-    cols[run.first].x - cols[run.first].size.w / 2 - boxPad - run.grow,
-    cols[run.last].x + cols[run.last].size.w / 2 + boxPad + run.grow,
-  )
+  fun boxEdges(run: BoxRun): Pair<Double, Double> =
+    Pair(
+      cols[run.first].x - cols[run.first].size.w / 2 - boxPad - run.grow,
+      cols[run.last].x + cols[run.last].size.w / 2 + boxPad + run.grow,
+    )
   val frames = arrayOfNulls<Frame>(count)
   fun layout() {
     place()
@@ -445,37 +515,41 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
 
     // Horizontal extents of every block, from what it holds.
     val open = ArrayList<Frame>()
-    fun spanAll(): Pair<Double, Double> = if (last < 0) Pair(0.0, 120.0) else Pair(cols[0].x - framePad, cols[last].x + framePad)
+    fun spanAll(): Pair<Double, Double> =
+      if (last < 0) Pair(0.0, 120.0) else Pair(cols[0].x - framePad, cols[last].x + framePad)
     for (i in 0 until count) {
       val m = messages[i]
       val type = m.type
       val frameKind = if (type == null) null else FRAME_KIND[type]
       val view = views[i]
       if (frameKind != null) {
-        val frame = Frame(
-          kind = frameKind,
-          x0 = Double.POSITIVE_INFINITY,
-          x1 = Double.NEGATIVE_INFINITY,
-          top = 0.0,
-          title = NO_LABEL,
-          tabW = 0.0,
-          fill = if (frameKind == "rect" && m.message is String) m.message else "",
-          dividers = arrayListOf(i),
-          dividerY = ArrayList(),
-          dividerLabels = ArrayList(),
-        )
+        val frame =
+          Frame(
+            kind = frameKind,
+            x0 = Double.POSITIVE_INFINITY,
+            x1 = Double.NEGATIVE_INFINITY,
+            top = 0.0,
+            title = NO_LABEL,
+            tabW = 0.0,
+            fill = if (frameKind == "rect" && m.message is String) m.message else "",
+            dividers = arrayListOf(i),
+            dividerY = ArrayList(),
+            dividerLabels = ArrayList(),
+          )
         frames[i] = frame
         open.add(frame)
-      } else if (type == LINETYPE.ALT_ELSE || type == LINETYPE.PAR_AND || type == LINETYPE.CRITICAL_OPTION) {
+      } else if (
+        type == LINETYPE.ALT_ELSE || type == LINETYPE.PAR_AND || type == LINETYPE.CRITICAL_OPTION
+      ) {
         if (open.isNotEmpty()) open[open.size - 1].dividers.add(i)
       } else if (
         type == LINETYPE.LOOP_END ||
-        type == LINETYPE.ALT_END ||
-        type == LINETYPE.OPT_END ||
-        type == LINETYPE.PAR_END ||
-        type == LINETYPE.CRITICAL_END ||
-        type == LINETYPE.BREAK_END ||
-        type == LINETYPE.RECT_END
+          type == LINETYPE.ALT_END ||
+          type == LINETYPE.OPT_END ||
+          type == LINETYPE.PAR_END ||
+          type == LINETYPE.CRITICAL_END ||
+          type == LINETYPE.BREAK_END ||
+          type == LINETYPE.RECT_END
       ) {
         val frame = if (open.isEmpty()) null else open.removeAt(open.size - 1)
         if (frame == null) continue
@@ -487,16 +561,23 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
         }
         if (frame.kind != "rect") {
           frame.tabW = measurer.width(frame.kind, tiny, Style.Bold) + 14
-          // A block grows to the right to give its texts up to FRAME_TEXT of width before they wrap.
+          // A block grows to the right to give its texts up to FRAME_TEXT of width before they
+          // wrap.
           for (k in 0 until frame.dividers.size) {
             val raw = messages[frame.dividers[k]].message
             val tab = if (k == 0) frame.tabW + 8 else 0.0
             val room = frame.x1 - frame.x0 - 16 - tab
-            val label = if (raw is String && raw != "") {
-              text("[$raw]", small, true, maxOf(room, if (tight) minOf(FRAME_TEXT, wrapW) else FRAME_TEXT))
-            } else {
-              NO_LABEL
-            }
+            val label =
+              if (raw is String && raw != "") {
+                text(
+                  "[$raw]",
+                  small,
+                  true,
+                  maxOf(room, if (tight) minOf(FRAME_TEXT, wrapW) else FRAME_TEXT),
+                )
+              } else {
+                NO_LABEL
+              }
             if (label.width > room) frame.x1 += label.width - room
             if (k == 0) frame.title = label else frame.dividerLabels.add(label)
           }
@@ -522,7 +603,9 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
           } else {
             val lo = minOf(a.x, b.x) - noteOver
             val hi = maxOf(a.x, b.x) + noteOver
-            if (tight || m.wrap) view.label = text(m.message as String, small, true, maxOf(wrapW, hi - lo - 2 * notePad))
+            if (tight || m.wrap)
+              view.label =
+                text(m.message as String, small, true, maxOf(wrapW, hi - lo - 2 * notePad))
             view.w = maxOf(hi - lo, view.label.width + 2 * notePad)
             view.x = (lo + hi - view.w) / 2
           }
@@ -534,7 +617,8 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
         } else {
           var lx0 = minOf(a.x, b.x)
           var lx1 = maxOf(a.x, b.x)
-          if (tight || m.wrap) view.label = sizedText(i, maxOf(wrapW, lx1 - lx0 - 2 * msgPad - ACT_W))
+          if (tight || m.wrap)
+            view.label = sizedText(i, maxOf(wrapW, lx1 - lx0 - 2 * msgPad - ACT_W))
           if (b.createAt == i) {
             if (b.x > a.x) lx1 += b.size.w / 2 else lx0 -= b.size.w / 2
           }
@@ -667,21 +751,26 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     if (label.width == 0.0) return ""
     val l = cx - label.width / 2
     val plate = crosses(l, l + label.width)
-    val back = if (plate) {
-      "<rect x=\"${num(l - 3)}\" y=\"${num(cy - label.height / 2 + 2)}\" width=\"${num(label.width + 6)}\" height=\"${num(label.height - 4)}\" rx=\"3\" fill=\"var(--_bg)\" stroke=\"none\"/>"
-    } else {
-      ""
-    }
+    val back =
+      if (plate) {
+        "<rect x=\"${num(l - 3)}\" y=\"${num(cy - label.height / 2 + 2)}\" width=\"${num(label.width + 6)}\" height=\"${num(label.height - 4)}\" rx=\"3\" fill=\"var(--_bg)\" stroke=\"none\"/>"
+      } else {
+        ""
+      }
     val fill = if (plate) "" else under(l, l + label.width)
-    return back + labelSvg(
-      label,
-      cx,
-      cy,
-      if (frame) " class=\"pele-frame-label\"${fill.ifEmpty { " fill=\"var(--_m)\"" }} stroke=\"none\"" else fill,
-      icons,
-    )
+    return back +
+      labelSvg(
+        label,
+        cx,
+        cy,
+        if (frame)
+          " class=\"pele-frame-label\"${fill.ifEmpty { " fill=\"var(--_m)\"" }} stroke=\"none\""
+        else fill,
+        icons,
+      )
   }
-  fun leftEdge(col: Column, extra: Int = 0): Double = if (col.activations.size + extra > 0) col.x - ACT_W / 2 else col.x
+  fun leftEdge(col: Column, extra: Int = 0): Double =
+    if (col.activations.size + extra > 0) col.x - ACT_W / 2 else col.x
   fun rightEdge(col: Column, extra: Int = 0): Double {
     val depth = col.activations.size + extra
     return if (depth > 0) col.x + ACT_W / 2 + (depth - 1) * ACT_STEP else col.x
@@ -704,18 +793,20 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     extend(x, x + ACT_W)
     activationsOut.add(
       "<rect class=\"pele-activation\" data-id=\"${escText(col.id)}\" x=\"${num(x)}\" y=\"${num(start)}\" width=\"${jsStr(ACT_W)}\" height=\"${num(
-        bottom - start,
-      )}\" rx=\"2\"/>",
+        bottom - start
+      )}\" rx=\"2\"/>"
     )
     return bottom
   }
-  // The lifeline of a destroyed participant ends in a cross a little below the message that ends it.
+  // The lifeline of a destroyed participant ends in a cross a little below the message that ends
+  // it.
   fun destroy(col: Column, lineY: Double): Double {
     val cx = col.x
     val cy = lineY + 16
     col.lifeEnd = cy
-    crossesOut += "<path class=\"pele-destroy\" data-id=\"${escText(col.id)}\" d=\"M${num(cx - 6)},${num(cy - 6)}L${num(cx + 6)},${num(cy + 6)}M${num(
-      cx + 6,
+    crossesOut +=
+      "<path class=\"pele-destroy\" data-id=\"${escText(col.id)}\" d=\"M${num(cx - 6)},${num(cy - 6)}L${num(cx + 6)},${num(cy + 6)}M${num(
+      cx + 6
     )},${num(cy - 6)}L${num(cx - 6)},${num(cy + 6)}\"/>"
     return cy + 6
   }
@@ -724,14 +815,22 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     return "<g class=\"pele-node pele-actor pele-actor-${col.kind}${if (footer) " pele-actor-footer" else ""}${
       if (cls is String) classNames(cls) else ""
     }\" data-id=\"${escText(col.id)}\">" +
-      drawActor(col.kind, col.x, top, col.size, col.label, icons, if (isFigure(col.kind)) inkOn(col.actor.box?.fill) else "") +
+      drawActor(
+        col.kind,
+        col.x,
+        top,
+        col.size,
+        col.label,
+        icons,
+        if (isFigure(col.kind)) inkOn(col.actor.box?.fill) else "",
+      ) +
       "</g>"
   }
   fun badge(i: Int, cx: Double, cy: Double, w: Double): String =
     "<g class=\"pele-sequence-number\"><rect x=\"${num(cx - w / 2)}\" y=\"${num(cy - BADGE_H / 2)}\" width=\"${num(w)}\" height=\"${jsStr(BADGE_H)}\" rx=\"${
       jsStr(BADGE_H / 2)
     }\" fill=\"var(--_l)\" stroke=\"none\"/><text x=\"${num(cx)}\" y=\"${num(cy + tiny * 0.35)}\" text-anchor=\"middle\" font-size=\"${jsStr(tiny)}\" fill=\"var(--_bg)\" stroke=\"none\">${esc(
-      jsStr(numbering.index[i]),
+      jsStr(numbering.index[i])
     )}</text></g>"
 
   var y = headBottom + 6
@@ -764,32 +863,35 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
       if (frame.kind == "rect") {
         val fill = if (frame.fill != "") resolveStyle(listOf("fill:${frame.fill}")).shape else ""
         rectsOut.add(
-          "<rect class=\"pele-rect\" x=\"$x\" y=\"${num(frame.top)}\" width=\"$w\" height=\"${num(bottom - frame.top)}\"${rounded((if (fill != "") "" else " fill-opacity=\"0.5\"") + fill)}/>",
+          "<rect class=\"pele-rect\" x=\"$x\" y=\"${num(frame.top)}\" width=\"$w\" height=\"${num(bottom - frame.top)}\"${rounded((if (fill != "") "" else " fill-opacity=\"0.5\"") + fill)}/>"
         )
       } else {
-        var inner = "<rect x=\"$x\" y=\"${num(frame.top)}\" width=\"$w\" height=\"${num(bottom - frame.top)}\" fill=\"none\"$ROUNDED/>"
+        var inner =
+          "<rect x=\"$x\" y=\"${num(frame.top)}\" width=\"$w\" height=\"${num(bottom - frame.top)}\" fill=\"none\"$ROUNDED/>"
         for (k in 0 until frame.dividerY.size) {
           val dy = frame.dividerY[k]
           val label = frame.dividerLabels[k]
           inner +=
             "<path d=\"M$x,${num(dy)}H${num(frame.x1)}\"$DASH/>" +
-            backed(label, frame.x0 + 8 + label.width / 2, dy + 2 + label.height / 2, true)
+              backed(label, frame.x0 + 8 + label.width / 2, dy + 2 + label.height / 2, true)
         }
         inner +=
           "<rect x=\"$x\" y=\"${num(frame.top)}\" width=\"${num(frame.tabW)}\" height=\"${jsStr(TAB_H)}\" fill=\"var(--_s)\"$ROUNDED/>" +
-          "<text class=\"pele-frame-kind\" x=\"${num(frame.x0 + frame.tabW / 2)}\" y=\"${num(
-            frame.top + TAB_H / 2 + tiny * 0.35,
+            "<text class=\"pele-frame-kind\" x=\"${num(frame.x0 + frame.tabW / 2)}\" y=\"${num(
+            frame.top + TAB_H / 2 + tiny * 0.35
           )}\" text-anchor=\"middle\" font-size=\"${jsStr(tiny)}\" font-weight=\"var(--_hw)\" fill=\"var(--_m)\" stroke=\"none\">${frame.kind}</text>" +
-          backed(
-            frame.title,
-            frame.x0 + frame.tabW + 8 + frame.title.width / 2,
-            frame.top + maxOf(TAB_H, frame.title.height) / 2,
-            true,
-          )
+            backed(
+              frame.title,
+              frame.x0 + frame.tabW + 8 + frame.title.width / 2,
+              frame.top + maxOf(TAB_H, frame.title.height) / 2,
+              true,
+            )
         framesOut += "<g class=\"pele-frame pele-frame-${frame.kind}\">$inner</g>"
       }
       y = bottom
-    } else if (type == LINETYPE.ALT_ELSE || type == LINETYPE.PAR_AND || type == LINETYPE.CRITICAL_OPTION) {
+    } else if (
+      type == LINETYPE.ALT_ELSE || type == LINETYPE.PAR_AND || type == LINETYPE.CRITICAL_OPTION
+    ) {
       val current = if (stack.isEmpty()) null else stack[stack.size - 1]
       if (current != null) {
         val label = current.dividerLabels[current.dividerY.size]
@@ -806,9 +908,15 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
       extend(x, x + view.w)
       notesOut +=
         "<g class=\"pele-note\" data-id=\"i${escText(m.id)}\">" +
-        "<rect x=\"${num(x)}\" y=\"${num(top)}\" width=\"${num(view.w)}\" height=\"${num(h)}\"$ROUNDED/>" +
-        labelSvg(view.label, x + view.w / 2, top + h / 2, " class=\"pele-label\" stroke=\"none\" fill=\"var(--_fg)\"", icons) +
-        "</g>"
+          "<rect x=\"${num(x)}\" y=\"${num(top)}\" width=\"${num(view.w)}\" height=\"${num(h)}\"$ROUNDED/>" +
+          labelSvg(
+            view.label,
+            x + view.w / 2,
+            top + h / 2,
+            " class=\"pele-label\" stroke=\"none\" fill=\"var(--_fg)\"",
+            icons,
+          ) +
+          "</g>"
       y = top + h
     } else if (view != null) {
       val st = STYLES[type!!]!!
@@ -822,7 +930,11 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
         val t = messages[k].type
         if (t == LINETYPE.ACTIVE_START) {
           if (messages[k].from == m.to) starting++
-        } else if (t != LINETYPE.ACTIVE_END && t != LINETYPE.CENTRAL_CONNECTION && t != LINETYPE.CENTRAL_CONNECTION_REVERSE) {
+        } else if (
+          t != LINETYPE.ACTIVE_END &&
+            t != LINETYPE.CENTRAL_CONNECTION &&
+            t != LINETYPE.CENTRAL_CONNECTION_REVERSE
+        ) {
           break
         }
       }
@@ -830,7 +942,8 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
       val attrs = if (st.dotted) DASH else ""
       val cc = m.centralConnection
       val circleTo = cc == LINETYPE.CENTRAL_CONNECTION || cc == LINETYPE.CENTRAL_CONNECTION_DUAL
-      val circleFrom = cc == LINETYPE.CENTRAL_CONNECTION_REVERSE || cc == LINETYPE.CENTRAL_CONNECTION_DUAL
+      val circleFrom =
+        cc == LINETYPE.CENTRAL_CONNECTION_REVERSE || cc == LINETYPE.CENTRAL_CONNECTION_DUAL
       var line: String?
       var color = "var(--_l)"
       fun circle(cx: Double, cy: Double): String =
@@ -855,21 +968,24 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
           if (tailAtEnd) x1 += bw / 2 else x0 += bw / 2
         }
         // The loop leaves to the right and comes back heading left, which turns a half head over.
-        val heads = (if (st.atStart) head(st.head, x0, top, -1.0, up, color) else "") +
-          (if (st.atEnd) head(st.head, x1, bottom, -1.0, -up, color) else "")
+        val heads =
+          (if (st.atStart) head(st.head, x0, top, -1.0, up, color) else "") +
+            (if (st.atEnd) head(st.head, x1, bottom, -1.0, -up, color) else "")
         val from = num(x0 + (if (st.atStart) headTrim else 0.0))
         val to = num(x1 + (if (st.atEnd) headTrim else 0.0))
-        val d = if (rightAngles) {
-          "M$from,${num(top)}H${num(out)}V${num(bottom)}H$to"
-        } else {
-          "M$from,${num(top)}H${num(out - 6)}A6,6 0 0 1 ${num(out)},${num(top + 6)}V${num(bottom - 6)}A6,6 0 0 1 ${num(out - 6)},${num(
-            bottom,
+        val d =
+          if (rightAngles) {
+            "M$from,${num(top)}H${num(out)}V${num(bottom)}H$to"
+          } else {
+            "M$from,${num(top)}H${num(out - 6)}A6,6 0 0 1 ${num(out)},${num(top + 6)}V${num(bottom - 6)}A6,6 0 0 1 ${num(out - 6)},${num(
+            bottom
           )}H$to"
-        }
+          }
         inner = "<path d=\"$d\"$attrs/>" + heads + inner
         extend(a.x, out + 8 + label.width)
         if (label.width > 0) {
-          labelsOut += "<g class=\"pele-edge-label\" data-id=\"i${escText(m.id)}\">${labelSvg(
+          labelsOut +=
+            "<g class=\"pele-edge-label\" data-id=\"i${escText(m.id)}\">${labelSvg(
             label,
             out + 8 + label.width / 2,
             (top + bottom) / 2,
@@ -884,7 +1000,13 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
         val creating = b.createAt == i
         line = inkOf(fillUnder(minOf(a.x, b.x), maxOf(a.x, b.x)))
         color = line ?: color
-        lineY = y + msgGap + maxOf(if (label.height > 0) label.height + 2 else 6.0, if (creating) b.size.h / 2 - msgGap + 6 else 0.0)
+        lineY =
+          y +
+            msgGap +
+            maxOf(
+              if (label.height > 0) label.height + 2 else 6.0,
+              if (creating) b.size.h / 2 - msgGap + 6 else 0.0,
+            )
         var x0 = if (dir > 0) rightEdge(a) else leftEdge(a)
         var x1 = if (dir > 0) leftEdge(b, starting) else rightEdge(b, starting)
         if (creating) {
@@ -901,7 +1023,8 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
           x1 = b.x - dir * CENTRAL_R
         }
         if (bw > 0) {
-          // The number sits on the lifeline at the tail of the arrow, past a connection circle if there is one.
+          // The number sits on the lifeline at the tail of the arrow, past a connection circle if
+          // there is one.
           if (tailAtEnd) {
             val cx = if (circleTo) x1 - dir * (bw / 2 + 2) else x1
             inner += badge(i, cx, lineY, bw)
@@ -912,21 +1035,26 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
             x0 = cx + (dir * bw) / 2
           }
         }
-        val heads = (if (st.atStart) head(st.head, x0, lineY, -dir, up * dir, color) else "") +
-          (if (st.atEnd) head(st.head, x1, lineY, dir, up * dir, color) else "")
+        val heads =
+          (if (st.atStart) head(st.head, x0, lineY, -dir, up * dir, color) else "") +
+            (if (st.atEnd) head(st.head, x1, lineY, dir, up * dir, color) else "")
         val from = x0 + (if (st.atStart) dir * headTrim else 0.0)
         val to = x1 - (if (st.atEnd) dir * headTrim else 0.0)
         inner = "<path d=\"M${num(from)},${num(lineY)}H${num(to)}\"$attrs/>" + heads + inner
         if (label.width > 0) {
           val l = minOf(x0, x1)
           val r = maxOf(x0, x1)
-          val cx = if (align < 0) l + msgPad + label.width / 2 else if (align > 0) r - msgPad - label.width / 2 else (l + r) / 2
+          val cx =
+            if (align < 0) l + msgPad + label.width / 2
+            else if (align > 0) r - msgPad - label.width / 2 else (l + r) / 2
           extend(cx - label.width / 2, cx + label.width / 2)
-          labelsOut += "<g class=\"pele-edge-label\" data-id=\"i${escText(m.id)}\">${backed(label, cx, lineY - 4 - label.height / 2)}</g>"
+          labelsOut +=
+            "<g class=\"pele-edge-label\" data-id=\"i${escText(m.id)}\">${backed(label, cx, lineY - 4 - label.height / 2)}</g>"
         }
         if (creating) y = lineY + b.size.h / 2 - 6
       }
-      edgesOut += "<g class=\"pele-edge pele-message\" data-id=\"i${escText(m.id)}\"${if (!line.isNullOrEmpty()) " stroke=\"$line\"" else ""}>$inner</g>"
+      edgesOut +=
+        "<g class=\"pele-edge pele-message\" data-id=\"i${escText(m.id)}\"${if (!line.isNullOrEmpty()) " stroke=\"$line\"" else ""}>$inner</g>"
       y = maxOf(y, lineY)
       if (a.destroyAt == i) y = maxOf(y, destroy(a, lineY))
       if (b.destroyAt == i && b !== a) y = maxOf(y, destroy(b, lineY))
@@ -950,7 +1078,8 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     actorsOut += actorSvg(col, col.top, false)
     val end = if (col.lifeEnd >= 0) col.lifeEnd else y
     if (end > col.lifeStart) {
-      lifelines += "<path class=\"pele-lifeline\" data-id=\"${escText(col.id)}\" d=\"M${num(col.x)},${num(col.lifeStart)}V${num(end)}\"/>"
+      lifelines +=
+        "<path class=\"pele-lifeline\" data-id=\"${escText(col.id)}\" d=\"M${num(col.x)},${num(col.lifeStart)}V${num(end)}\"/>"
     }
   }
 
@@ -959,26 +1088,41 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
     val edges = boxEdges(run)
     val x0 = edges.first
     val x1 = edges.second
-    val fill = if (run.box.fill == "transparent") "" else resolveStyle(listOf("fill:${run.box.fill}")).shape
+    val fill =
+      if (run.box.fill == "transparent") "" else resolveStyle(listOf("fill:${run.box.fill}")).shape
     boxesOut +=
       "<g class=\"pele-cluster pele-box\"${if (!run.box.name.isNullOrEmpty()) " data-id=\"${escText(run.box.name)}\"" else ""}>" +
-      "<rect x=\"${num(x0)}\" y=\"0\" width=\"${num(x1 - x0)}\" height=\"${num(bottom + boxPad)}\" fill=\"var(--_a)\" stroke=\"var(--_b)\"${rounded((if (fill != "") "" else " fill-opacity=\"0.5\"") + fill)}/>" +
-      labelSvg(run.title, (x0 + x1) / 2, boxPad / 2 + 2 + run.title.height / 2, " class=\"pele-cluster-label\"${inkOn(run.box.fill).ifEmpty { " fill=\"var(--_m)\"" }}", icons) +
-      "</g>"
+        "<rect x=\"${num(x0)}\" y=\"0\" width=\"${num(x1 - x0)}\" height=\"${num(bottom + boxPad)}\" fill=\"var(--_a)\" stroke=\"var(--_b)\"${rounded((if (fill != "") "" else " fill-opacity=\"0.5\"") + fill)}/>" +
+        labelSvg(
+          run.title,
+          (x0 + x1) / 2,
+          boxPad / 2 + 2 + run.title.height / 2,
+          " class=\"pele-cluster-label\"${inkOn(run.box.fill).ifEmpty { " fill=\"var(--_m)\"" }}",
+          icons,
+        ) +
+        "</g>"
   }
   if (runs.size > 0) bottom += boxPad
 
   var minY = 0.0
   var titleOut = ""
   val room = titleRoom(options)
-  val plainTitle = titleLabel(db.title, measurer, size, if (tight) room else Double.POSITIVE_INFINITY)
+  val plainTitle =
+    titleLabel(db.title, measurer, size, if (tight) room else Double.POSITIVE_INFINITY)
   val title = if (tight) breakLabel(plainTitle, measurer, maxOf(120.0, room)) else plainTitle
   if (minX > maxX) extend(0.0, maxOf(title.width, 40.0))
   if (title.width > 0) {
     val cx = (minX + maxX) / 2
     extend(cx - title.width / 2, cx + title.width / 2)
     minY = -title.height - 12
-    titleOut = labelSvg(title, cx, minY + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"", icons)
+    titleOut =
+      labelSvg(
+        title,
+        cx,
+        minY + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+        icons,
+      )
   }
 
   val width = ceil(maxX - minX + 2 * pad)
@@ -989,49 +1133,56 @@ private fun draw(db: SeqDb, config: Config, options: RenderOptions, tight: Boole
       config,
       options,
       tight,
-      if (uneven) hold else if (hold > 0) Double.POSITIVE_INFINITY else width - floor(options.maxWidth),
+      if (uneven) hold
+      else if (hold > 0) Double.POSITIVE_INFINITY else width - floor(options.maxWidth),
       false,
     )
   }
   val height = ceil(bottom - minY + 2 * pad)
-  val svg = svgDocument(
-    "sequence",
-    width,
-    height,
-    size,
-    options,
-    db,
-    "<g transform=\"translate(${num(pad - minX)},${num(pad - minY)})\">" +
-      titleOut +
-      (if (boxesOut != "") "<g class=\"pele-boxes\" font-size=\"${jsStr(small)}\">$boxesOut</g>" else "") +
-      (if (rectsOut.size > 0) "<g class=\"pele-rects\" fill=\"var(--_a)\">${rectsOut.asReversed().joinToString("")}</g>" else "") +
-      (if (lifelines != "") "<g class=\"pele-lifelines\" fill=\"none\" stroke=\"var(--_b)\">$lifelines</g>" else "") +
-      (
-        if (activationsOut.size > 0) {
+  val svg =
+    svgDocument(
+      "sequence",
+      width,
+      height,
+      size,
+      options,
+      db,
+      "<g transform=\"translate(${num(pad - minX)},${num(pad - minY)})\">" +
+        titleOut +
+        (if (boxesOut != "") "<g class=\"pele-boxes\" font-size=\"${jsStr(small)}\">$boxesOut</g>"
+        else "") +
+        (if (rectsOut.size > 0)
+          "<g class=\"pele-rects\" fill=\"var(--_a)\">${rectsOut.asReversed().joinToString("")}</g>"
+        else "") +
+        (if (lifelines != "")
+          "<g class=\"pele-lifelines\" fill=\"none\" stroke=\"var(--_b)\">$lifelines</g>"
+        else "") +
+        (if (activationsOut.size > 0) {
           "<g class=\"pele-activations\" fill=\"var(--_s)\" stroke=\"var(--_b)\">${activationsOut.asReversed().joinToString("")}</g>"
         } else {
           ""
-        }
-        ) +
-      (if (framesOut != "") "<g class=\"pele-frames\" font-size=\"${jsStr(small)}\" stroke=\"var(--_b)\">$framesOut</g>" else "") +
-      (if (edgesOut != "") "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>" else "") +
-      (
-        if (crossesOut != "") {
+        }) +
+        (if (framesOut != "")
+          "<g class=\"pele-frames\" font-size=\"${jsStr(small)}\" stroke=\"var(--_b)\">$framesOut</g>"
+        else "") +
+        (if (edgesOut != "")
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>"
+        else "") +
+        (if (crossesOut != "") {
           "<g class=\"pele-destroys\" fill=\"none\" stroke=\"var(--_l)\" stroke-width=\"1.5\" stroke-linecap=\"round\">$crossesOut</g>"
         } else {
           ""
-        }
-        ) +
-      (
-        if (labelsOut != "") {
+        }) +
+        (if (labelsOut != "") {
           "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\"${if (monospaced) " font-family=\"$FONT_MONO\"" else ""}>$labelsOut</g>"
         } else {
           ""
-        }
-        ) +
-      (if (notesOut != "") "<g class=\"pele-notes\" font-size=\"${jsStr(small)}\" fill=\"var(--_a)\" stroke=\"var(--_b)\">$notesOut</g>" else "") +
-      (if (actorsOut != "") "<g class=\"pele-nodes\">$actorsOut</g>" else "") +
-      "</g>",
-  )
+        }) +
+        (if (notesOut != "")
+          "<g class=\"pele-notes\" font-size=\"${jsStr(small)}\" fill=\"var(--_a)\" stroke=\"var(--_b)\">$notesOut</g>"
+        else "") +
+        (if (actorsOut != "") "<g class=\"pele-nodes\">$actorsOut</g>" else "") +
+        "</g>",
+    )
   return Rendered(svg, width, height, ArrayList())
 }

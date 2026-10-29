@@ -8,12 +8,19 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val usecase: Diagram<UsecaseModel> = object : Diagram<UsecaseModel> {
-  override val type = "usecase"
-  override val math = true
+val usecase: Diagram<UsecaseModel> =
+  object : Diagram<UsecaseModel> {
+    override val type = "usecase"
+    override val math = true
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): UsecaseModel =
-    parseUsecase(source, title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): UsecaseModel = parseUsecase(source, title)
 
-  override fun render(model: UsecaseModel, config: Config, options: RenderOptions): Rendered = renderUsecase(model, config, options)
-}
+    override fun render(model: UsecaseModel, config: Config, options: RenderOptions): Rendered =
+      renderUsecase(model, config, options)
+  }

@@ -2,6 +2,9 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.xychart
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import pele.Config
 import pele.PeleError
 import pele.PeleErrorCode
@@ -21,9 +24,6 @@ import pele.text.Label
 import pele.text.Style
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.floor
 
 private const val TICK = 4.0
 private const val SWATCH = 12.0
@@ -47,7 +47,8 @@ private fun on(config: Map<*, *>, key: String, fallback: Boolean = true): Boolea
 private fun dimension(value: Any?, fallback: Double): Double =
   if (value is Double && value > 0) jsRound(minOf(maxOf(value, 100.0), 4000.0)) else fallback
 
-private fun finite(value: Double?): Double? = if (value != null && value.isFinite()) minOf(maxOf(value, -LIMIT), LIMIT) else null
+private fun finite(value: Double?): Double? =
+  if (value != null && value.isFinite()) minOf(maxOf(value, -LIMIT), LIMIT) else null
 
 private fun widest(marks: List<Mark>): Double {
   var width = 0.0
@@ -62,12 +63,22 @@ private fun aligned(label: Label, x: Double, y: Double, anchor: String): String 
   if (line != null && line.size == 1 && line[0].icon == null && line[0].style == 0) {
     return "<text x=\"${num(x)}\" y=\"${num(y + label.size * 0.35)}\" text-anchor=\"$anchor\">${esc(line[0].text)}</text>"
   }
-  return labelSvg(label, x + (if (anchor == "start") label.width / 2 else if (anchor == "end") -label.width / 2 else 0.0), y, "")
+  return labelSvg(
+    label,
+    x +
+      (if (anchor == "start") label.width / 2 else if (anchor == "end") -label.width / 2 else 0.0),
+    y,
+    "",
+  )
 }
 
 fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): Rendered {
   if (model.plots.size == 0) {
-    throw PeleError("No Plot to render, please provide a plot with some data", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "xychart"))
+    throw PeleError(
+      "No Plot to render, please provide a plot with some data",
+      PeleErrorCode.SEMANTIC,
+      PeleErrorInfo(type = "xychart"),
+    )
   }
   val chart = record(config["xyChart"])
   val size = options.fontSize ?: 16.0
@@ -81,15 +92,26 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
   val height = jsRound(dimension(chart["height"], 500.0) * maxOf(0.6, width / natural))
   val horizontal = (model.orientation ?: chart["chartOrientation"]) == "horizontal"
   // The value of a bar is always written past its end, which is what showDataLabelOutsideBar asks
-  // for in Mermaid. Inside, whether it fits changes from bar to bar and with the width of the chart.
+  // for in Mermaid. Inside, whether it fits changes from bar to bar and with the width of the
+  // chart.
   val showValues = on(chart, "showDataLabel", false)
   val x = model.xAxis
   val plots = model.plots
-  val text = { raw: String?, fontSize: Double, max: Double -> layoutLabel(raw, false, measurer, fontSize, max) }
+  val text = { raw: String?, fontSize: Double, max: Double ->
+    layoutLabel(raw, false, measurer, fontSize, max)
+  }
   val lineHeight = text("0", small, 4000.0).height
   val tinyHeight = text("0", tiny, 4000.0).height
 
-  val title = layoutLabel(if (on(chart, "showTitle")) model.title else null, false, measurer, size, width - 2 * pad, Style.Bold)
+  val title =
+    layoutLabel(
+      if (on(chart, "showTitle")) model.title else null,
+      false,
+      measurer,
+      size,
+      width - 2 * pad,
+      Style.Bold,
+    )
   val titleSpace = if (title.height > 0) title.height + 12 else 0.0
 
   val legend = ArrayList<LegendEntry>()
@@ -163,23 +185,37 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
   val x1 = finite(if (x is LinearAxis) x.max else null)
   val ranged = x0 != null && x1 != null && x0 != x1
   val place = { i: Int, n: Int ->
-    if (x is BandAxis) (i + 0.5) * slot else inset + (if (n > 1) i.toDouble() / (n - 1) else if (ranged) 0.0 else 0.5) * (1 - 2 * inset)
+    if (x is BandAxis) (i + 0.5) * slot
+    else inset + (if (n > 1) i.toDouble() / (n - 1) else if (ranged) 0.0 else 0.5) * (1 - 2 * inset)
   }
 
   val categoryConf = record(chart["xAxis"])
   val valueConf = record(chart["yAxis"])
   val leftConf = if (horizontal) categoryConf else valueConf
   val bottomConf = if (horizontal) valueConf else categoryConf
-  val leftTitle = text(if (on(leftConf, "showTitle")) (if (horizontal) x.title else model.yAxis.title) else null, small, height * 0.8)
-  val bottomTitle = text(if (on(bottomConf, "showTitle")) (if (horizontal) model.yAxis.title else x.title) else null, small, width * 0.8)
+  val leftTitle =
+    text(
+      if (on(leftConf, "showTitle")) (if (horizontal) x.title else model.yAxis.title) else null,
+      small,
+      height * 0.8,
+    )
+  val bottomTitle =
+    text(
+      if (on(bottomConf, "showTitle")) (if (horizontal) model.yAxis.title else x.title) else null,
+      small,
+      width * 0.8,
+    )
   val leftTick = if (on(leftConf, "showTick")) TICK else 0.0
   val bottomTick = if (on(bottomConf, "showTick")) TICK else 0.0
   val leftLabels = on(leftConf, "showLabel")
   val bottomLabels = on(bottomConf, "showLabel")
 
-  val wrapAt = if (horizontal) width * 0.3 else maxOf(48.0, (width - 2 * pad - 64 - legendSpace) * slot - 8)
+  val wrapAt =
+    if (horizontal) width * 0.3 else maxOf(48.0, (width - 2 * pad - 64 - legendSpace) * slot - 8)
   val categories: List<Label> =
-    if (x is BandAxis && on(categoryConf, "showLabel")) x.categories.map { category -> text(category, small, wrapAt) } else emptyList()
+    if (x is BandAxis && on(categoryConf, "showLabel"))
+      x.categories.map { category -> text(category, small, wrapAt) }
+    else emptyList()
   var categoryWidth = 0.0
   var categoryHeight = 0.0
   for (label in categories) {
@@ -187,11 +223,13 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
     categoryHeight = maxOf(categoryHeight, label.height)
   }
 
-  // The labelled places of the category axis. Labels that would run into each other are thinned out.
+  // The labelled places of the category axis. Labels that would run into each other are thinned
+  // out.
   val categoryMarks = { length: Double ->
     val marks = ArrayList<Mark>()
     if (x is BandAxis) {
-      val need = if (categories.size == 0) 8.0 else if (horizontal) categoryHeight else categoryWidth + 12
+      val need =
+        if (categories.size == 0) 8.0 else if (horizontal) categoryHeight else categoryWidth + 12
       val every = maxOf(1.0, ceil(need / (length * slot)))
       var i = 0.0
       while (i < x.categories.size) {
@@ -199,9 +237,18 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
         i += every
       }
     } else if (ranged) {
-      val step = tickStep(abs(x1 - x0), maxOf(2.0, minOf(10.0, floor(length / (if (horizontal) 32 else 80)))))
+      val step =
+        tickStep(
+          abs(x1 - x0),
+          maxOf(2.0, minOf(10.0, floor(length / (if (horizontal) 32 else 80)))),
+        )
       for (value in ticksBetween(minOf(x0, x1), maxOf(x0, x1), step)) {
-        marks.add(Mark(inset + ((value - x0) / (x1 - x0)) * (1 - 2 * inset), text(jsStr(value), small, 4000.0)))
+        marks.add(
+          Mark(
+            inset + ((value - x0) / (x1 - x0)) * (1 - 2 * inset),
+            text(jsStr(value), small, 4000.0),
+          )
+        )
       }
     } else if (x0 != null) {
       marks.add(Mark(0.5, text(jsStr(x0), small, 4000.0)))
@@ -213,19 +260,27 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
   var pointLabelWidth = 0.0
   var valueWidth = 0.0
   for (plot in plots) {
-    for (label in plot.pointLabels ?: emptyList()) pointLabelWidth = maxOf(pointLabelWidth, measurer.width(label, tiny, 0))
+    for (label in plot.pointLabels ?: emptyList()) pointLabelWidth =
+      maxOf(pointLabelWidth, measurer.width(label, tiny, 0))
     if (showValues && horizontal && plot.type == "bar") {
       for ((_, value) in plot.data) {
         val shown = finite(value)
-        valueWidth = maxOf(valueWidth, measurer.width(if (shown != null) jsStr(shown) else "", tiny, 0))
+        valueWidth =
+          maxOf(valueWidth, measurer.width(if (shown != null) jsStr(shown) else "", tiny, 0))
       }
     }
   }
 
-  val bottomLabelHeight = if (!bottomLabels) 0.0 else if (horizontal || x !is BandAxis) lineHeight else categoryHeight
+  val bottomLabelHeight =
+    if (!bottomLabels) 0.0 else if (horizontal || x !is BandAxis) lineHeight else categoryHeight
   val bottomSpace =
-    bottomTick + (if (bottomLabelHeight > 0) bottomLabelHeight + 4 else 0.0) + (if (bottomTitle.height > 0) bottomTitle.height + 4 else 0.0)
-  val headroom = if (horizontal) 0.0 else if (pointLabelWidth > 0 || showValues) tinyHeight + 4 else if (leftLabels) lineHeight / 2 else 0.0
+    bottomTick +
+      (if (bottomLabelHeight > 0) bottomLabelHeight + 4 else 0.0) +
+      (if (bottomTitle.height > 0) bottomTitle.height + 4 else 0.0)
+  val headroom =
+    if (horizontal) 0.0
+    else if (pointLabelWidth > 0 || showValues) tinyHeight + 4
+    else if (leftLabels) lineHeight / 2 else 0.0
   val top = pad + titleSpace + headroom
   val plotHeight = maxOf(1.0, height - pad - bottomSpace - top)
   val bottom = top + plotHeight
@@ -233,26 +288,39 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
   val leftMarks = if (horizontal) categoryMarks(plotHeight) else valueMarks(plotHeight, 56.0)
   val leftLabelWidth = if (leftLabels) widest(leftMarks) else 0.0
   val left =
-    pad + (if (leftTitle.height > 0) leftTitle.height + 6 else 0.0) + (if (leftLabelWidth > 0) leftLabelWidth + 6 else 0.0) + leftTick
-  val beside = maxOf(if (pointLabelWidth > 0) pointLabelWidth + 12 else 0.0, if (valueWidth > 0) valueWidth + 8 else 0.0)
+    pad +
+      (if (leftTitle.height > 0) leftTitle.height + 6 else 0.0) +
+      (if (leftLabelWidth > 0) leftLabelWidth + 6 else 0.0) +
+      leftTick
+  val beside =
+    maxOf(
+      if (pointLabelWidth > 0) pointLabelWidth + 12 else 0.0,
+      if (valueWidth > 0) valueWidth + 8 else 0.0,
+    )
   val reach = if (horizontal) minOf(width * 0.25, beside) else 0.0
   var plotWidth = maxOf(1.0, width - pad - left - legendSpace - reach)
   val bottomMarks = if (horizontal) valueMarks(plotWidth, 80.0) else categoryMarks(plotWidth)
   if (bottomLabels && legendSpace + reach == 0.0) {
     var over = 0.0
-    for (mark in bottomMarks) over = maxOf(over, mark.at * plotWidth + mark.label.width / 2 - plotWidth)
+    for (mark in bottomMarks) over =
+      maxOf(over, mark.at * plotWidth + mark.label.width / 2 - plotWidth)
     plotWidth = maxOf(1.0, plotWidth - over)
   }
   val right = left + plotWidth
 
-  val px = { c: Double, v: Double -> if (horizontal) left + v * plotWidth else left + c * plotWidth }
-  val py = { c: Double, v: Double -> if (horizontal) top + c * plotHeight else bottom - v * plotHeight }
+  val px = { c: Double, v: Double ->
+    if (horizontal) left + v * plotWidth else left + c * plotWidth
+  }
+  val py = { c: Double, v: Double ->
+    if (horizontal) top + c * plotHeight else bottom - v * plotHeight
+  }
   val scale = { value: Double -> (value - lo) / (hi - lo) }
   val clamp = { v: Double -> minOf(maxOf(v, 0.0), 1.0) }
 
   // A line across the plot at a place on the value axis.
   val rule = { v: Double ->
-    if (horizontal) "M${num(px(0.0, v))},${num(top)}V${num(bottom)}" else "M${num(left)},${num(py(0.0, v))}H${num(right)}"
+    if (horizontal) "M${num(px(0.0, v))},${num(top)}V${num(bottom)}"
+    else "M${num(left)},${num(py(0.0, v))}H${num(right)}"
   }
 
   var grid = ""
@@ -270,7 +338,8 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
   for (mark in bottomMarks) {
     val at = left + mark.at * plotWidth
     if (bottomTick != 0.0) axis += "M${num(at)},${num(bottom)}v${jsStr(bottomTick)}"
-    if (bottomLabels) labels += aligned(mark.label, at, bottom + bottomTick + 4 + mark.label.height / 2, "middle")
+    if (bottomLabels)
+      labels += aligned(mark.label, at, bottom + bottomTick + 4 + mark.label.height / 2, "middle")
   }
 
   val span = (if (horizontal) plotHeight else plotWidth) * slot
@@ -305,11 +374,13 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
         val by = if (horizontal) py(c, 0.0) + offset else py(c, to)
         val bw = if (horizontal) (to - from) * plotWidth else thickness - gap
         val bh = if (horizontal) thickness - gap else (to - from) * plotHeight
-        rects += "<rect x=\"${num(bx)}\" y=\"${num(by)}\" width=\"${num(bw)}\" height=\"${num(bh)}\"/>"
+        rects +=
+          "<rect x=\"${num(bx)}\" y=\"${num(by)}\" width=\"${num(bw)}\" height=\"${num(bh)}\"/>"
         if (!showValues) continue
         val label = jsStr(value)
         val w = measurer.width(label, tiny, 0)
-        // Towards the end of the bar: 1 when it runs up or right from the baseline, -1 the other way.
+        // Towards the end of the bar: 1 when it runs up or right from the baseline, -1 the other
+        // way.
         val out = if (v >= base) 1 else -1
         var tx = bx + bw / 2
         var ty = by + bh / 2
@@ -322,7 +393,8 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
           if (w + 2 > span / bars) continue
           ty = (if (out > 0) by else by + bh) - out * (tinyHeight / 2 + 2)
         }
-        outside += "<text x=\"${num(tx)}\" y=\"${num(ty + tiny * 0.35)}\" text-anchor=\"$anchor\">$label</text>"
+        outside +=
+          "<text x=\"${num(tx)}\" y=\"${num(ty + tiny * 0.35)}\" text-anchor=\"$anchor\">$label</text>"
       }
       series += "<g class=\"pele-series pele-bars\"$id fill=\"$color\">$rects</g>"
       return@forEachIndexed
@@ -377,23 +449,32 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
       val label = text(plot.pointLabels?.getOrNull(i), tiny, 4000.0)
       if (label.height > 0) {
         val half = label.width / 2
-        pointLabels += if (horizontal) {
-          aligned(label, cx + 10, cy, "start")
-        } else {
-          aligned(label, maxOf(minOf(cx, right - half), left + half), cy - 6 - label.height / 2, "middle")
-        }
+        pointLabels +=
+          if (horizontal) {
+            aligned(label, cx + 10, cy, "start")
+          } else {
+            aligned(
+              label,
+              maxOf(minOf(cx, right - half), left + half),
+              cy - 6 - label.height / 2,
+              "middle",
+            )
+          }
       }
     }
     lines +=
       "<g class=\"pele-series pele-line\"$id fill=\"$color\">" +
-      (if (d.isNotEmpty()) "<path d=\"$d\" fill=\"none\" stroke=\"$color\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>" else "") +
-      dots +
-      "</g>"
+        (if (d.isNotEmpty())
+          "<path d=\"$d\" fill=\"none\" stroke=\"$color\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+        else "") +
+        dots +
+        "</g>"
   }
 
   var titles = ""
   if (leftTitle.height > 0) {
-    titles += "<g transform=\"translate(${num(pad + leftTitle.height / 2)},${num(top + plotHeight / 2)}) rotate(-90)\">${labelSvg(leftTitle, 0.0, 0.0, "")}</g>"
+    titles +=
+      "<g transform=\"translate(${num(pad + leftTitle.height / 2)},${num(top + plotHeight / 2)}) rotate(-90)\">${labelSvg(leftTitle, 0.0, 0.0, "")}</g>"
   }
   titles += labelSvg(bottomTitle, left + plotWidth / 2, height - pad - bottomTitle.height / 2, "")
 
@@ -411,26 +492,49 @@ fun renderXyChart(model: XyChartModel, config: Config, options: RenderOptions): 
     val color = seriesColor(index)
     legendOut +=
       "<g class=\"pele-legend-item\" data-id=\"${escText(plots[index].title)}\">" +
-      (if (plots[index].type == "bar") {
-        "<rect x=\"${num(lx)}\" y=\"${num(y - SWATCH / 2)}\" width=\"${jsStr(SWATCH)}\" height=\"${jsStr(SWATCH)}\" rx=\"2\" fill=\"$color\"/>"
-      } else {
-        "<path d=\"M${num(lx)},${num(y)}h${jsStr(SWATCH)}\" stroke=\"$color\" stroke-width=\"2\" stroke-linecap=\"round\"/>"
-      }) +
-      labelSvg(label, lx + SWATCH + 8 + label.width / 2, y, "") +
-      "</g>"
+        (if (plots[index].type == "bar") {
+          "<rect x=\"${num(lx)}\" y=\"${num(y - SWATCH / 2)}\" width=\"${jsStr(SWATCH)}\" height=\"${jsStr(SWATCH)}\" rx=\"2\" fill=\"$color\"/>"
+        } else {
+          "<path d=\"M${num(lx)},${num(y)}h${jsStr(SWATCH)}\" stroke=\"$color\" stroke-width=\"2\" stroke-linecap=\"round\"/>"
+        }) +
+        labelSvg(label, lx + SWATCH + 8 + label.width / 2, y, "") +
+        "</g>"
     ly += row
   }
 
   val content =
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (grid.isNotEmpty()) "<path class=\"pele-grid\" d=\"$grid\" stroke=\"var(--_a)\"/>" else "") +
+    labelSvg(
+      title,
+      width / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) +
+      (if (grid.isNotEmpty()) "<path class=\"pele-grid\" d=\"$grid\" stroke=\"var(--_a)\"/>"
+      else "") +
       "<g class=\"pele-plot\">$series$lines</g>" +
-      (if (axis.isNotEmpty()) "<path class=\"pele-axis\" d=\"$axis\" fill=\"none\" stroke=\"var(--_b)\"/>" else "") +
-      (if (labels.isNotEmpty()) "<g class=\"pele-axis-labels\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\">$labels</g>" else "") +
-      (if (titles.isNotEmpty()) "<g class=\"pele-axis-titles\" font-size=\"${jsStr(small)}\">$titles</g>" else "") +
-      (if (outside.isNotEmpty()) "<g class=\"pele-data-labels\" font-size=\"${jsStr(tiny)}\">$outside</g>" else "") +
-      (if (pointLabels.isNotEmpty()) "<g class=\"pele-point-labels\" font-size=\"${jsStr(tiny)}\">$pointLabels</g>" else "") +
-      (if (legendOut.isNotEmpty()) "<g class=\"pele-legend\" font-size=\"${jsStr(small)}\">$legendOut</g>" else "")
+      (if (axis.isNotEmpty())
+        "<path class=\"pele-axis\" d=\"$axis\" fill=\"none\" stroke=\"var(--_b)\"/>"
+      else "") +
+      (if (labels.isNotEmpty())
+        "<g class=\"pele-axis-labels\" font-size=\"${jsStr(small)}\" fill=\"var(--_m)\">$labels</g>"
+      else "") +
+      (if (titles.isNotEmpty())
+        "<g class=\"pele-axis-titles\" font-size=\"${jsStr(small)}\">$titles</g>"
+      else "") +
+      (if (outside.isNotEmpty())
+        "<g class=\"pele-data-labels\" font-size=\"${jsStr(tiny)}\">$outside</g>"
+      else "") +
+      (if (pointLabels.isNotEmpty())
+        "<g class=\"pele-point-labels\" font-size=\"${jsStr(tiny)}\">$pointLabels</g>"
+      else "") +
+      (if (legendOut.isNotEmpty())
+        "<g class=\"pele-legend\" font-size=\"${jsStr(small)}\">$legendOut</g>"
+      else "")
 
-  return Rendered(svgDocument("xychart", width, height, size, options, model, content), width, height, ArrayList())
+  return Rendered(
+    svgDocument("xychart", width, height, size, options, model, content),
+    width,
+    height,
+    ArrayList(),
+  )
 }

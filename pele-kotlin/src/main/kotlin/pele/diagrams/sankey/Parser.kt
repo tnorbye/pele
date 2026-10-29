@@ -44,8 +44,7 @@ private fun trimRows(text: String, edits: MutableList<Edit>): String {
     val c = text.charCodeAt(i)
     if (quoted) {
       if (c == 34) {
-        if (text.charCodeAt(i + 1) == 34) i++
-        else quoted = false
+        if (text.charCodeAt(i + 1) == 34) i++ else quoted = false
       }
       i++
     } else if (c == 34) {
@@ -81,7 +80,9 @@ fun prepareTextForParsing(text: String, steps: MutableList<List<Edit>>? = null):
     val lead = collapsed.length - collapsed.jsTrimStart().length
     steps.add(edits)
     steps.add(replacements(rows, RE_LINE_BREAKS, 1))
-    steps.add(listOf(intArrayOf(0, lead, 0), intArrayOf(lead + trimmed.length, collapsed.length, 0)))
+    steps.add(
+      listOf(intArrayOf(0, lead, 0), intArrayOf(lead + trimmed.length, collapsed.length, 0))
+    )
   }
   return trimmed
 }
@@ -98,7 +99,9 @@ fun parseSankey(src: String, db: SankeyDb, source: String = src) {
     val steps = ArrayList<List<Edit>>()
     if (source != src) prepareTextForParsing(source, steps)
     // Map EOF before the trimmed trailing blanks.
-    val offset = if (at > 0 && at >= src.length) inputOffset(steps, src.length - 1) + 1 else inputOffset(steps, at)
+    val offset =
+      if (at > 0 && at >= src.length) inputOffset(steps, src.length - 1) + 1
+      else inputOffset(steps, at)
     syntaxError("sankey", source, offset, detail)
   }
 

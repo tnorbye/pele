@@ -44,29 +44,34 @@ private const val MAX_TICKS = 32.0
 private val RE_LEADING = JsRegExp("""^\s+""", "g")
 private val RE_INDENT = JsRegExp("""\n\s+""", "g")
 
-private fun invalid(message: String): PeleError = PeleError(message, PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "radar"))
+private fun invalid(message: String): PeleError =
+  PeleError(message, PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "radar"))
 
 fun buildRadar(ast: RadarAst, title: String?): RadarModel {
   val axes = ast.axes.map { axis -> RadarAxis(axis.name, axis.label ?: axis.name) }
 
-  val curves = ast.curves.map { curve ->
-    val entries: List<Double>
-    if (curve.entries[0].axis == null) {
-      entries = curve.entries.map { entry -> entry.value }
-    } else {
-      if (axes.isEmpty()) throw invalid("Axes must be populated before curves for reference entries")
-      val byAxis = HashMap<String, Double>()
-      for (entry in curve.entries) {
-        if (entry.axis != null && !byAxis.containsKey(entry.axis)) byAxis[entry.axis] = entry.value
+  val curves =
+    ast.curves.map { curve ->
+      val entries: List<Double>
+      if (curve.entries[0].axis == null) {
+        entries = curve.entries.map { entry -> entry.value }
+      } else {
+        if (axes.isEmpty())
+          throw invalid("Axes must be populated before curves for reference entries")
+        val byAxis = HashMap<String, Double>()
+        for (entry in curve.entries) {
+          if (entry.axis != null && !byAxis.containsKey(entry.axis))
+            byAxis[entry.axis] = entry.value
+        }
+        entries = axes.map { axis ->
+          byAxis[axis.name] ?: throw invalid("Missing entry for axis " + axis.label)
+        }
       }
-      entries = axes.map { axis ->
-        byAxis[axis.name] ?: throw invalid("Missing entry for axis " + axis.label)
-      }
+      RadarCurve(curve.name, curve.label ?: curve.name, entries)
     }
-    RadarCurve(curve.name, curve.label ?: curve.name, entries)
-  }
 
-  val options = RadarOptions(showLegend = true, ticks = 5.0, max = null, min = 0.0, graticule = "circle")
+  val options =
+    RadarOptions(showLegend = true, ticks = 5.0, max = null, min = 0.0, graticule = "circle")
   for (option in ast.options) {
     if (option.name == "showLegend") {
       options.showLegend = option.value as Boolean
@@ -86,8 +91,10 @@ fun buildRadar(ast: RadarAst, title: String?): RadarModel {
   return RadarModel(
     type = "radar",
     title = if (!ast.title.isNullOrEmpty()) ast.title else title,
-    accTitle = if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
-    accDescr = if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
+    accTitle =
+      if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
+    accDescr =
+      if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
     axes = axes,
     curves = curves,
     options = options,

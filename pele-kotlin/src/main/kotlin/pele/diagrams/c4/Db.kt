@@ -6,23 +6,25 @@ import pele.js.JsRegExp
 import pele.js.jsParseInt
 import pele.js.jsReplace
 
-private val ELEMENT_FIELDS: Set<String> = setOf(
-  "label",
-  "type",
-  "descr",
-  "techn",
-  "sprite",
-  "tags",
-  "link",
-  "bgColor",
-  "fontColor",
-  "borderColor",
-  "shadowing",
-  "shape",
-  "legendText",
-  "legendSprite",
-)
-private val REL_FIELDS: Set<String> = setOf("label", "descr", "techn", "sprite", "tags", "link", "textColor", "lineColor")
+private val ELEMENT_FIELDS: Set<String> =
+  setOf(
+    "label",
+    "type",
+    "descr",
+    "techn",
+    "sprite",
+    "tags",
+    "link",
+    "bgColor",
+    "fontColor",
+    "borderColor",
+    "shadowing",
+    "shape",
+    "legendText",
+    "legendSprite",
+  )
+private val REL_FIELDS: Set<String> =
+  setOf("label", "descr", "techn", "sprite", "tags", "link", "textColor", "lineColor")
 
 private val RE_INDENT = JsRegExp("""\n\s+""", "g")
 
@@ -79,11 +81,11 @@ private fun named(target: Any, attr: C4Named) {
   }
 }
 
-// A positional argument fills the field of its slot. A named one fills the field it names, whichever slot it is in.
+// A positional argument fills the field of its slot. A named one fills the field it names,
+// whichever slot it is in.
 private fun put(target: Any, field: String, attr: C4Attr?) {
   if (attr == null) return
-  if (attr is String) setField(target, field, attr)
-  else named(target, attr as C4Named)
+  if (attr is String) setField(target, field, attr) else named(target, attr as C4Named)
 }
 
 private fun text(target: Any, field: String, attr: C4Attr?) {
@@ -123,18 +125,21 @@ class C4Db : C4Model {
   override val type = "c4"
   override var c4Type: String? = null
     private set
+
   override var title: String? = null
     private set
+
   override var accTitle: String? = null
   override var accDescr: String? = null
   override val shapes: MutableList<C4Shape> = ArrayList()
-  override val boundaries: MutableList<C4Boundary> = arrayListOf(
-    C4Boundary().also {
-      it.alias = "global"
-      it.label = "global"
-      it.type = "global"
-    },
-  )
+  override val boundaries: MutableList<C4Boundary> =
+    arrayListOf(
+      C4Boundary().also {
+        it.alias = "global"
+        it.label = "global"
+        it.type = "global"
+      }
+    )
   override val rels: MutableList<C4Rel> = ArrayList()
   override var shapeInRow: Double = 4.0
   override var boundaryInRow: Double = 2.0
@@ -160,7 +165,13 @@ class C4Db : C4Model {
     this.accDescr = descr.jsReplace(RE_INDENT, "\n")
   }
 
-  private fun <E : C4Element> element(list: MutableList<E>, index: MutableMap<String, E>, alias: C4Attr, title: C4Attr?, make: () -> E): E {
+  private fun <E : C4Element> element(
+    list: MutableList<E>,
+    index: MutableMap<String, E>,
+    alias: C4Attr,
+    title: C4Attr?,
+    make: () -> E,
+  ): E {
     var el = if (alias is String) index[alias] else null
     if (el == null) {
       el = make()
@@ -206,8 +217,7 @@ class C4Db : C4Model {
 
   private fun boundary(attrs: List<C4Attr>, fallback: String): C4Boundary {
     val boundary = element(boundaries, boundaryIndex, attrs[0], attrs.getOrNull(1)) { C4Boundary() }
-    if (attrs.getOrNull(2) == null) boundary.type = fallback
-    else put(boundary, "type", attrs[2])
+    if (attrs.getOrNull(2) == null) boundary.type = fallback else put(boundary, "type", attrs[2])
     return boundary
   }
 
@@ -242,7 +252,8 @@ class C4Db : C4Model {
   }
 
   fun popBoundaryParseStack() {
-    this.current = if (this.stack.isEmpty()) this.boundaries[0] else this.stack.removeAt(this.stack.size - 1)
+    this.current =
+      if (this.stack.isEmpty()) this.boundaries[0] else this.stack.removeAt(this.stack.size - 1)
   }
 
   // from, to, label, ?techn, ?descr, ?sprite, ?tags, $link
@@ -263,10 +274,8 @@ class C4Db : C4Model {
         }
         targets[to as String] = rel
       }
-      if (from is String) rel.from = from
-      else rel.fromAttr = from as C4Named
-      if (to is String) rel.to = to
-      else rel.toAttr = to as C4Named
+      if (from is String) rel.from = from else rel.fromAttr = from as C4Named
+      if (to is String) rel.to = to else rel.toAttr = to as C4Named
     }
     rel.type = type
     label(rel, attrs[2])
@@ -281,7 +290,8 @@ class C4Db : C4Model {
     return this.shapeIndex[alias] ?: this.boundaryIndex[alias]
   }
 
-  // elementName, ?bgColor, ?fontColor, ?borderColor, ?shadowing, ?shape, ?sprite, ?techn, ?legendText, ?legendSprite
+  // elementName, ?bgColor, ?fontColor, ?borderColor, ?shadowing, ?shape, ?sprite, ?techn,
+  // ?legendText, ?legendSprite
   fun updateElStyle(@Suppress("UNUSED_PARAMETER") type: String, attrs: List<C4Attr>) {
     val first = attrs.getOrNull(0)
     val el = if (first is String) this.getC4Shape(first) else null
@@ -307,16 +317,16 @@ class C4Db : C4Model {
     put(rel, "lineColor", attrs.getOrNull(3))
     val x = attrs.getOrNull(4)
     val y = attrs.getOrNull(5)
-    if (x is String) rel.offsetX = jsParseInt(x)
-    else if (x != null) named(rel, x as C4Named)
-    if (y is String) rel.offsetY = jsParseInt(y)
-    else if (y != null) named(rel, y as C4Named)
+    if (x is String) rel.offsetX = jsParseInt(x) else if (x != null) named(rel, x as C4Named)
+    if (y is String) rel.offsetY = jsParseInt(y) else if (y != null) named(rel, y as C4Named)
   }
 
-  // ?c4ShapeInRow, ?c4BoundaryInRow. As in Mermaid, the slot decides which one a value sets, not its name.
+  // ?c4ShapeInRow, ?c4BoundaryInRow. As in Mermaid, the slot decides which one a value sets, not
+  // its name.
   fun updateLayoutConfig(@Suppress("UNUSED_PARAMETER") type: String, attrs: List<C4Attr>) {
     fun count(attr: C4Attr?): Double =
-      if (attr == null) Double.NaN else jsParseInt(if (attr is String) attr else (attr as C4Named).value)
+      if (attr == null) Double.NaN
+      else jsParseInt(if (attr is String) attr else (attr as C4Named).value)
     val shapes = count(attrs.getOrNull(0))
     val boundaries = count(attrs.getOrNull(1))
     if (shapes >= 1) this.shapeInRow = shapes

@@ -2,6 +2,9 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.gantt
 
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.ceil
+import kotlin.math.floor
 import pele.js.JsRegExp
 import pele.js.jsMatch
 import pele.js.jsMatchGlobal
@@ -11,29 +14,30 @@ import pele.js.jsRound
 import pele.js.jsSlice
 import pele.js.jsStr
 import pele.js.truthy
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.ceil
-import kotlin.math.floor
 
-// The parts of dayjs 1.11 that Mermaid's gantt code relies on, with the plugins it loads (custom parse format,
-// advanced format, ISO week) and the English locale: strict parsing against a format, formatting, and calendar
-// arithmetic, all in local time. Quirks are kept, because a date is accepted only when formatting the parsed
+// The parts of dayjs 1.11 that Mermaid's gantt code relies on, with the plugins it loads (custom
+// parse format,
+// advanced format, ISO week) and the English locale: strict parsing against a format, formatting,
+// and calendar
+// arithmetic, all in local time. Quirks are kept, because a date is accepted only when formatting
+// the parsed
 // result gives back the input.
 
-val MONTHS = listOf(
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-)
+val MONTHS =
+  listOf(
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  )
 val WEEKDAYS = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
 
 private const val DAY = 86400000.0
@@ -122,8 +126,13 @@ private fun isoWeek(date: JsDate): Double {
   return whole + 1
 }
 
-private val RE_ADVANCED = JsRegExp("""\[([^\]]+)]|Q|wo|ww|w|WW|W|zzz|z|gggg|GGGG|Do|X|x|k{1,2}|S""", "g")
-private val RE_FORMAT = JsRegExp("""\[([^\]]+)]|YYYY|YY|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS""", "g")
+private val RE_ADVANCED =
+  JsRegExp("""\[([^\]]+)]|Q|wo|ww|w|WW|W|zzz|z|gggg|GGGG|Do|X|x|k{1,2}|S""", "g")
+private val RE_FORMAT =
+  JsRegExp(
+    """\[([^\]]+)]|YYYY|YY|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS""",
+    "g",
+  )
 private const val DEFAULT_FORMAT = "YYYY-MM-DDTHH:mm:ssZ"
 
 // Returns null for the week-of-year and time zone name tokens, which need dayjs plugins Mermaid
@@ -133,25 +142,31 @@ fun format(date: JsDate, template: String): String? {
   val str = if (template.isNotEmpty()) template else DEFAULT_FORMAT
   if (str == "YYYY-MM-DD") return isoDate(date)
   var unsupported = false
-  val advanced = str.jsReplace(RE_ADVANCED) { m ->
-    val match = m.value
-    when (match) {
-      "Q" -> jsStr(ceil((date.getMonth() + 1) / 3))
-      "Do" -> "[" + ordinal(date.getDate().toInt()) + "]"
-      "GGGG" -> jsStr(weekThursday(date).getFullYear())
-      "W" -> jsStr(isoWeek(date))
-      "WW" -> pad(isoWeek(date), 2)
-      "k" -> jsStr(if (truthy(date.getHours())) date.getHours() else 24.0)
-      "kk" -> pad(if (truthy(date.getHours())) date.getHours() else 24.0, 2)
-      "X" -> jsStr(floor(date.getTime() / 1000))
-      "x" -> jsStr(date.getTime())
-      "gggg", "wo", "w", "ww", "z", "zzz" -> {
-        unsupported = true
-        match
+  val advanced =
+    str.jsReplace(RE_ADVANCED) { m ->
+      val match = m.value
+      when (match) {
+        "Q" -> jsStr(ceil((date.getMonth() + 1) / 3))
+        "Do" -> "[" + ordinal(date.getDate().toInt()) + "]"
+        "GGGG" -> jsStr(weekThursday(date).getFullYear())
+        "W" -> jsStr(isoWeek(date))
+        "WW" -> pad(isoWeek(date), 2)
+        "k" -> jsStr(if (truthy(date.getHours())) date.getHours() else 24.0)
+        "kk" -> pad(if (truthy(date.getHours())) date.getHours() else 24.0, 2)
+        "X" -> jsStr(floor(date.getTime() / 1000))
+        "x" -> jsStr(date.getTime())
+        "gggg",
+        "wo",
+        "w",
+        "ww",
+        "z",
+        "zzz" -> {
+          unsupported = true
+          match
+        }
+        else -> match
       }
-      else -> match
     }
-  }
   if (unsupported) return null
   val hours = date.getHours()
   return advanced.jsReplace(RE_FORMAT) { m ->
@@ -194,8 +209,11 @@ fun isoDate(date: JsDate): String {
   val year = date.getFullYear()
   val month = date.getMonth() + 1
   val day = date.getDate()
-  return (if (year >= 1000 && year <= 9999) jsStr(year) else pad(year, 4)) + (if (month < 10) "-0" else "-") + jsStr(month) +
-    (if (day < 10) "-0" else "-") + jsStr(day)
+  return (if (year >= 1000 && year <= 9999) jsStr(year) else pad(year, 4)) +
+    (if (month < 10) "-0" else "-") +
+    jsStr(month) +
+    (if (day < 10) "-0" else "-") +
+    jsStr(day)
 }
 
 private class Fields {
@@ -222,7 +240,11 @@ private sealed class Step {
   class Read(val re: JsRegExp, val read: Reader) : Step()
 }
 
-private val RE_TOKENS = JsRegExp("""(\[[^[]*\])|([-_:/.,()\s]+)|(A|a|Q|YYYY|YY?|ww?|MM?M?M?|Do|DD?|hh?|HH?|mm?|ss?|S{1,3}|z|ZZ?)""", "g")
+private val RE_TOKENS =
+  JsRegExp(
+    """(\[[^[]*\])|([-_:/.,()\s]+)|(A|a|Q|YYYY|YY?|ww?|MM?M?M?|Do|DD?|hh?|HH?|mm?|ss?|S{1,3}|z|ZZ?)""",
+    "g",
+  )
 private val RE_LITERAL = JsRegExp("""\[[^\]]+]""", "g")
 private val RE_BRACKETS = JsRegExp("""^\[|\]$""", "g")
 private val MATCH_1 = JsRegExp("""\d""")
@@ -267,47 +289,77 @@ private fun monthName(names: List<String>): Reader = Reader { fields, input ->
 
 private fun step(re: JsRegExp, read: Reader) = Step.Read(re, read)
 
-private val READERS: Map<String, Step.Read> = mapOf(
-  "A" to step(MATCH_WORD) { f, input -> f.afternoon = input == "PM"; true },
-  "a" to step(MATCH_WORD) { f, input -> f.afternoon = input == "pm"; true },
-  "Q" to step(MATCH_1) { f, input -> f.month = (jsNumber(input) - 1) * 3 + 1; true },
-  "S" to step(MATCH_1) { f, input -> f.milliseconds = jsNumber(input) * 100; true },
-  "SS" to step(MATCH_2) { f, input -> f.milliseconds = jsNumber(input) * 10; true },
-  "SSS" to step(MATCH_3) { f, input -> f.milliseconds = jsNumber(input); true },
-  "s" to step(MATCH_1_TO_2, field { f, v -> f.seconds = v }),
-  "ss" to step(MATCH_1_TO_2, field { f, v -> f.seconds = v }),
-  "m" to step(MATCH_1_TO_2, field { f, v -> f.minutes = v }),
-  "mm" to step(MATCH_1_TO_2, field { f, v -> f.minutes = v }),
-  "H" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
-  "h" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
-  "HH" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
-  "hh" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
-  "D" to step(MATCH_1_TO_2, field { f, v -> f.day = v }),
-  "DD" to step(MATCH_2, field { f, v -> f.day = v }),
-  "Do" to step(MATCH_WORD) { f, input ->
-    val digits = input.jsMatch(RE_DIGITS)
-    if (digits == null) {
-      false
-    } else {
-      // dayjs keeps the digits as a string here, so even "0" counts as a day having been given.
-      f.day = jsNumber(digits[0]!!)
-      f.dayGiven = true
-      for (i in 1..31) if (ordinal(i) == input) f.day = i.toDouble()
-      true
-    }
-  },
-  "w" to step(MATCH_1_TO_2, field { f, v -> f.week = v }),
-  "ww" to step(MATCH_2, field { f, v -> f.week = v }),
-  "M" to step(MATCH_1_TO_2, field { f, v -> f.month = v }),
-  "MM" to step(MATCH_2, field { f, v -> f.month = v }),
-  "MMM" to step(MATCH_WORD, monthName(MONTHS.map { it.jsSlice(0, 3) })),
-  "MMMM" to step(MATCH_WORD, monthName(MONTHS)),
-  "Y" to step(MATCH_SIGNED, field { f, v -> f.year = v }),
-  "YY" to step(MATCH_2) { f, input -> f.year = jsNumber(input) + (if (jsNumber(input) > 68) 1900 else 2000); true },
-  "YYYY" to step(MATCH_4, field { f, v -> f.year = v }),
-  "Z" to step(MATCH_OFFSET, readOffset),
-  "ZZ" to step(MATCH_OFFSET, readOffset),
-)
+private val READERS: Map<String, Step.Read> =
+  mapOf(
+    "A" to
+      step(MATCH_WORD) { f, input ->
+        f.afternoon = input == "PM"
+        true
+      },
+    "a" to
+      step(MATCH_WORD) { f, input ->
+        f.afternoon = input == "pm"
+        true
+      },
+    "Q" to
+      step(MATCH_1) { f, input ->
+        f.month = (jsNumber(input) - 1) * 3 + 1
+        true
+      },
+    "S" to
+      step(MATCH_1) { f, input ->
+        f.milliseconds = jsNumber(input) * 100
+        true
+      },
+    "SS" to
+      step(MATCH_2) { f, input ->
+        f.milliseconds = jsNumber(input) * 10
+        true
+      },
+    "SSS" to
+      step(MATCH_3) { f, input ->
+        f.milliseconds = jsNumber(input)
+        true
+      },
+    "s" to step(MATCH_1_TO_2, field { f, v -> f.seconds = v }),
+    "ss" to step(MATCH_1_TO_2, field { f, v -> f.seconds = v }),
+    "m" to step(MATCH_1_TO_2, field { f, v -> f.minutes = v }),
+    "mm" to step(MATCH_1_TO_2, field { f, v -> f.minutes = v }),
+    "H" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
+    "h" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
+    "HH" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
+    "hh" to step(MATCH_1_TO_2, field { f, v -> f.hours = v }),
+    "D" to step(MATCH_1_TO_2, field { f, v -> f.day = v }),
+    "DD" to step(MATCH_2, field { f, v -> f.day = v }),
+    "Do" to
+      step(MATCH_WORD) { f, input ->
+        val digits = input.jsMatch(RE_DIGITS)
+        if (digits == null) {
+          false
+        } else {
+          // dayjs keeps the digits as a string here, so even "0" counts as a day having been given.
+          f.day = jsNumber(digits[0]!!)
+          f.dayGiven = true
+          for (i in 1..31) if (ordinal(i) == input) f.day = i.toDouble()
+          true
+        }
+      },
+    "w" to step(MATCH_1_TO_2, field { f, v -> f.week = v }),
+    "ww" to step(MATCH_2, field { f, v -> f.week = v }),
+    "M" to step(MATCH_1_TO_2, field { f, v -> f.month = v }),
+    "MM" to step(MATCH_2, field { f, v -> f.month = v }),
+    "MMM" to step(MATCH_WORD, monthName(MONTHS.map { it.jsSlice(0, 3) })),
+    "MMMM" to step(MATCH_WORD, monthName(MONTHS)),
+    "Y" to step(MATCH_SIGNED, field { f, v -> f.year = v }),
+    "YY" to
+      step(MATCH_2) { f, input ->
+        f.year = jsNumber(input) + (if (jsNumber(input) > 68) 1900 else 2000)
+        true
+      },
+    "YYYY" to step(MATCH_4, field { f, v -> f.year = v }),
+    "Z" to step(MATCH_OFFSET, readOffset),
+    "ZZ" to step(MATCH_OFFSET, readOffset),
+  )
 
 // PORT: the format and its steps live in one immutable pair that is swapped atomically.
 private class Compiled(val format: String, val steps: List<Step>?)
@@ -323,14 +375,16 @@ private fun compile(template: String): List<Step>? {
 }
 
 private fun compileSteps(template: String): List<Step>? {
-  // dayjs expands localized tokens through a locale table the English locale does not have, and fails.
+  // dayjs expands localized tokens through a locale table the English locale does not have, and
+  // fails.
   if (RE_LOCALIZED.test(template.jsReplace(RE_LITERAL, ""))) return null
   val tokens = template.jsMatchGlobal(RE_TOKENS) ?: return null
   return tokens.map { token -> READERS[token] ?: Step.Literal(token.jsReplace(RE_BRACKETS, "")) }
 }
 
 private fun loose(input: String, template: String, now: JsDate): JsDate? {
-  if (template == "x" || template == "X") return JsDate((if (template == "X") 1000 else 1) * jsNumber(input))
+  if (template == "x" || template == "X")
+    return JsDate((if (template == "X") 1000 else 1) * jsNumber(input))
   val steps = compile(template) ?: return null
   val f = Fields()
   var rest = input
@@ -343,7 +397,8 @@ private fun loose(input: String, template: String, now: JsDate): JsDate? {
     step as Step.Read
     val match = step.re.exec(rest.jsSlice(start)) ?: return null
     if (!step.read.read(f, match[0]!!)) return null
-    // dayjs drops the first occurrence of the matched text, wherever it is, and does not move `start`.
+    // dayjs drops the first occurrence of the matched text, wherever it is, and does not move
+    // `start`.
     rest = rest.jsReplace(match[0]!!, "")
   }
   val afternoon = f.afternoon
@@ -360,23 +415,28 @@ private fun loose(input: String, template: String, now: JsDate): JsDate? {
   val fMonth = f.month
   val yearTruthy = fYear != null && truthy(fYear)
   val monthTruthy = fMonth != null && truthy(fMonth)
-  val day = if (f.dayGiven == true || (fDay != null && truthy(fDay))) fDay!! else if (!yearTruthy && !monthTruthy) now.getDate() else 1.0
+  val day =
+    if (f.dayGiven == true || (fDay != null && truthy(fDay))) fDay!!
+    else if (!yearTruthy && !monthTruthy) now.getDate() else 1.0
   val year = if (yearTruthy) fYear!! else now.getFullYear()
   var month = 0.0
-  if (!(yearTruthy && !monthTruthy)) month = if ((fMonth ?: Double.NaN) > 0) fMonth!! - 1 else now.getMonth()
+  if (!(yearTruthy && !monthTruthy))
+    month = if ((fMonth ?: Double.NaN) > 0) fMonth!! - 1 else now.getMonth()
   val hours = f.hours?.takeIf { truthy(it) } ?: 0.0
   val minutes = f.minutes?.takeIf { truthy(it) } ?: 0.0
   val seconds = f.seconds?.takeIf { truthy(it) } ?: 0.0
   val ms = f.milliseconds?.takeIf { truthy(it) } ?: 0.0
   val offset = f.offset
-  if (offset != null) return JsDate(dateUtc(year, month, day, hours, minutes, seconds, ms + offset * 60000))
+  if (offset != null)
+    return JsDate(dateUtc(year, month, day, hours, minutes, seconds, ms + offset * 60000))
   // Applying a week number needs a dayjs plugin Mermaid does not load.
   val week = f.week
   if (week != null && truthy(week)) return null
   return JsDate.local(year, month, day, hours, minutes, seconds, ms)
 }
 
-// Parses the way `dayjs(input, format, true)` does. `now` supplies the fields the format leaves out.
+// Parses the way `dayjs(input, format, true)` does. `now` supplies the fields the format leaves
+// out.
 fun parseStrict(input: String, template: String, now: JsDate): JsDate? {
   val date = loose(input, template, now)
   return if (date != null && isValid(date) && format(date, template) == input) date else null

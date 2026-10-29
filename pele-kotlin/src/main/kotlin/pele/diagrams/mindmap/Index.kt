@@ -8,16 +8,24 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val mindmap: Diagram<MindmapModel> = object : Diagram<MindmapModel> {
-  override val type = "mindmap"
-  override val math = true
+val mindmap: Diagram<MindmapModel> =
+  object : Diagram<MindmapModel> {
+    override val type = "mindmap"
+    override val math = true
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): MindmapModel {
-    val db = MindmapDb()
-    db.title = title
-    parseMindmap(source, db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): MindmapModel {
+      val db = MindmapDb()
+      db.title = title
+      parseMindmap(source, db)
+      return db
+    }
+
+    override fun render(model: MindmapModel, config: Config, options: RenderOptions): Rendered =
+      renderMindmap(model, config, options)
   }
-
-  override fun render(model: MindmapModel, config: Config, options: RenderOptions): Rendered = renderMindmap(model, config, options)
-}

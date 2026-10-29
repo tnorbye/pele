@@ -31,24 +31,25 @@ object T {
   const val event = 15
 }
 
-val TOKEN_NAMES = listOf(
-  "\$end",
-  "EOF",
-  "INVALID",
-  "NEWLINE",
-  "timeline",
-  "timeline_lr",
-  "timeline_td",
-  "title",
-  "acc_title",
-  "acc_title_value",
-  "acc_descr",
-  "acc_descr_value",
-  "acc_descr_multiline_value",
-  "section",
-  "period",
-  "event",
-)
+val TOKEN_NAMES =
+  listOf(
+    "\$end",
+    "EOF",
+    "INVALID",
+    "NEWLINE",
+    "timeline",
+    "timeline_lr",
+    "timeline_td",
+    "title",
+    "acc_title",
+    "acc_title_value",
+    "acc_descr",
+    "acc_descr_value",
+    "acc_descr_multiline_value",
+    "section",
+    "period",
+    "event",
+  )
 
 fun tokenize(src: String): ScanTokens {
   val n = src.length

@@ -9,10 +9,12 @@ class GanttTask(
   // The task's label, under the name Mermaid gives it.
   var task: String,
   var section: String,
-  // Unset until `getTasks` has scheduled the task, and still unset when what it refers to never resolves.
+  // Unset until `getTasks` has scheduled the task, and still unset when what it refers to never
+  // resolves.
   var startTime: JsDate?,
   var endTime: JsDate?,
-  // Where the bar ends when excluded days pushed the task's end out; null when the end was given as a date.
+  // Where the bar ends when excluded days pushed the task's end out; null when the end was given as
+  // a date.
   var renderEndTime: JsDate?,
   var manualEndTime: Boolean,
   var processed: Boolean,

@@ -56,7 +56,8 @@ private fun skipSpace(src: String, from: Int): Int {
   return p
 }
 
-// Lexes an accTitle or accDescr statement at `p` and returns where it ends, or `p` if there is none.
+// Lexes an accTitle or accDescr statement at `p` and returns where it ends, or `p` if there is
+// none.
 // The token types acc_title, acc_title_value, acc_descr, acc_descr_value and
 // acc_descr_multiline_value must be numbered consecutively from `first`.
 fun accessibility(src: String, p: Int, out: ScanTokens, first: Int): Int {

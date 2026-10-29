@@ -2,15 +2,15 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.c4
 
-import pele.js.jsHypot
-import pele.js.jsOr
-import pele.js.truthy
-import pele.svg.num
 import java.util.IdentityHashMap
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.sign
 import kotlin.math.sqrt
+import pele.js.jsHypot
+import pele.js.jsOr
+import pele.js.truthy
+import pele.svg.num
 
 // A laid out shape or boundary: top-left corner, size, and the shared shape it is drawn as.
 open class Box(
@@ -37,7 +37,8 @@ class Route(
   val y0: Double,
   val x1: Double,
   val y1: Double,
-  // The side of that stretch the label is pushed to, as a unit vector; zero centers it on the stretch.
+  // The side of that stretch the label is pushed to, as a unit vector; zero centers it on the
+  // stretch.
   val nx: Double,
   val ny: Double,
   // When set, the label stays over the line and moves that way by at most this much.
@@ -53,7 +54,8 @@ const val LANE = 20.0
 private const val LANE_STEP = 7.0
 private const val CORNER = 8.0
 
-// A wide label on an upright lane leans this far out from it, to the middle of the gap between columns.
+// A wide label on an upright lane leans this far out from it, to the middle of the gap between
+// columns.
 private const val LEAN = 30.0
 
 // Label widths that fit the gap between two columns, and where there is room to spare.
@@ -63,15 +65,27 @@ private const val WIDE = 160.0
 // The space a label's background adds to the width of its text.
 const val LABEL_PAD = 8.0
 
-// The shared person shape: a head of radius 13 centered 14 below the top, over a body that starts 26 below it.
+// The shared person shape: a head of radius 13 centered 14 below the top, over a body that starts
+// 26 below it.
 const val HEAD = 26.0
 
 // The cap radii drawShape uses for the two cylinders.
 fun cylRy(w: Double): Double = minOf(12.0, maxOf(6.0, w / 14))
+
 fun queueRx(h: Double): Double = minOf(12.0, h / 4)
 
-// How far along the segment from (px, py) by (dx, dy) it first meets the rectangle; Infinity when it misses.
-private fun hitRect(x0: Double, y0: Double, x1: Double, y1: Double, px: Double, py: Double, dx: Double, dy: Double): Double {
+// How far along the segment from (px, py) by (dx, dy) it first meets the rectangle; Infinity when
+// it misses.
+private fun hitRect(
+  x0: Double,
+  y0: Double,
+  x1: Double,
+  y1: Double,
+  px: Double,
+  py: Double,
+  dx: Double,
+  dy: Double,
+): Double {
   var enter = 0.0
   var leave = 1.0
   if (dx == 0.0) {
@@ -93,7 +107,16 @@ private fun hitRect(x0: Double, y0: Double, x1: Double, y1: Double, px: Double, 
   return if (enter <= leave) enter else Double.POSITIVE_INFINITY
 }
 
-private fun hitEllipse(cx: Double, cy: Double, rx: Double, ry: Double, px: Double, py: Double, dx: Double, dy: Double): Double {
+private fun hitEllipse(
+  cx: Double,
+  cy: Double,
+  rx: Double,
+  ry: Double,
+  px: Double,
+  py: Double,
+  dx: Double,
+  dy: Double,
+): Double {
   val ux = dx / rx
   val uy = dy / ry
   val vx = (px - cx) / rx
@@ -116,7 +139,10 @@ private fun hit(box: Box, px: Double, py: Double, qx: Double, qy: Double): Doubl
   val dx = qx - px
   val dy = qy - py
   if (box.form == "person") {
-    return minOf(hitRect(x, y + HEAD, x + w, y + h, px, py, dx, dy), hitEllipse(x + w / 2, y + 14, 13.0, 13.0, px, py, dx, dy))
+    return minOf(
+      hitRect(x, y + HEAD, x + w, y + h, px, py, dx, dy),
+      hitEllipse(x + w / 2, y + 14, 13.0, 13.0, px, py, dx, dy),
+    )
   }
   if (box.form == "cyl") {
     val ry = cylRy(w)
@@ -149,12 +175,10 @@ fun crosses(points: DoubleArray, x0: Double, y0: Double, x1: Double, y1: Double)
 }
 
 private fun contains(outer: Box, inner: Box): Boolean {
-  return (
-    outer.x <= inner.x &&
-      outer.y <= inner.y &&
-      outer.x + outer.w >= inner.x + inner.w &&
-      outer.y + outer.h >= inner.y + inner.h
-    )
+  return (outer.x <= inner.x &&
+    outer.y <= inner.y &&
+    outer.x + outer.w >= inner.x + inner.w &&
+    outer.y + outer.h >= inner.y + inner.h)
 }
 
 // The straight line from a to b: x, y of its start, then of its end.
@@ -176,7 +200,9 @@ private fun connect(a: Box, b: Box, shift: Double): DoubleArray {
     val bottom = outer.y + outer.h - inner.y - inner.h
     val least = minOf(left, right, top, bottom)
     val ox = if (least == left) outer.x else if (least == right) outer.x + outer.w else ix
-    val oy = if (least == left || least == right) iy else if (least == bottom) outer.y + outer.h else outer.y
+    val oy =
+      if (least == left || least == right) iy
+      else if (least == bottom) outer.y + outer.h else outer.y
     val t = minOf(hit(inner, ox, oy, ix, iy), 1.0)
     val mx = ox + (ix - ox) * t
     val my = oy + (iy - oy) * t
@@ -187,7 +213,8 @@ private fun connect(a: Box, b: Box, shift: Double): DoubleArray {
   var py = ay
   var qx = bx
   var qy = by
-  // Shapes that share a column or a row are joined by an upright or level line through the shared span.
+  // Shapes that share a column or a row are joined by an upright or level line through the shared
+  // span.
   val x0 = maxOf(a.x, b.x)
   val x1 = minOf(a.x + a.w, b.x + b.w)
   val y0 = maxOf(a.y, b.y)
@@ -217,7 +244,12 @@ private fun connect(a: Box, b: Box, shift: Double): DoubleArray {
     ta = minOf(hit(a, qx, qy, px, py), 1.0)
     tb = minOf(hit(b, px, py, qx, qy), 1.0)
   }
-  return doubleArrayOf(qx + (px - qx) * ta, qy + (py - qy) * ta, px + (qx - px) * tb, py + (qy - py) * tb)
+  return doubleArrayOf(
+    qx + (px - qx) * ta,
+    qy + (py - qy) * ta,
+    px + (qx - px) * tb,
+    py + (qy - py) * tb,
+  )
 }
 
 // Parallel stretches closer than this read as one line, and a line this close to a boundary's frame
@@ -227,7 +259,8 @@ private const val FRAME_NEAR = 3.0
 private const val PORT_STEP = 12.0
 
 // What the routes drawn so far take up, so that the next keeps apart from them: upright stretches
-// as x, top, bottom; level ones as y, left, right; and where lines leave or reach each side of a shape.
+// as x, top, bottom; level ones as y, left, right; and where lines leave or reach each side of a
+// shape.
 class Lanes {
   private val upright = ArrayList<Double>()
   private val level = ArrayList<Double>()
@@ -249,7 +282,8 @@ class Lanes {
       }
       return false
     }
-    return !near(if (upright) this.upright else this.level, NEAR) && !near(this.frames[if (upright) 0 else 1], FRAME_NEAR)
+    return !near(if (upright) this.upright else this.level, NEAR) &&
+      !near(this.frames[if (upright) 0 else 1], FRAME_NEAR)
   }
 
   fun crossings(points: DoubleArray): Int {
@@ -258,8 +292,16 @@ class Lanes {
     while (i < points.size) {
       val upright = points[i] == points[i - 2]
       val at = if (upright) points[i] else points[i + 1]
-      val lo = minOf(if (upright) points[i - 1] else points[i - 2], if (upright) points[i + 1] else points[i])
-      val hi = maxOf(if (upright) points[i - 1] else points[i - 2], if (upright) points[i + 1] else points[i])
+      val lo =
+        minOf(
+          if (upright) points[i - 1] else points[i - 2],
+          if (upright) points[i + 1] else points[i],
+        )
+      val hi =
+        maxOf(
+          if (upright) points[i - 1] else points[i - 2],
+          if (upright) points[i + 1] else points[i],
+        )
       val list = if (upright) this.level else this.upright
       var j = 0
       while (j < list.size) {
@@ -280,9 +322,17 @@ class Lanes {
     var i = 2
     while (i < points.size) {
       if (points[i] == points[i - 2]) {
-        this.upright.addAll(listOf(points[i], minOf(points[i - 1], points[i + 1]), maxOf(points[i - 1], points[i + 1])))
+        this.upright.addAll(
+          listOf(
+            points[i],
+            minOf(points[i - 1], points[i + 1]),
+            maxOf(points[i - 1], points[i + 1]),
+          )
+        )
       } else if (points[i + 1] == points[i - 1]) {
-        this.level.addAll(listOf(points[i + 1], minOf(points[i - 2], points[i]), maxOf(points[i - 2], points[i])))
+        this.level.addAll(
+          listOf(points[i + 1], minOf(points[i - 2], points[i]), maxOf(points[i - 2], points[i]))
+        )
       }
       i += 2
     }
@@ -333,22 +383,31 @@ private fun path(points: DoubleArray, startTrim: Double, endTrim: Double): Strin
     val iy = sign(y - points[i - 1])
     val ox = sign(points[i + 2] - x)
     val oy = sign(points[i + 3] - y)
-    val r = minOf(
-      CORNER,
-      abs(x - points[i - 2] + y - points[i - 1]) / 2,
-      abs(points[i + 2] - x + points[i + 3] - y) / 2,
-    )
-    d += "${if (truthy(ix)) "H" + num(x - ix * r) else "V" + num(y - iy * r)}Q${num(x)},${num(y)} ${num(x + ox * r)},${num(y + oy * r)}"
+    val r =
+      minOf(
+        CORNER,
+        abs(x - points[i - 2] + y - points[i - 1]) / 2,
+        abs(points[i + 2] - x + points[i + 3] - y) / 2,
+      )
+    d +=
+      "${if (truthy(ix)) "H" + num(x - ix * r) else "V" + num(y - iy * r)}Q${num(x)},${num(y)} ${num(x + ox * r)},${num(y + oy * r)}"
     i += 2
   }
   val lx = sign(points[n - 2] - points[n - 4])
   val ly = sign(points[n - 1] - points[n - 3])
-  return d + (if (truthy(lx)) "H" + num(points[n - 2] - lx * endTrim) else "V" + num(points[n - 1] - ly * endTrim))
+  return d +
+    (if (truthy(lx)) "H" + num(points[n - 2] - lx * endTrim)
+    else "V" + num(points[n - 1] - ly * endTrim))
 }
 
 private fun clearOf(points: DoubleArray, others: List<Box>, a: Box, b: Box): Boolean {
   for (other in others) {
-    if (other !== a && other !== b && crosses(points, other.x, other.y, other.x + other.w, other.y + other.h)) return false
+    if (
+      other !== a &&
+        other !== b &&
+        crosses(points, other.x, other.y, other.x + other.w, other.y + other.h)
+    )
+      return false
   }
   return true
 }
@@ -398,9 +457,21 @@ private fun across(lo: Double, hi: Double): List<Double> {
   return out
 }
 
-private class Best(val points: DoubleArray, val cost: Double, val upright: Boolean, val sides: IntArray)
+private class Best(
+  val points: DoubleArray,
+  val cost: Double,
+  val upright: Boolean,
+  val sides: IntArray,
+)
 
-private fun elbow(a: Box, b: Box, others: List<Box>, lanes: Lanes, startTrim: Double, endTrim: Double): Route? {
+private fun elbow(
+  a: Box,
+  b: Box,
+  others: List<Box>,
+  lanes: Lanes,
+  startTrim: Double,
+  endTrim: Double,
+): Route? {
   val ax = a.x + a.w / 2
   val ay = a.y + a.h / 2
   val bx = b.x + b.w / 2
@@ -411,7 +482,15 @@ private fun elbow(a: Box, b: Box, others: List<Box>, lanes: Lanes, startTrim: Do
     var i = 2
     while (i < points.size) {
       val up = points[i] == points[i - 2]
-      if (!lanes.free(up, if (up) points[i] else points[i + 1], if (up) points[i - 1] else points[i - 2], if (up) points[i + 1] else points[i])) return
+      if (
+        !lanes.free(
+          up,
+          if (up) points[i] else points[i + 1],
+          if (up) points[i - 1] else points[i - 2],
+          if (up) points[i + 1] else points[i],
+        )
+      )
+        return
       i += 2
     }
     var cost = lanes.crossings(points) * 1e6
@@ -445,7 +524,8 @@ private fun elbow(a: Box, b: Box, others: List<Box>, lanes: Lanes, startTrim: Do
     val sideways = sign(bx - ax)
     val sides = if (below) intArrayOf(3, 2) else intArrayOf(2, 3)
     val lanesAcross = across(if (below) a.y + a.h else b.y + b.h, if (below) b.y else a.y)
-    search@ for (x0 in lanes.ports(a, sides[0], ax + (sideways * a.w) / 4, a.x + 8, a.x + a.w - 8)) {
+    search@ for (x0 in
+      lanes.ports(a, sides[0], ax + (sideways * a.w) / 4, a.x + 8, a.x + a.w - 8)) {
       for (x1 in lanes.ports(b, sides[1], bx - (sideways * b.w) / 4, b.x + 8, b.x + b.w - 8)) {
         for (lane in lanesAcross) {
           val y0 = lane + (ay - lane) * minOf(hit(a, x0, lane, x0, ay), 1.0)
@@ -468,9 +548,16 @@ private fun elbow(a: Box, b: Box, others: List<Box>, lanes: Lanes, startTrim: Do
   return bent(points, 2, startTrim, endTrim, room = if (upright) NARROW else WIDE)
 }
 
-private class Way(val points: DoubleArray, val side: Int, val p0: Double, val p1: Double, val step: Int)
+private class Way(
+  val points: DoubleArray,
+  val side: Int,
+  val p0: Double,
+  val p1: Double,
+  val step: Int,
+)
 
-// Routes a relation from a to b. `shift` moves the line sideways when another runs the opposite way.
+// Routes a relation from a to b. `shift` moves the line sideways when another runs the opposite
+// way.
 // `others` are the shapes to steer clear of; null skips that check. `lanes` holds what the
 // routes before it take up, so that this one keeps apart from them.
 fun route(
@@ -490,8 +577,9 @@ fun route(
     val ux = LOOP / len
     val uy = spread / len
     return Route(
-      d = "M${num(x + ux * startTrim)},${num(cy - spread - uy * startTrim)}C${num(x + LOOP)},${num(cy - spread * 2)} " +
-        "${num(x + LOOP)},${num(cy + spread * 2)} ${num(x + ux * endTrim)},${num(cy + spread + uy * endTrim)}",
+      d =
+        "M${num(x + ux * startTrim)},${num(cy - spread - uy * startTrim)}C${num(x + LOOP)},${num(cy - spread * 2)} " +
+          "${num(x + LOOP)},${num(cy + spread * 2)} ${num(x + ux * endTrim)},${num(cy + spread + uy * endTrim)}",
       sx = x,
       sy = cy - spread,
       sdx = -ux,
@@ -521,7 +609,21 @@ fun route(
   var blocked = false
   if (others != null && !contains(a, b) && !contains(b, a)) {
     for (other in others) {
-      if (other !== a && other !== b && hitRect(other.x, other.y, other.x + other.w, other.y + other.h, sx, sy, ex - sx, ey - sy) <= 1) blocked = true
+      if (
+        other !== a &&
+          other !== b &&
+          hitRect(
+            other.x,
+            other.y,
+            other.x + other.w,
+            other.y + other.h,
+            sx,
+            sy,
+            ex - sx,
+            ey - sy,
+          ) <= 1
+      )
+        blocked = true
     }
   }
   if (others != null && blocked && !upright && sy != ey) {
@@ -534,12 +636,27 @@ fun route(
       var lane = if (forward) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY
       fun widen(box: Box) {
         val edge = if (upright) box.x else box.y
-        lane = if (forward) maxOf(lane, edge + (if (upright) box.w else box.h)) else minOf(lane, edge)
+        lane =
+          if (forward) maxOf(lane, edge + (if (upright) box.w else box.h)) else minOf(lane, edge)
       }
       widen(a)
       widen(b)
       for (other in others) {
-        if (other !== a && other !== b && hitRect(other.x, other.y, other.x + other.w, other.y + other.h, sx, sy, ex - sx, ey - sy) <= 1) widen(other)
+        if (
+          other !== a &&
+            other !== b &&
+            hitRect(
+              other.x,
+              other.y,
+              other.x + other.w,
+              other.y + other.h,
+              sx,
+              sy,
+              ex - sx,
+              ey - sy,
+            ) <= 1
+        )
+          widen(other)
       }
       return lane
     }
@@ -548,7 +665,9 @@ fun route(
     fun outside(forward: Boolean, lane: Double): Boolean {
       for (other in others) {
         if (other === a || other === b) continue
-        val near = if (upright) other.y < hi && other.y + other.h > lo else other.x < hi && other.x + other.w > lo
+        val near =
+          if (upright) other.y < hi && other.y + other.h > lo
+          else other.x < hi && other.x + other.w > lo
         val start = if (upright) other.x else other.y
         val end = start + (if (upright) other.w else other.h)
         if (near && (if (forward) end > lane else start < lane)) return false
@@ -568,16 +687,18 @@ fun route(
       val lane = laneOn(forward)
       val sgn = if (forward) 1.0 else -1.0
       val side = if (upright) (if (forward) 1 else 0) else if (forward) 3 else 2
-      val p0 = if (upright) {
-        lanes.ports(a, side, ay + (towards * a.h) / 4, a.y + 8, a.y + a.h - 8)[0]
-      } else {
-        lanes.ports(a, side, ax + (towards * a.w) / 4, a.x + 8, a.x + a.w - 8)[0]
-      }
-      val p1 = if (upright) {
-        lanes.ports(b, side, by - (towards * b.h) / 4, b.y + 8, b.y + b.h - 8)[0]
-      } else {
-        lanes.ports(b, side, bx - (towards * b.w) / 4, b.x + 8, b.x + b.w - 8)[0]
-      }
+      val p0 =
+        if (upright) {
+          lanes.ports(a, side, ay + (towards * a.h) / 4, a.y + 8, a.y + a.h - 8)[0]
+        } else {
+          lanes.ports(a, side, ax + (towards * a.w) / 4, a.x + 8, a.x + a.w - 8)[0]
+        }
+      val p1 =
+        if (upright) {
+          lanes.ports(b, side, by - (towards * b.h) / 4, b.y + 8, b.y + b.h - 8)[0]
+        } else {
+          lanes.ports(b, side, bx - (towards * b.w) / 4, b.x + 8, b.x + b.w - 8)[0]
+        }
       fun pointsAt(at: Double): DoubleArray {
         if (upright) {
           val x0 = at + (ax - at) * minOf(hit(a, at, p0, ax, p0), 1.0)
@@ -608,7 +729,9 @@ fun route(
     val first = along(natural)
     val other = if (out == back) along(!natural) else null
     fun cost(way: Way): Double = (lanes.crossings(way.points) * 8 + way.step).toDouble()
-    val forward = if (back && !out) !natural else if (other != null && cost(other) < cost(first)) !natural else natural
+    val forward =
+      if (back && !out) !natural
+      else if (other != null && cost(other) < cost(first)) !natural else natural
     val chosen = if (forward == natural) first else (other ?: along(!natural))
     val points = chosen.points
     val side = chosen.side
@@ -619,7 +742,8 @@ fun route(
     lanes.take(points)
     lanes.claim(a, side, p0)
     lanes.claim(b, side, p1)
-    return if (upright) bent(points, 2, startTrim, endTrim, nx = sgn, lean = LEAN, room = NARROW) else bent(points, 2, startTrim, endTrim, room = WIDE)
+    return if (upright) bent(points, 2, startTrim, endTrim, nx = sgn, lean = LEAN, room = NARROW)
+    else bent(points, 2, startTrim, endTrim, room = WIDE)
   }
 
   val len = jsHypot(ex - sx, ey - sy).jsOr { 1.0 }
@@ -627,7 +751,8 @@ fun route(
   val dy = (ey - sy) / len
   if (upright || sy == ey) lanes.take(doubleArrayOf(sx, sy, ex, ey))
   return Route(
-    d = "M${num(sx + dx * startTrim)},${num(sy + dy * startTrim)}L${num(ex - dx * endTrim)},${num(ey - dy * endTrim)}",
+    d =
+      "M${num(sx + dx * startTrim)},${num(sy + dy * startTrim)}L${num(ex - dx * endTrim)},${num(ey - dy * endTrim)}",
     sx = sx,
     sy = sy,
     sdx = -dx,

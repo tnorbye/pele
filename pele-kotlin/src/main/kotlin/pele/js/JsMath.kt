@@ -54,16 +54,17 @@ private val HAS_SHORTEST_TO_STRING: Boolean = Runtime.version().feature() >= 19
 // Lays out the significant digits of a positive value 0.d1d2... * 10^n as Number::toString does.
 private fun formatJsDigits(sign: String, digits: String, n: Int): String {
   val k = digits.length
-  return sign + when {
-    n in k..21 -> digits + "0".repeat(n - k)
-    n in 1..21 -> digits.substring(0, n) + "." + digits.substring(n)
-    n in -5..0 -> "0." + "0".repeat(-n) + digits
-    else -> {
-      val e = n - 1
-      val mantissa = if (k == 1) digits else digits[0] + "." + digits.substring(1)
-      mantissa + "e" + (if (e >= 0) "+" else "-") + abs(e)
+  return sign +
+    when {
+      n in k..21 -> digits + "0".repeat(n - k)
+      n in 1..21 -> digits.substring(0, n) + "." + digits.substring(n)
+      n in -5..0 -> "0." + "0".repeat(-n) + digits
+      else -> {
+        val e = n - 1
+        val mantissa = if (k == 1) digits else digits[0] + "." + digits.substring(1)
+        mantissa + "e" + (if (e >= 0) "+" else "-") + abs(e)
+      }
     }
-  }
 }
 
 /** ECMAScript `Number::toString`, with the shortest digits that round-trip on any JDK. */
@@ -87,7 +88,10 @@ fun jsStr(x: Double): String {
   return jsStrFallback(x)
 }
 
-/** [jsStr] by search: the fewest digits whose nearest double is [x]. For JDK 17 and 18 and subnormals. */
+/**
+ * [jsStr] by search: the fewest digits whose nearest double is [x]. For JDK 17 and 18 and
+ * subnormals.
+ */
 internal fun jsStrFallback(x: Double): String {
   if (x.isNaN()) return "NaN"
   if (x == 0.0) return "0"
@@ -122,11 +126,12 @@ fun jsNumber(raw: String): Double {
   if (s == "Infinity" || s == "+Infinity") return Double.POSITIVE_INFINITY
   if (s == "-Infinity") return Double.NEGATIVE_INFINITY
   if (RE_RADIX.matches(s)) {
-    val radix = when (s[1].lowercaseChar()) {
-      'x' -> 16
-      'o' -> 8
-      else -> 2
-    }
+    val radix =
+      when (s[1].lowercaseChar()) {
+        'x' -> 16
+        'o' -> 8
+        else -> 2
+      }
     return s.substring(2).toBigInteger(radix).toDouble()
   }
   if (!RE_DECIMAL.matches(s)) return Double.NaN
@@ -134,24 +139,27 @@ fun jsNumber(raw: String): Double {
 }
 
 /** ECMAScript `Number(value)` for the values a port passes it. */
-fun jsNumber(value: Any?): Double = when (value) {
-  null -> 0.0
-  is Double -> value
-  is Number -> value.toDouble()
-  is Boolean -> if (value) 1.0 else 0.0
-  is String -> jsNumber(value)
-  else -> Double.NaN
-}
+fun jsNumber(value: Any?): Double =
+  when (value) {
+    null -> 0.0
+    is Double -> value
+    is Number -> value.toDouble()
+    is Boolean -> if (value) 1.0 else 0.0
+    is String -> jsNumber(value)
+    else -> Double.NaN
+  }
 
-private val RE_PARSE_FLOAT = Regex(
-  "^[$JS_WHITESPACE_CLASS_BODY]*([-+]?(?:Infinity|[0-9]+(?:\\.[0-9]*)?(?:[eE][-+]?[0-9]+)?|\\.[0-9]+(?:[eE][-+]?[0-9]+)?))"
-)
+private val RE_PARSE_FLOAT =
+  Regex(
+    "^[$JS_WHITESPACE_CLASS_BODY]*([-+]?(?:Infinity|[0-9]+(?:\\.[0-9]*)?(?:[eE][-+]?[0-9]+)?|\\.[0-9]+(?:[eE][-+]?[0-9]+)?))"
+  )
 
 /** ECMAScript `parseFloat`: the longest numeric prefix after leading whitespace. */
 fun jsParseFloat(raw: String): Double {
   val num = RE_PARSE_FLOAT.find(raw)?.groupValues?.get(1) ?: return Double.NaN
   return when (num) {
-    "Infinity", "+Infinity" -> Double.POSITIVE_INFINITY
+    "Infinity",
+    "+Infinity" -> Double.POSITIVE_INFINITY
     "-Infinity" -> Double.NEGATIVE_INFINITY
     else -> num.toDouble()
   }
@@ -183,7 +191,8 @@ fun jsParseInt(raw: String, radix: Int = 0): Double {
   while (end < s.length && Character.digit(s[end], r) != -1 && s[end].code < 128) end++
   if (end == 0) return Double.NaN
   val digits = s.substring(0, end)
-  val value = if (r == 10) BigDecimal(digits).toDouble() else java.math.BigInteger(digits, r).toDouble()
+  val value =
+    if (r == 10) BigDecimal(digits).toDouble() else java.math.BigInteger(digits, r).toDouble()
   return sign * value
 }
 
@@ -229,8 +238,8 @@ fun truthy(n: Double): Boolean = n != 0.0 && !n.isNaN()
 
 /**
  * ECMAScript `Math.hypot` as V8 computes it (src/builtins/math.tq): the values scaled by the
- * largest, squared and summed with Kahan compensation. Neither `Math.hypot` nor
- * `StrictMath.hypot` rounds the same way.
+ * largest, squared and summed with Kahan compensation. Neither `Math.hypot` nor `StrictMath.hypot`
+ * rounds the same way.
  */
 fun jsHypot(vararg values: Double): Double {
   var max = 0.0
@@ -238,8 +247,7 @@ fun jsHypot(vararg values: Double): Double {
   val abs = DoubleArray(values.size)
   for (i in values.indices) {
     val v = abs(values[i])
-    if (v.isNaN()) nan = true
-    else if (v > max) max = v
+    if (v.isNaN()) nan = true else if (v > max) max = v
     abs[i] = v
   }
   if (max == Double.POSITIVE_INFINITY) return Double.POSITIVE_INFINITY
@@ -257,39 +265,45 @@ fun jsHypot(vararg values: Double): Double {
   return kotlin.math.sqrt(sum) * max
 }
 
-/** A JS sort comparator's result as a Kotlin one: NaN counts as 0, as `Array.prototype.sort` treats it. */
+/**
+ * A JS sort comparator's result as a Kotlin one: NaN counts as 0, as `Array.prototype.sort` treats
+ * it.
+ */
 fun cmp(d: Double): Int = if (d > 0.0) 1 else if (d < 0.0) -1 else 0
 
 /** JS `a || b` for numbers: `b` when `a` is 0 or NaN. */
 inline fun Double.jsOr(b: () -> Double): Double = if (this != 0.0 && !isNaN()) this else b()
 
 /** JS truthiness of a dynamic value, as read from YAML or JSON. */
-fun isTruthy(v: Any?): Boolean = when (v) {
-  null -> false
-  is Boolean -> v
-  is Double -> truthy(v)
-  is Number -> truthy(v.toDouble())
-  is String -> v.isNotEmpty()
-  else -> true
-}
+fun isTruthy(v: Any?): Boolean =
+  when (v) {
+    null -> false
+    is Boolean -> v
+    is Double -> truthy(v)
+    is Number -> truthy(v.toDouble())
+    is String -> v.isNotEmpty()
+    else -> true
+  }
 
 /** ECMAScript `String(value)` for the values a port passes it. */
-fun jsString(value: Any?): String = when (value) {
-  null -> "null"
-  is String -> value
-  is Double -> jsStr(value)
-  is Float -> jsStr(value.toDouble())
-  is Number -> jsStr(value.toDouble())
-  is Boolean -> value.toString()
-  is List<*> -> value.joinToString(",") { if (it == null) "" else jsString(it) }
-  is Map<*, *> -> "[object Object]"
-  else -> value.toString()
-}
+fun jsString(value: Any?): String =
+  when (value) {
+    null -> "null"
+    is String -> value
+    is Double -> jsStr(value)
+    is Float -> jsStr(value.toDouble())
+    is Number -> jsStr(value.toDouble())
+    is Boolean -> value.toString()
+    is List<*> -> value.joinToString(",") { if (it == null) "" else jsString(it) }
+    is Map<*, *> -> "[object Object]"
+    else -> value.toString()
+  }
 
 /**
  * A JS array of numbers where reading outside it gives NaN, which is what `undefined` becomes in
  * arithmetic and comparisons. For code whose upstream reads past the end of its arrays.
  */
 class JsNumberArray : ArrayList<Double>() {
-  override fun get(index: Int): Double = if (index >= 0 && index < size) super.get(index) else Double.NaN
+  override fun get(index: Int): Double =
+    if (index >= 0 && index < size) super.get(index) else Double.NaN
 }

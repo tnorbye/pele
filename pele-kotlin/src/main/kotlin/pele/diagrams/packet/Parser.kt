@@ -36,24 +36,25 @@ private object T {
   const val newline = 10
 }
 
-val PACKET_TOKENS: List<TokenType> = listOf(
-  TokenType(name = "packet-beta", pattern = "packet-beta"),
-  keyword("packet"),
-  // A front matter block also starts with dashes, so Langium lets it win over a dash.
-  TokenType(name = "-", pattern = "-", longer = listOf(YAML)),
-  TokenType(name = "+", pattern = "+"),
-  TokenType(name = ":", pattern = ":"),
-  ACC_DESCR,
-  ACC_TITLE,
-  TITLE,
-  TokenType(name = "INT", pattern = JsRegExp("""0|[1-9][0-9]*(?!\.)""", "y")),
-  STRING,
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-)
+val PACKET_TOKENS: List<TokenType> =
+  listOf(
+    TokenType(name = "packet-beta", pattern = "packet-beta"),
+    keyword("packet"),
+    // A front matter block also starts with dashes, so Langium lets it win over a dash.
+    TokenType(name = "-", pattern = "-", longer = listOf(YAML)),
+    TokenType(name = "+", pattern = "+"),
+    TokenType(name = ":", pattern = ":"),
+    ACC_DESCR,
+    ACC_TITLE,
+    TITLE,
+    TokenType(name = "INT", pattern = JsRegExp("""0|[1-9][0-9]*(?!\.)""", "y")),
+    STRING,
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+  )
 
 class PacketBlockAst(
   var start: Double? = null,
@@ -97,7 +98,8 @@ fun parsePacket(src: String): PacketAst {
         ast.title = titleValue(r.take())
         endOfLine()
       }
-      T.int, T.plus -> {
+      T.int,
+      T.plus -> {
         val block = PacketBlockAst(label = "")
         if (r.accept(T.plus)) {
           block.bits = jsNumber(r.expect(T.int))

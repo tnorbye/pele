@@ -2,6 +2,9 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.sankey
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -25,9 +28,6 @@ import pele.text.Style
 import pele.text.decodeEntities
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.floor
 
 private const val LABEL_GAP = 6.0
 private const val VALUE_GAP = 15.0
@@ -46,39 +46,66 @@ private fun contentId(text: String): String {
     a = jsImul(a xor c, 0x01000193)
     b = jsImul(b, 33) + c
   }
-  return java.lang.Long.toString(toUint32(a).toLong(), 36) + java.lang.Long.toString(toUint32(b).toLong(), 36)
+  return java.lang.Long.toString(toUint32(a).toLong(), 36) +
+    java.lang.Long.toString(toUint32(b).toLong(), 36)
 }
 
 private fun isRecord(value: Any?): Boolean = value is Map<*, *>
 
-private fun numberOption(conf: Map<*, *>, key: String, fallback: Double, min: Double, max: Double): Double {
+private fun numberOption(
+  conf: Map<*, *>,
+  key: String,
+  fallback: Double,
+  min: Double,
+  max: Double,
+): Double {
   val value = conf[key]
   return if (value is Double && value >= min) minOf(value, max) else fallback
 }
 
 private fun textOption(conf: Map<*, *>, key: String): String {
   val value = conf[key]
-  return if (value is String || (value is Double && value.isFinite())) (if (value is Double) jsStr(value) else value as String) else ""
+  return if (value is String || (value is Double && value.isFinite()))
+    (if (value is Double) jsStr(value) else value as String)
+  else ""
 }
 
 // Two decimals, as Mermaid shows values; numbers too large for that are left as they are.
-private fun rounded(value: Double): Double = if (abs(value) < 1e15) jsRound(value * 100) / 100 else value
+private fun rounded(value: Double): Double =
+  if (abs(value) < 1e15) jsRound(value * 100) / 100 else value
 
 // A colour from the configuration, as an inline style that overrides the series colour.
-private fun fillStyle(color: Any?): String = if (color is String) resolveStyle(listOf("fill:$color")).shape else ""
+private fun fillStyle(color: Any?): String =
+  if (color is String) resolveStyle(listOf("fill:$color")).shape else ""
 
 fun renderSankey(model: SankeyModel, config: Config, options: RenderOptions): Rendered {
-  val conf: Map<*, *> = if (isRecord(config["sankey"])) config["sankey"] as Map<*, *> else emptyMap<String, Any?>()
+  val conf: Map<*, *> =
+    if (isRecord(config["sankey"])) config["sankey"] as Map<*, *> else emptyMap<String, Any?>()
   val natural = numberOption(conf, "width", 600.0, 1.0, 10000.0)
-  return fitWidth(options, natural, 160.0) { chartWidth, _ -> draw(model, conf, options, chartWidth, natural) }
+  return fitWidth(options, natural, 160.0) { chartWidth, _ ->
+    draw(model, conf, options, chartWidth, natural)
+  }
 }
 
-private class LabelBox(val value: String, val width: Double, var after: Boolean, var left: Double, var y: Double)
+private class LabelBox(
+  val value: String,
+  val width: Double,
+  var after: Boolean,
+  var left: Double,
+  var y: Double,
+)
 
-private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, chartWidth: Double, natural: Double): Rendered {
+private fun draw(
+  model: SankeyModel,
+  conf: Map<*, *>,
+  options: RenderOptions,
+  chartWidth: Double,
+  natural: Double,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val least = jsRound(size * 0.625)
-  // Labels shrink with a chart narrowed to fit, as they would if the whole picture were scaled down.
+  // Labels shrink with a chart narrowed to fit, as they would if the whole picture were scaled
+  // down.
   var small = maxOf(least, jsRound(size * 0.875 * minOf(1.0, chartWidth / natural)))
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
   val pad = options.padding ?: 8.0
@@ -90,7 +117,11 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
   val suffix = decodeEntities(textOption(conf, "suffix"))
   val outlined = conf["labelStyle"] == "outlined"
   val alignment: Alignment =
-    if (conf["nodeAlignment"] == "left" || conf["nodeAlignment"] == "right" || conf["nodeAlignment"] == "center") {
+    if (
+      conf["nodeAlignment"] == "left" ||
+        conf["nodeAlignment"] == "right" ||
+        conf["nodeAlignment"] == "center"
+    ) {
       conf["nodeAlignment"] as String
     } else {
       "justify"
@@ -105,7 +136,9 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
         width = chartWidth,
         height = chartHeight,
         nodeWidth = nodeWidth,
-        nodePadding = numberOption(conf, "nodePadding", 12.0, 0.0, 200.0) + (if (showValues) VALUE_GAP else 0.0),
+        nodePadding =
+          numberOption(conf, "nodePadding", 12.0, 0.0, 200.0) +
+            (if (showValues) VALUE_GAP else 0.0),
         labelHeight = labelSize * 1.15,
         alignment = alignment,
       ),
@@ -171,28 +204,32 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
   }
   // A label moves at most one line; retain two bands on each side.
   val bands = LinkedHashMap<Double, MutableList<LabelBox>>()
-  if (nodes.size <= CAREFUL) for (label in labels) {
-    val band = floor(label.y / lineHeight)
-    for (key in listOf(band - 2, band - 1, band, band + 1, band + 2)) {
-      val nearby = bands[key + 0.0]
-      if (nearby != null) nearby.add(label)
-      else bands[key + 0.0] = arrayListOf(label)
+  if (nodes.size <= CAREFUL)
+    for (label in labels) {
+      val band = floor(label.y / lineHeight)
+      for (key in listOf(band - 2, band - 1, band, band + 1, band + 2)) {
+        val nearby = bands[key + 0.0]
+        if (nearby != null) nearby.add(label) else bands[key + 0.0] = arrayListOf(label)
+      }
     }
-  }
   var labelsOut = ""
   var nodesOut = ""
   nodes.forEachIndexed { i, node ->
     val id = model.nodes[i].id
     val name = decodeEntities(id)
     val height = maxOf(node.height, 1.0)
-    nodesOut += "<rect class=\"pele-sankey-node\" data-id=\"${escText(id)}\" x=\"${num(node.x)}\" y=\"${num(node.y)}\" width=\"${num(
-      nodeWidth,
+    nodesOut +=
+      "<rect class=\"pele-sankey-node\" data-id=\"${escText(id)}\" x=\"${num(node.x)}\" y=\"${num(node.y)}\" width=\"${num(
+      nodeWidth
     )}\" height=\"${num(height)}\" rx=\"${num(minOf(2.0, height / 2))}\" fill=\"${seriesColor(i)}\"${nodeStyle(i)}/>"
 
     val label = labels[i]
     val overlapsLabel = { left: Double, y: Double ->
       (bands[floor(y / lineHeight) + 0.0] ?: emptyList<LabelBox>()).any { other ->
-        other !== label && abs(other.y - y) < lineHeight && left < other.left + other.width + LABEL_GAP && left + label.width > other.left - LABEL_GAP
+        other !== label &&
+          abs(other.y - y) < lineHeight &&
+          left < other.left + other.width + LABEL_GAP &&
+          left + label.width > other.left - LABEL_GAP
       }
     }
     // Try the other side, then an adjacent line when both sides are crowded.
@@ -201,16 +238,30 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
         for (after in listOf(label.after, !label.after)) {
           val left = if (after) node.x + nodeWidth + LABEL_GAP else node.x - LABEL_GAP - label.width
           val y = label.y + dy
-          if (overlapsLabel(left, y) || left < minX || left + label.width > maxX || y - small * 0.75 < minY || y + small * 0.75 > maxY) continue
+          if (
+            overlapsLabel(left, y) ||
+              left < minX ||
+              left + label.width > maxX ||
+              y - small * 0.75 < minY ||
+              y + small * 0.75 > maxY
+          )
+            continue
           var blocked = false
           for ((j, bar) in nodes.withIndex()) {
-            if (j != i && left < bar.x + nodeWidth + LABEL_GAP && left + label.width > bar.x - LABEL_GAP && y - small * 0.75 < bar.y + bar.height && y + small * 0.75 > bar.y) {
+            if (
+              j != i &&
+                left < bar.x + nodeWidth + LABEL_GAP &&
+                left + label.width > bar.x - LABEL_GAP &&
+                y - small * 0.75 < bar.y + bar.height &&
+                y + small * 0.75 > bar.y
+            ) {
               blocked = true
               break
             }
           }
           if (blocked) continue
-          // A label stays nearer its own bar than any other in the column, so it can't name that one.
+          // A label stays nearer its own bar than any other in the column, so it can't name that
+          // one.
           val own = maxOf(0.0, node.y - y, y - node.y - node.height)
           for ((j, bar) in nodes.withIndex()) {
             if (j != i && bar.x == node.x && maxOf(0.0, bar.y - y, y - bar.y - bar.height) <= own) {
@@ -230,21 +281,28 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
     val after = label.after
     val y = label.y
     val x = if (after) node.x + nodeWidth + LABEL_GAP else node.x - LABEL_GAP
-    val position = " x=\"${num(x)}\" y=\"${num(y + small * 0.35)}\" text-anchor=\"${if (after) "start" else "end"}\""
-    val text = esc(name) + (if (value.isNotEmpty()) " <tspan class=\"pele-sankey-value\" fill=\"var(--_m)\">${esc(value)}</tspan>" else "")
+    val position =
+      " x=\"${num(x)}\" y=\"${num(y + small * 0.35)}\" text-anchor=\"${if (after) "start" else "end"}\""
+    val text =
+      esc(name) +
+        (if (value.isNotEmpty())
+          " <tspan class=\"pele-sankey-value\" fill=\"var(--_m)\">${esc(value)}</tspan>"
+        else "")
     labelsOut +=
       "<g class=\"pele-label\" data-id=\"${escText(id)}\">" +
-      (if (outlined) {
-        "<text$position fill=\"none\" stroke=\"var(--_bg)\" stroke-width=\"3\" stroke-linejoin=\"round\">${esc(name)}${
+        (if (outlined) {
+          "<text$position fill=\"none\" stroke=\"var(--_bg)\" stroke-width=\"3\" stroke-linejoin=\"round\">${esc(name)}${
           if (value.isNotEmpty()) " " + esc(value) else ""
         }</text>"
-      } else {
-        ""
-      }) +
-      "<text$position>$text</text></g>"
+        } else {
+          ""
+        }) +
+        "<text$position>$text</text></g>"
   }
 
-  val fixed = if (linkColor == "gradient" || linkColor == "source" || linkColor == "target") "" else fillStyle(linkColor)
+  val fixed =
+    if (linkColor == "gradient" || linkColor == "source" || linkColor == "target") ""
+    else fillStyle(linkColor)
   // Without an idPrefix diagrams share gradient ids, and Chrome then uses a hidden or differently
   // themed copy's gradient. Other characters would end the url() and void the whole fill.
   val idPrefix = options.idPrefix ?: ""
@@ -264,7 +322,8 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
         "x1=\"${num(x0)}\" x2=\"${num(x1)}\"><stop offset=\"0\" stop-color=\"${nodeColor(link.source)}\"/>" +
           "<stop offset=\"1\" stop-color=\"${nodeColor(link.target)}\"/>"
       val id = "$idPrefix-sankey-${contentId(stops)}"
-      gradients[id] = "<linearGradient id=\"$id\" gradientUnits=\"userSpaceOnUse\" $stops</linearGradient>"
+      gradients[id] =
+        "<linearGradient id=\"$id\" gradientUnits=\"userSpaceOnUse\" $stops</linearGradient>"
       paint = "fill=\"url(#$id) ${nodeColor(link.source)}\""
     }
     val mid = num((x0 + x1) / 2)
@@ -272,13 +331,13 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
     val to = escText(model.nodes[link.target].id)
     linksOut +=
       "<path class=\"pele-sankey-link\" data-id=\"$from-&gt;$to\" d=\"M${num(x0)},${num(link.sourceY - half)}C$mid,${num(
-        link.sourceY - half,
+        link.sourceY - half
       )} $mid,${num(link.targetY - half)} ${num(x1)},${num(link.targetY - half)}L${num(x1)},${num(
-        link.targetY + half,
+        link.targetY + half
       )}C$mid,${num(link.targetY + half)} $mid,${num(link.sourceY + half)} ${num(x0)},${num(
-        link.sourceY + half,
+        link.sourceY + half
       )}Z\" $paint>" +
-      "<title>$from → $to: ${esc(prefix)}${jsStr(rounded(link.value))}${esc(suffix)}</title></path>"
+        "<title>$from → $to: ${esc(prefix)}${jsStr(rounded(link.value))}${esc(suffix)}</title></path>"
   }
 
   val title = layoutLabel(model.title, false, measurer, size, titleRoom(options), Style.Bold)
@@ -289,21 +348,27 @@ private fun draw(model: SankeyModel, conf: Map<*, *>, options: RenderOptions, ch
   val width = ceil(inner + 2 * pad)
   val height = ceil(maxY - minY + titleHeight + 2 * pad)
 
-  val svg = svgDocument(
-    "sankey",
-    width,
-    height,
-    size,
-    options,
-    model,
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      "<g transform=\"translate(${num(ox)},${num(oy)})\">" +
-      (if (gradients.size > 0) "<defs>${gradients.values.joinToString("")}</defs>" else "") +
-      "<g class=\"pele-sankey-links\" fill-opacity=\"0.4\">$linksOut</g>" +
-      "<g class=\"pele-sankey-nodes\">$nodesOut</g>" +
-      "<g class=\"pele-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>" +
-      "</g>",
-  )
+  val svg =
+    svgDocument(
+      "sankey",
+      width,
+      height,
+      size,
+      options,
+      model,
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        "<g transform=\"translate(${num(ox)},${num(oy)})\">" +
+        (if (gradients.size > 0) "<defs>${gradients.values.joinToString("")}</defs>" else "") +
+        "<g class=\"pele-sankey-links\" fill-opacity=\"0.4\">$linksOut</g>" +
+        "<g class=\"pele-sankey-nodes\">$nodesOut</g>" +
+        "<g class=\"pele-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>" +
+        "</g>",
+    )
 
   return Rendered(svg, width, height, ArrayList())
 }

@@ -25,6 +25,7 @@ class StateDb : StateModel, StateBuilder {
   override val type = "state"
   override var rootDoc: MutableList<Any> = ArrayList()
     private set
+
   override var states = LinkedHashMap<String, StateStmt>()
   override var relations = ArrayList<StateRelation>()
   override var classes = LinkedHashMap<String, StateClassDef>()
@@ -33,6 +34,7 @@ class StateDb : StateModel, StateBuilder {
   override var title: String? = null
   override var accTitle: String? = null
     private set
+
   override var accDescr: String? = null
     private set
 
@@ -61,7 +63,8 @@ class StateDb : StateModel, StateBuilder {
     for (item in doc) {
       if (item is String) continue
       when (item) {
-        is StateStmt -> addState(item.id.jsTrim(), item.type ?: "default", item.doc, item.description, item.note)
+        is StateStmt ->
+          addState(item.id.jsTrim(), item.type ?: "default", item.doc, item.description, item.note)
         is RelationStmt -> addRelation(item.state1, item.state2, item.description)
         is ClassDefStmt -> addStyleClass(item.id.jsTrim(), item.classes)
         is StyleStmt -> {
@@ -69,7 +72,12 @@ class StateDb : StateModel, StateBuilder {
           for (state in named(item.id.jsTrim())) state.styles = ArrayList(styles)
         }
         is ApplyClassStmt -> setCssClass(item.id.jsTrim(), item.styleClass)
-        is ClickStmt -> addLink(if (item.id is String) item.id else (item.id as StateStmt).id, item.url, item.tooltip)
+        is ClickStmt ->
+          addLink(
+            if (item.id is String) item.id else (item.id as StateStmt).id,
+            item.url,
+            item.tooltip,
+          )
       }
     }
     graph = buildStateGraph(doc, states, classes)
@@ -123,7 +131,10 @@ class StateDb : StateModel, StateBuilder {
       // then fails to draw it; here the regions before that divider are kept.
       var finalDoc: MutableList<Any> = nodeDoc
       if (regions.size > 0) {
-        if (current.size > 0) regions.add(StateStmt(id = getDividerId(), type = "divider", doc = current, descriptions = null))
+        if (current.size > 0)
+          regions.add(
+            StateStmt(id = getDividerId(), type = "divider", doc = current, descriptions = null)
+          )
         finalDoc = regions
         if (node is StateStmt) node.doc = regions else (node as Root).doc = regions
       }
@@ -131,20 +142,28 @@ class StateDb : StateModel, StateBuilder {
     }
   }
 
-  fun addState(id: String, type: String = "default", doc: MutableList<Any>? = null, descr: Any? = null, note: StateNote? = null, classes: List<String>? = null) {
+  fun addState(
+    id: String,
+    type: String = "default",
+    doc: MutableList<Any>? = null,
+    descr: Any? = null,
+    note: StateNote? = null,
+    classes: List<String>? = null,
+  ) {
     val trimmedId = id.jsTrim()
     var state = states[trimmedId]
     if (state == null) {
-      state = StateStmt(
-        id = trimmedId,
-        type = type,
-        descriptions = ArrayList(),
-        doc = doc,
-        note = note,
-        classes = ArrayList(),
-        styles = ArrayList(),
-        textStyles = ArrayList(),
-      )
+      state =
+        StateStmt(
+          id = trimmedId,
+          type = type,
+          descriptions = ArrayList(),
+          doc = doc,
+          note = note,
+          classes = ArrayList(),
+          styles = ArrayList(),
+          textStyles = ArrayList(),
+        )
       states[trimmedId] = state
     } else {
       if (state.doc == null) state.doc = doc
@@ -153,7 +172,11 @@ class StateDb : StateModel, StateBuilder {
     // Truthy: a non-empty string or any array.
     if (descr != null && !(descr is String && descr.isEmpty())) {
       @Suppress("UNCHECKED_CAST")
-      for (text in (if (descr is List<*>) descr as List<String> else listOf(descr as String))) addDescription(trimmedId, text.jsTrim())
+      for (text in
+        (if (descr is List<*>) descr as List<String> else listOf(descr as String))) addDescription(
+        trimmedId,
+        text.jsTrim(),
+      )
     }
     if (note != null) state.note = note
     if (classes != null) for (name in classes) setCssClass(trimmedId, name.jsTrim())
@@ -166,12 +189,21 @@ class StateDb : StateModel, StateBuilder {
   }
 
   fun addRelation(item1: StateStmt, item2: StateStmt, title: String? = null) {
-    for (item in listOf(item1, item2)) addState(item.id, item.type ?: "default", item.doc, item.description, item.note, item.classes)
+    for (item in listOf(item1, item2)) addState(
+      item.id,
+      item.type ?: "default",
+      item.doc,
+      item.description,
+      item.note,
+      item.classes,
+    )
     relations.add(StateRelation(item1.id.jsTrim(), item2.id.jsTrim(), title ?: ""))
   }
 
   fun addDescription(id: String, descr: String) {
-    states[id]?.descriptions?.add(if (descr.startsWith(":")) descr.jsReplace(":", "").jsTrim() else descr)
+    states[id]
+      ?.descriptions
+      ?.add(if (descr.startsWith(":")) descr.jsReplace(":", "").jsTrim() else descr)
   }
 
   override fun getDividerId(): String = "divider-id-${++dividerCount}"
@@ -185,7 +217,8 @@ class StateDb : StateModel, StateBuilder {
     if (styleAttributes.isEmpty()) return
     for (attrib in styleAttributes.jsSplit(",")) {
       val fixed = attrib.jsReplace(";", "").jsTrim()
-      if (attrib.contains("color")) found.textStyles.add(fixed.jsReplace("fill", "bgFill").jsReplace("color", "fill"))
+      if (attrib.contains("color"))
+        found.textStyles.add(fixed.jsReplace("fill", "bgFill").jsReplace("color", "fill"))
       found.styles.add(fixed)
     }
   }
@@ -212,7 +245,8 @@ class StateDb : StateModel, StateBuilder {
     rootDoc.add(0, DirectionStmt(dir))
   }
 
-  override fun trimColon(text: String): String = if (text.startsWith(":")) text.jsSlice(1).jsTrim() else text.jsTrim()
+  override fun trimColon(text: String): String =
+    if (text.startsWith(":")) text.jsSlice(1).jsTrim() else text.jsTrim()
 
   override fun setAccTitle(text: String) {
     accTitle = text.jsReplace(RE_LEADING, "")

@@ -82,26 +82,27 @@ private fun numberScanner(): Scanner {
   }
 }
 
-val PIE_TOKENS: List<TokenType> = listOf(
-  keyword("showData"),
-  keyword("pie"),
-  TokenType(name = ":", pattern = ":"),
-  TokenType(
-    name = "NUMBER_PIE",
-    pattern = JsRegExp("""(?:-?[0-9]+\.[0-9]+(?!\.))|(?:-?(0|[1-9][0-9]*)(?!\.))""", "y"),
-    scanner = ::numberScanner,
-    first = "-0123456789",
-  ),
-  ACC_DESCR,
-  ACC_TITLE,
-  TITLE,
-  STRING,
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-)
+val PIE_TOKENS: List<TokenType> =
+  listOf(
+    keyword("showData"),
+    keyword("pie"),
+    TokenType(name = ":", pattern = ":"),
+    TokenType(
+      name = "NUMBER_PIE",
+      pattern = JsRegExp("""(?:-?[0-9]+\.[0-9]+(?!\.))|(?:-?(0|[1-9][0-9]*)(?!\.))""", "y"),
+      scanner = ::numberScanner,
+      first = "-0123456789",
+    ),
+    ACC_DESCR,
+    ACC_TITLE,
+    TITLE,
+    STRING,
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+  )
 
 class PieSection(val label: String, val value: Double)
 

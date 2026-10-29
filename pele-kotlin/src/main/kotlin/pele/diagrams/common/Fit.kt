@@ -13,12 +13,20 @@ import pele.text.layoutLabel
 private val RE_TAG_START = JsRegExp("""<(?!br\s*\/?>)""", "gi")
 private val RE_ICON = JsRegExp(":fa-", "g")
 
-// A line break, an encoded entity, a surrogate pair, or one character: the pieces a word can be cut between.
-private val RE_UNIT = JsRegExp("""<br\s*\/?>|ﬂ°°?\w+¶ß|&#?\w+;|[\ud800-\udbff][\udc00-\udfff]|[\s\S]""", "gi")
+// A line break, an encoded entity, a surrogate pair, or one character: the pieces a word can be cut
+// between.
+private val RE_UNIT =
+  JsRegExp("""<br\s*\/?>|ﬂ°°?\w+¶ß|&#?\w+;|[\ud800-\udbff][\udc00-\udfff]|[\s\S]""", "gi")
 
 // Lays out text the way Mermaid's journey and timeline draw it: as plain text in which only
 // <br> is markup, so other tags and icon names show as written instead of being read as formatting.
-fun plainLabel(raw: String?, measurer: TextMeasurer, size: Double, max: Double, base: Int = 0): Label {
+fun plainLabel(
+  raw: String?,
+  measurer: TextMeasurer,
+  size: Double,
+  max: Double,
+  base: Int = 0,
+): Label {
   var text = raw
   if (text != null) {
     if (text.contains('<')) text = text.jsReplace(RE_TAG_START, "&lt;")
@@ -27,8 +35,15 @@ fun plainLabel(raw: String?, measurer: TextMeasurer, size: Double, max: Double, 
   return layoutLabel(text, false, measurer, size, max, base)
 }
 
-// layoutLabel wraps at spaces only. For a box of fixed width, this also cuts any word too long to fit.
-fun fitLabel(raw: String?, measurer: TextMeasurer, size: Double, max: Double, base: Int = 0): Label {
+// layoutLabel wraps at spaces only. For a box of fixed width, this also cuts any word too long to
+// fit.
+fun fitLabel(
+  raw: String?,
+  measurer: TextMeasurer,
+  size: Double,
+  max: Double,
+  base: Int = 0,
+): Label {
   val label = plainLabel(raw, measurer, size, max, base)
   if (raw == null || label.width <= max) return label
   val out = StringBuilder()

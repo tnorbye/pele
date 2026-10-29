@@ -35,21 +35,23 @@ class AgentflowDbOptions(
 )
 
 // Presentation-only metadata keys, left out of the semantic model.
-private val PRESENTATION_KEYS: Set<String> = hashSetOf(
-  "shape",
-  "view",
-  "icon",
-  "img",
-  "form",
-  "pos",
-  "w",
-  "h",
-  "class",
-  "style",
-  "labelType",
-)
+private val PRESENTATION_KEYS: Set<String> =
+  hashSetOf(
+    "shape",
+    "view",
+    "icon",
+    "img",
+    "form",
+    "pos",
+    "w",
+    "h",
+    "class",
+    "style",
+    "labelType",
+  )
 
-private val TOOL_SHAPES: Set<String> = hashSetOf("subroutine", "subprocess", "subproc", "framed-rectangle", "tool")
+private val TOOL_SHAPES: Set<String> =
+  hashSetOf("subroutine", "subprocess", "subproc", "framed-rectangle", "tool")
 
 fun isToolDefinition(vertex: AgentNode): Boolean {
   val type = vertex.type
@@ -64,8 +66,7 @@ private fun unquote(text: String): String =
 
 private fun isObject(value: Any?): Boolean = value is Map<*, *>
 
-@Suppress("UNCHECKED_CAST")
-private fun asMetadata(value: Any?): Metadata = value as Metadata
+@Suppress("UNCHECKED_CAST") private fun asMetadata(value: Any?): Metadata = value as Metadata
 
 private fun isContainer(value: Any?): Boolean = value is Map<*, *> || value is List<*>
 
@@ -73,7 +74,8 @@ private fun isContainer(value: Any?): Boolean = value is Map<*, *> || value is L
 // merging metadata into its own objects cannot be made to pollute a prototype.
 private fun stripPrototypeKeys(root: YamlValue): YamlValue {
   val copy = { value: YamlValue ->
-    if (value is List<*>) ArrayList<YamlValue>() else if (isObject(value)) LinkedHashMap<String, YamlValue>() else value
+    if (value is List<*>) ArrayList<YamlValue>()
+    else if (isObject(value)) LinkedHashMap<String, YamlValue>() else value
   }
   val out = copy(root)
   val pending = ArrayList<Pair<YamlValue, YamlValue>>()
@@ -81,8 +83,7 @@ private fun stripPrototypeKeys(root: YamlValue): YamlValue {
   while (pending.size > 0) {
     val (from, to) = pending.removeAt(pending.size - 1)
     if (from is List<*>) {
-      @Suppress("UNCHECKED_CAST")
-      val target = to as MutableList<YamlValue>
+      @Suppress("UNCHECKED_CAST") val target = to as MutableList<YamlValue>
       for (entry in from) {
         val next = copy(entry)
         target.add(next)
@@ -130,7 +131,8 @@ private val RE_LEADING = JsRegExp("""^\s+""", "g")
 private val RE_INDENT = JsRegExp("""\n\s+""", "g")
 private val RE_SPACE = JsRegExp("""\s""")
 
-// Removes the comma that ends a line of a multi-line metadata body, which block YAML does not allow.
+// Removes the comma that ends a line of a multi-line metadata body, which block YAML does not
+// allow.
 // Commas inside quoted scalars, flow collections and block scalars are content and stay.
 private fun stripLineTrailingCommas(body: String): String {
   var inSingle = false
@@ -152,8 +154,7 @@ private fun stripLineTrailingCommas(body: String): String {
     while (i < line.length) {
       val ch = line[i]
       if (inDouble) {
-        if (ch == '\\') i++
-        else if (ch == '"') inDouble = false
+        if (ch == '\\') i++ else if (ch == '"') inDouble = false
       } else if (inSingle) {
         if (ch == '\'') inSingle = false
       } else if (ch == '"') {
@@ -202,7 +203,8 @@ private fun destructEndLink(raw: String): EndLink {
   when (str.jsSlice(-1)) {
     "x" -> type = "arrow_cross"
     ">" -> type = "arrow_point"
-    "-", "." -> line = str
+    "-",
+    "." -> line = str
   }
   var stroke = "normal"
   var length = (line.length - 1).toDouble()
@@ -251,7 +253,8 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
   private val edgeById = HashMap<String, AgentEdge>()
   private val pairCount = HashMap<String, Int>()
   private var subCount = 0
-  private val bareMappings: MutableSet<ElementMapping> = java.util.Collections.newSetFromMap(java.util.IdentityHashMap())
+  private val bareMappings: MutableSet<ElementMapping> =
+    java.util.Collections.newSetFromMap(java.util.IdentityHashMap())
   private val firstMapping = HashMap<String, ElementMapping>()
   private val reported = HashMap<String, MutableList<Diagnostic>>()
   private val options: AgentflowDbOptions = options
@@ -266,7 +269,8 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
     try {
       parsed = parseYaml(if (multiline) source + "\n" else "{\n" + source + "\n}")
     } catch (error: Exception) {
-      // Block YAML rejects the comma-separated style of the single-line form, so try once more without the commas.
+      // Block YAML rejects the comma-separated style of the single-line form, so try once more
+      // without the commas.
       val stripped = if (multiline) stripLineTrailingCommas(source) else source
       var retried: YamlValue = null
       var retriedOk = false
@@ -305,7 +309,11 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
 
   private fun shapeError(message: String, loc: Loc?): PeleError {
     val at = errorAt(loc)
-    return PeleError(message, PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "agentflow", line = at.first, column = at.second))
+    return PeleError(
+      message,
+      PeleErrorCode.SEMANTIC,
+      PeleErrorInfo(type = "agentflow", line = at.first, column = at.second),
+    )
   }
 
   fun addVertex(
@@ -359,8 +367,10 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
     if (edge != null) {
       if (fields != null && fields.containsKey("animate")) edge.animate = fields["animate"]
       if (fields != null && fields.containsKey("animation")) edge.animation = fields["animation"]
-      // PORT: upstream stores the value as it is; one that is not a string only matters by its truthiness.
-      if (fields != null && fields.containsKey("curve")) edge.interpolate = fields["curve"].let { if (isTruthy(it)) jsString(it) else null }
+      // PORT: upstream stores the value as it is; one that is not a string only matters by its
+      // truthiness.
+      if (fields != null && fields.containsKey("curve"))
+        edge.interpolate = fields["curve"].let { if (isTruthy(it)) jsString(it) else null }
       if (docTruthy) edge.metadata = merge(edge.metadata, doc)
       return
     }
@@ -408,16 +418,17 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
   }
 
   fun addSingleLink(start: String, end: String, type: LinkInfo?, id: String? = null) {
-    val edge = AgentEdge(
-      start = start,
-      end = end,
-      type = null,
-      text = "",
-      labelType = "text",
-      classes = ArrayList(),
-      isUserDefinedId = false,
-      interpolate = defaultInterpolate,
-    )
+    val edge =
+      AgentEdge(
+        start = start,
+        end = end,
+        type = null,
+        text = "",
+        labelType = "text",
+        classes = ArrayList(),
+        isUserDefinedId = false,
+        interpolate = defaultInterpolate,
+      )
     val linkText = type?.text
     if (linkText != null) {
       edge.text = unquote(linkText.text.jsTrim())
@@ -441,7 +452,11 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
 
     val max = options.maxEdges
     if (max != null && edges.size >= max) {
-      throw PeleError("Edge limit exceeded. The limit is $max.", PeleErrorCode.LIMIT, PeleErrorInfo(type = "agentflow"))
+      throw PeleError(
+        "Edge limit exceeded. The limit is $max.",
+        PeleErrorCode.LIMIT,
+        PeleErrorInfo(type = "agentflow"),
+      )
     }
     edges.add(edge)
     pairCount[pair] = existing + 1
@@ -479,10 +494,13 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
     }
   }
 
-  // Mermaid checks the bounds only for a numeric index and crashes on the strings its own parser passes.
+  // Mermaid checks the bounds only for a numeric index and crashes on the strings its own parser
+  // passes.
   private fun edgeAt(pos: String): AgentEdge {
     val index = jsNumber(pos)
-    val edge = if (index >= 0 && index < edges.size && index == Math.floor(index)) edges[index.toInt()] else null
+    val edge =
+      if (index >= 0 && index < edges.size && index == Math.floor(index)) edges[index.toInt()]
+      else null
     if (edge == null) {
       throw PeleError(
         "The index $pos for linkStyle is out of bounds. Valid indices for linkStyle are between 0 and ${
@@ -496,7 +514,13 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
   }
 
   fun addClass(ids: String, styles: List<String>) {
-    val style = styles.joinToString(",").jsReplace(RE_ESCAPED_COMMA, "§§§").jsReplace(RE_COMMA, ";").jsReplace(RE_MARK, ",").jsSplit(";")
+    val style =
+      styles
+        .joinToString(",")
+        .jsReplace(RE_ESCAPED_COMMA, "§§§")
+        .jsReplace(RE_COMMA, ";")
+        .jsReplace(RE_MARK, ",")
+        .jsSplit(";")
     for (id in ids.jsSplit(",")) {
       var classNode = classes[id]
       if (classNode == null) {
@@ -592,14 +616,20 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
         dir = (entry as DirStatement).value
       }
     }
-    if (dir == null) dir = if (options.inheritDir == true) (direction ?: options.direction) else null
+    if (dir == null)
+      dir = if (options.inheritDir == true) (direction ?: options.direction) else null
 
     if (id == null) id = "subGraph$subCount"
     subCount++
 
     // A flow never contains itself, a globally scoped node, or a node another flow already holds.
     val subId: String = id
-    val nodes = nodeList.filter { nodeId -> nodeId != subId && !globalNodes.contains(nodeId) && !members.contains(nodeId) }.toMutableList()
+    val nodes =
+      nodeList
+        .filter { nodeId ->
+          nodeId != subId && !globalNodes.contains(nodeId) && !members.contains(nodeId)
+        }
+        .toMutableList()
     for (nodeId in nodes) members.add(nodeId)
 
     val existing = subgraphLookup[id]
@@ -610,15 +640,16 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
       if (!dir.isNullOrEmpty()) existing.dir = dir
       return id
     }
-    val subgraph = AgentSubgraph(
-      id = id,
-      nodes = nodes,
-      title = title.jsTrim(),
-      classes = ArrayList(),
-      dir = dir,
-      labelType = labelType(titleText?.type),
-      type = "flow",
-    )
+    val subgraph =
+      AgentSubgraph(
+        id = id,
+        nodes = nodes,
+        title = title.jsTrim(),
+        classes = ArrayList(),
+        dir = dir,
+        labelType = labelType(titleText?.type),
+        type = "flow",
+      )
     subgraphs.add(subgraph)
     subgraphLookup[id] = subgraph
     return id
@@ -640,7 +671,8 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
     }
     if (!release) return
     for (subgraph in subgraphs) {
-      subgraph.nodes = subgraph.nodes.filter { nodeId -> !globalNodes.contains(nodeId) }.toMutableList()
+      subgraph.nodes =
+        subgraph.nodes.filter { nodeId -> !globalNodes.contains(nodeId) }.toMutableList()
     }
   }
 
@@ -650,14 +682,15 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
     val title = titleObj?.text?.jsTrim() ?: ""
     val connector = connectors[id]
     if (connector == null) {
-      val created = AgentNode(
-        id = id,
-        labelType = "text",
-        styles = ArrayList(),
-        classes = ArrayList(),
-        isConnector = true,
-        text = if (title.isNotEmpty()) title else id,
-      )
+      val created =
+        AgentNode(
+          id = id,
+          labelType = "text",
+          styles = ArrayList(),
+          classes = ArrayList(),
+          isConnector = true,
+          text = if (title.isNotEmpty()) title else id,
+        )
       connectors[id] = created
       nodes[id] = created
     } else if (title.isNotEmpty()) {
@@ -673,7 +706,12 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
       val stroke = if (start.contains('.')) "dotted" else "normal"
       if (stroke != info.stroke) return LinkInfo(type = "INVALID", stroke = "INVALID")
     }
-    return LinkInfo(type = info.type, stroke = info.stroke, length = info.length, edgeSemantic = edgeSemantic(info.type, info.stroke))
+    return LinkInfo(
+      type = info.type,
+      stroke = info.stroke,
+      length = info.length,
+      edgeSemantic = edgeSemantic(info.type, info.stroke),
+    )
   }
 
   fun subgraph(id: String): AgentSubgraph? = subgraphLookup[id]
@@ -710,28 +748,37 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
       vertices.add(vertex)
     }
 
-    val edges = this.edges.map { e ->
-      val edge = SemanticEdge(e.start, e.end)
-      if (e.id != null) edge.id = e.id
-      if (e.text.isNotEmpty()) edge.label = e.text
-      if (e.type != null) edge.type = e.type
-      if (e.stroke != null) edge.stroke = e.stroke
-      if (e.edgeSemantic != null) edge.edgeSemantic = e.edgeSemantic
-      if (e.length != null) edge.length = e.length
-      val md = e.metadata
-      if (md != null && md.size > 0) edge.metadata = LinkedHashMap(md)
-      edge
-    }
+    val edges =
+      this.edges.map { e ->
+        val edge = SemanticEdge(e.start, e.end)
+        if (e.id != null) edge.id = e.id
+        if (e.text.isNotEmpty()) edge.label = e.text
+        if (e.type != null) edge.type = e.type
+        if (e.stroke != null) edge.stroke = e.stroke
+        if (e.edgeSemantic != null) edge.edgeSemantic = e.edgeSemantic
+        if (e.length != null) edge.length = e.length
+        val md = e.metadata
+        if (md != null && md.size > 0) edge.metadata = LinkedHashMap(md)
+        edge
+      }
 
     val subGraphs = subgraphs.map { sg ->
-      val out = SemanticSubgraph(id = sg.id, nodes = ArrayList(sg.nodes), type = sg.type, title = sg.title)
+      val out =
+        SemanticSubgraph(id = sg.id, nodes = ArrayList(sg.nodes), type = sg.type, title = sg.title)
       if (sg.dir != null) out.direction = sg.dir
       val metadata = semanticMetadata(sg.metadata)
       if (metadata != null) out.metadata = metadata
       out
     }
 
-    val model = SemanticModel(vertices = vertices, edges = edges, subGraphs = subGraphs, connectors = connectors, diagnostics = diagnostics)
+    val model =
+      SemanticModel(
+        vertices = vertices,
+        edges = edges,
+        subGraphs = subGraphs,
+        connectors = connectors,
+        diagnostics = diagnostics,
+      )
     if (direction != null) model.direction = direction
     return model
   }
@@ -750,7 +797,11 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
     )
   }
 
-  private fun pushMapping(id: String, type: StatementType, position: ElementPosition): ElementMapping {
+  private fun pushMapping(
+    id: String,
+    type: StatementType,
+    position: ElementPosition,
+  ): ElementMapping {
     val mapping = ElementMapping(id, type, position)
     mappings.add(mapping)
     if (!firstMapping.containsKey(id)) firstMapping[id] = mapping
@@ -830,10 +881,10 @@ class AgentflowDb(options: AgentflowDbOptions = AgentflowDbOptions()) : Agentflo
       for (d in same) {
         if (
           d.id == id &&
-          d.severity == severity &&
-          d.message == message &&
-          d.nodeId == diagnostic.nodeId &&
-          d.edgeId == diagnostic.edgeId
+            d.severity == severity &&
+            d.message == message &&
+            d.nodeId == diagnostic.nodeId &&
+            d.edgeId == diagnostic.edgeId
         ) {
           return
         }

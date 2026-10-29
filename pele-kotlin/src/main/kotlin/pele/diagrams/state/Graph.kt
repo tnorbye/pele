@@ -10,7 +10,8 @@ import pele.js.jsTrim
 
 class StateNode(
   var id: String,
-  // rect, rectWithTitle, stateStart, stateEnd, choice, fork, join, divider, roundedWithTitle, note or noteGroup.
+  // rect, rectWithTitle, stateStart, stateEnd, choice, fork, join, divider, roundedWithTitle, note
+  // or noteGroup.
   var shape: String?,
   var label: String?,
   var description: List<String>,
@@ -25,7 +26,8 @@ class StateNode(
   var position: String? = null,
   var noteFor: String? = null,
   var colorIndex: Int? = null,
-  // PORT: whether `position` is an own key of the node, which Object.assign copies even when undefined.
+  // PORT: whether `position` is an own key of the node, which Object.assign copies even when
+  // undefined.
   val hasPosition: Boolean = false,
 )
 
@@ -70,9 +72,11 @@ private fun direction(doc: List<Stmt>): String {
 }
 
 // PORT: `.length` of a string or an array.
-private fun lengthOf(description: Any): Int = if (description is String) description.length else (description as List<*>).size
+private fun lengthOf(description: Any): Int =
+  if (description is String) description.length else (description as List<*>).size
 
-// Mermaid's dataFetcher: walks the documents and resolves them into the nodes and edges that are drawn.
+// Mermaid's dataFetcher: walks the documents and resolves them into the nodes and edges that are
+// drawn.
 fun buildStateGraph(
   rootDoc: List<Stmt>,
   states: Map<String, StateStmt>,
@@ -87,10 +91,12 @@ fun buildStateGraph(
   var nextSlot = 0
 
   fun insert(node: StateNode) {
-    // The two literal ids are what DOMPurify leaves of `<<fork>>` and `<<choice>>` in Mermaid; kept for parity.
+    // The two literal ids are what DOMPurify leaves of `<<fork>>` and `<<choice>>` in Mermaid; kept
+    // for parity.
     if (node.id.isEmpty() || node.id == "</join></fork>" || node.id == "</choice>") return
     if (node.cssClasses.isNotEmpty()) {
-      // One copy, however many classes: a state named in a class statement many times has a long list.
+      // One copy, however many classes: a state named in a class statement many times has a long
+      // list.
       var compiled: ArrayList<String>? = null
       for (name in node.cssClasses.jsSplit(" ")) {
         val def = classes[name] ?: continue
@@ -133,18 +139,18 @@ fun buildStateGraph(
     var draft = drafts[id]
     if (draft == null) {
       var shape: String? = "rect"
-      if (item.start == true) shape = "stateStart"
-      else if (item.start == false) shape = "stateEnd"
+      if (item.start == true) shape = "stateStart" else if (item.start == false) shape = "stateEnd"
       if (item.type != "default") shape = item.type
-      draft = Draft(
-        shape = shape,
-        description = id,
-        cssClasses = "$classStr statediagram-state",
-        cssStyles = styles,
-        type = null,
-        dir = null,
-        colorIndex = null,
-      )
+      draft =
+        Draft(
+          shape = shape,
+          description = id,
+          cssClasses = "$classStr statediagram-state",
+          cssStyles = styles,
+          type = null,
+          dir = null,
+          colorIndex = null,
+        )
       drafts[id] = draft
     }
 
@@ -155,16 +161,23 @@ fun buildStateGraph(
       if (current is List<*>) {
         draft.shape = "rectWithTitle"
         @Suppress("UNCHECKED_CAST")
-        draft.description = current + (if (itemDescription is List<*>) itemDescription as List<String> else listOf(itemDescription as String))
+        draft.description =
+          current +
+            (if (itemDescription is List<*>) itemDescription as List<String>
+            else listOf(itemDescription as String))
       } else if ((current as String).length > 0) {
         draft.shape = "rectWithTitle"
         @Suppress("UNCHECKED_CAST")
-        val added: List<String> = if (itemDescription is List<*>) itemDescription as List<String> else listOf(itemDescription as String)
+        val added: List<String> =
+          if (itemDescription is List<*>) itemDescription as List<String>
+          else listOf(itemDescription as String)
         draft.description = if (current == id) added.toList() else listOf(current) + added
       } else {
         draft.shape = "rect"
         @Suppress("UNCHECKED_CAST")
-        draft.description = if (itemDescription is List<*>) (itemDescription as List<String>).toList() else itemDescription
+        draft.description =
+          if (itemDescription is List<*>) (itemDescription as List<String>).toList()
+          else itemDescription
       }
     }
     if (lengthOf(draft.description) == 1 && draft.shape == "rectWithTitle") {
@@ -176,7 +189,8 @@ fun buildStateGraph(
       draft.type = "group"
       draft.dir = direction(itemDoc)
       draft.shape = if (item.type == "divider") "divider" else "roundedWithTitle"
-      // A container takes the next palette slot unless it is a region, which shares its composite's.
+      // A container takes the next palette slot unless it is a region, which shares its
+      // composite's.
       if (draft.shape == "divider" && parent?.id != null && slots.containsKey(parent.id)) {
         draft.colorIndex = slots[parent.id]
       } else {
@@ -184,23 +198,25 @@ fun buildStateGraph(
         draft.colorIndex = if (classStr.jsTrim() != "" || styles.size > 0) null else slot
       }
       slots[id] = draft.colorIndex
-      draft.cssClasses = "${draft.cssClasses} statediagram-cluster ${if (alt) "statediagram-cluster-alt" else ""}"
+      draft.cssClasses =
+        "${draft.cssClasses} statediagram-cluster ${if (alt) "statediagram-cluster-alt" else ""}"
     }
 
     val full = draft.description
-    val node = StateNode(
-      id = id,
-      shape = draft.shape,
-      label = if (full is List<*>) (full.getOrNull(0) as String?) else full as String,
-      description = if (full is List<*>) full.drop(1).map { it as String } else emptyList(),
-      cssClasses = draft.cssClasses,
-      cssCompiledStyles = emptyList(),
-      cssStyles = draft.cssStyles,
-      type = draft.type,
-      isGroup = draft.type == "group",
-      dir = draft.dir,
-      colorIndex = draft.colorIndex,
-    )
+    val node =
+      StateNode(
+        id = id,
+        shape = draft.shape,
+        label = if (full is List<*>) (full.getOrNull(0) as String?) else full as String,
+        description = if (full is List<*>) full.drop(1).map { it as String } else emptyList(),
+        cssClasses = draft.cssClasses,
+        cssCompiledStyles = emptyList(),
+        cssStyles = draft.cssStyles,
+        type = draft.type,
+        isGroup = draft.type == "group",
+        dir = draft.dir,
+        colorIndex = draft.colorIndex,
+      )
     if (node.shape == "divider") node.label = ""
     if (parent != null && parent.id != "root") node.parentId = parent.id
 
@@ -255,7 +271,15 @@ fun buildStateGraph(
     } else if (item is RelationStmt) {
       visit(frame.item, item.state1, frame.alt)
       visit(frame.item, item.state2, frame.alt)
-      edges.add(StateEdge("edge${counter++}", item.state1.id, item.state2.id, item.description ?: "", "transition"))
+      edges.add(
+        StateEdge(
+          "edge${counter++}",
+          item.state1.id,
+          item.state2.id,
+          item.description ?: "",
+          "transition",
+        )
+      )
     }
   }
 

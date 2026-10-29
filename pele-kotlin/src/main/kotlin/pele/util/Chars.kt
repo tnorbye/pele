@@ -32,4 +32,5 @@ fun isLetter(c: Int): Boolean = (c >= 65 && c <= 90) || (c >= 97 && c <= 122)
 fun isHex(c: Int): Boolean = (c >= 48 && c <= 57) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)
 
 // A character of `\w`.
-fun isWord(c: Int): Boolean = (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95
+fun isWord(c: Int): Boolean =
+  (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95

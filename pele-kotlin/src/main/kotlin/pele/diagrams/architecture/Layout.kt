@@ -7,7 +7,8 @@ import kotlin.math.sqrt
 
 // Grid placement. Mermaid hands the edge sides to a force-directed solver as relative placement
 // constraints. Pele applies them directly: every service and junction takes a cell, an edge
-// `a:R -- L:b` puts b in the cell to the right of a, and a group is a solid rectangle of cells, so a
+// `a:R -- L:b` puts b in the cell to the right of a, and a group is a solid rectangle of cells, so
+// a
 // group never encloses a node that is not in it. Each container (the diagram, then every group) is
 // laid out on its own, innermost first, and a finished group is placed in its parent as one block.
 
@@ -28,14 +29,20 @@ class Grid(
 private val DX = intArrayOf(-1, 1, 0, 0)
 private val DY = intArrayOf(0, 0, -1, 1)
 
-fun sideIndex(side: Side): Int = if (side == "L") 0 else if (side == "R") 1 else if (side == "T") 2 else 3
+fun sideIndex(side: Side): Int =
+  if (side == "L") 0 else if (side == "R") 1 else if (side == "T") 2 else 3
 
 // Blocks up to this many cells are found through the cell map; larger ones are compared one by one.
 private const val SMALL = 64
 private const val OFFSET = 33554432L // 2 ** 25
 private const val SPAN = 67108864L // 2 ** 26
 
-fun placeOnGrid(nodes: List<ArchNode>, groups: List<ArchGroup>, edges: List<ArchEdge>, hints: List<ArchLayoutHint>): Grid {
+fun placeOnGrid(
+  nodes: List<ArchNode>,
+  groups: List<ArchGroup>,
+  edges: List<ArchEdge>,
+  hints: List<ArchLayoutHint>,
+): Grid {
   val N = nodes.size
   val G = groups.size
   val root = G
@@ -113,7 +120,8 @@ fun placeOnGrid(nodes: List<ArchNode>, groups: List<ArchGroup>, edges: List<Arch
       if ((edge.lhsDir == edge.rhsDir) != likeSides) continue
       val a = nodeIndex[edge.lhsId]
       val b = nodeIndex[edge.rhsId]
-      if (a != null && b != null) addLink(a, b, sideIndex(edge.lhsDir), sideIndex(edge.rhsDir), edgeLinks)
+      if (a != null && b != null)
+        addLink(a, b, sideIndex(edge.lhsDir), sideIndex(edge.rhsDir), edgeLinks)
     }
   }
 
@@ -183,7 +191,10 @@ fun placeOnGrid(nodes: List<ArchNode>, groups: List<ArchGroup>, edges: List<Arch
     while (true) {
       val hit = collide(rx + k * sx, ry + k * sy, rw, rh)
       if (hit < 0) break
-      k = if (sx > 0) x[hit] + w[hit] - rx else if (sx < 0) rx + rw - x[hit] else if (sy > 0) y[hit] + h[hit] - ry else ry + rh - y[hit]
+      k =
+        if (sx > 0) x[hit] + w[hit] - rx
+        else if (sx < 0) rx + rw - x[hit]
+        else if (sy > 0) y[hit] + h[hit] - ry else ry + rh - y[hit]
     }
     reach[key] = k
     return k
@@ -231,7 +242,12 @@ fun placeOnGrid(nodes: List<ArchNode>, groups: List<ArchGroup>, edges: List<Arch
         for (j in list) {
           val toIsB = itemB[j] == to
           val other = if (toIsB) itemA[j] else itemB[j]
-          if (placed[other] == 0 || (if (toIsB) sideA[j] else sideB[j]) != sp || (if (toIsB) sideB[j] else sideA[j]) != sq) continue
+          if (
+            placed[other] == 0 ||
+              (if (toIsB) sideA[j] else sideB[j]) != sp ||
+              (if (toIsB) sideB[j] else sideA[j]) != sq
+          )
+            continue
           anchor(if (toIsB) linkA[j] else linkB[j], other)
           val at = if (dx != 0) y[other] + ay else x[other] + ax
           anchor(if (toIsB) linkB[j] else linkA[j], to)
@@ -239,7 +255,8 @@ fun placeOnGrid(nodes: List<ArchNode>, groups: List<ArchGroup>, edges: List<Arch
         }
         if (wanted.size > 1) {
           wanted.sort()
-          if (dx != 0) by = wanted[(wanted.size - 1) shr 1] else bx = wanted[(wanted.size - 1) shr 1]
+          if (dx != 0) by = wanted[(wanted.size - 1) shr 1]
+          else bx = wanted[(wanted.size - 1) shr 1]
         }
       }
       // Taken: move sideways, to whichever side is nearer, so the edge can still leave straight.

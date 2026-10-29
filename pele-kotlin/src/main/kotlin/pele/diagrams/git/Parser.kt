@@ -53,48 +53,50 @@ private object T {
   const val reference = 31
 }
 
-private val REFERENCE = TokenType(name = "REFERENCE", pattern = JsRegExp("""\w([-\.\/\w]*[-\w])?""", "y"))
+private val REFERENCE =
+  TokenType(name = "REFERENCE", pattern = JsRegExp("""\w([-\.\/\w]*[-\w])?""", "y"))
 private val NAME = listOf(REFERENCE)
 
 // A keyword that is the start of a longer name is part of that name: `commits` is a branch.
 private fun word(name: String): TokenType = TokenType(name = name, pattern = name, longer = NAME)
 
-val GIT_TOKENS: List<TokenType> = listOf(
-  word("cherry-pick"),
-  TokenType(name = "gitGraph:", pattern = "gitGraph:"),
-  word("HIGHLIGHT"),
-  keyword("gitGraph").copy(longer = NAME),
-  word("checkout"),
-  word("REVERSE"),
-  TokenType(name = "parent:", pattern = "parent:"),
-  word("commit"),
-  word("NORMAL"),
-  word("branch"),
-  TokenType(name = "order:", pattern = "order:"),
-  word("switch"),
-  TokenType(name = "type:", pattern = "type:"),
-  word("merge"),
-  TokenType(name = "msg:", pattern = "msg:"),
-  TokenType(name = "tag:", pattern = "tag:"),
-  TokenType(name = "id:", pattern = "id:"),
-  word("LR"),
-  word("TB"),
-  word("BT"),
-  TokenType(name = ":", pattern = ":"),
-  // Without a closing brace the block form scans to the end of the text, and a brace is not a
-  // token on its own, so the first failure is final.
-  ACC_DESCR.copy(opener = JsRegExp("""[\t ]*accDescr\s*{""", "y")),
-  ACC_TITLE,
-  titleBefore("""[-./\w]*[-\w]"""),
-  TokenType(name = "INT", pattern = JsRegExp("""0|[1-9][0-9]*(?!\.)""", "y")),
-  STRING,
-  NEWLINE,
-  WHITESPACE,
-  YAML,
-  DIRECTIVE,
-  SINGLE_LINE_COMMENT,
-  REFERENCE,
-)
+val GIT_TOKENS: List<TokenType> =
+  listOf(
+    word("cherry-pick"),
+    TokenType(name = "gitGraph:", pattern = "gitGraph:"),
+    word("HIGHLIGHT"),
+    keyword("gitGraph").copy(longer = NAME),
+    word("checkout"),
+    word("REVERSE"),
+    TokenType(name = "parent:", pattern = "parent:"),
+    word("commit"),
+    word("NORMAL"),
+    word("branch"),
+    TokenType(name = "order:", pattern = "order:"),
+    word("switch"),
+    TokenType(name = "type:", pattern = "type:"),
+    word("merge"),
+    TokenType(name = "msg:", pattern = "msg:"),
+    TokenType(name = "tag:", pattern = "tag:"),
+    TokenType(name = "id:", pattern = "id:"),
+    word("LR"),
+    word("TB"),
+    word("BT"),
+    TokenType(name = ":", pattern = ":"),
+    // Without a closing brace the block form scans to the end of the text, and a brace is not a
+    // token on its own, so the first failure is final.
+    ACC_DESCR.copy(opener = JsRegExp("""[\t ]*accDescr\s*{""", "y")),
+    ACC_TITLE,
+    titleBefore("""[-./\w]*[-\w]"""),
+    TokenType(name = "INT", pattern = JsRegExp("""0|[1-9][0-9]*(?!\.)""", "y")),
+    STRING,
+    NEWLINE,
+    WHITESPACE,
+    YAML,
+    DIRECTIVE,
+    SINGLE_LINE_COMMENT,
+    REFERENCE,
+  )
 
 // 'NORMAL' | 'REVERSE' | 'HIGHLIGHT'
 typealias CommitTypeName = String
@@ -124,9 +126,7 @@ class MergeAst(
   override val `$type` = "Merge"
 }
 
-class CheckoutAst(
-  val branch: String,
-) : StatementAst() {
+class CheckoutAst(val branch: String) : StatementAst() {
   override val `$type` = "Checkout"
 }
 
@@ -170,7 +170,8 @@ fun parseGit(src: String): GitGraphAst {
   }
   fun string(): String = stringValue(r.expect(T.string))
   fun commitType(): CommitTypeName {
-    if (r.kind != T.normal && r.kind != T.reverse && r.kind != T.highlight) r.fail("NORMAL, REVERSE, or HIGHLIGHT")
+    if (r.kind != T.normal && r.kind != T.reverse && r.kind != T.highlight)
+      r.fail("NORMAL, REVERSE, or HIGHLIGHT")
     return r.take()
   }
 
@@ -228,13 +229,13 @@ fun parseGit(src: String): GitGraphAst {
         while (true) {
           if (r.accept(T.id)) node.id = string()
           else if (r.accept(T.tag)) node.tags.add(string())
-          else if (r.accept(T.type)) node.type = commitType()
-          else break
+          else if (r.accept(T.type)) node.type = commitType() else break
         }
         endOfLine()
         ast.statements.add(node)
       }
-      T.checkout, T.switch -> {
+      T.checkout,
+      T.switch -> {
         r.i++
         val node = CheckoutAst(name())
         endOfLine()
@@ -246,8 +247,7 @@ fun parseGit(src: String): GitGraphAst {
         while (true) {
           if (r.accept(T.id)) node.id = string()
           else if (r.accept(T.tag)) node.tags.add(string())
-          else if (r.accept(T.parent)) node.parent = string()
-          else break
+          else if (r.accept(T.parent)) node.parent = string() else break
         }
         endOfLine()
         ast.statements.add(node)

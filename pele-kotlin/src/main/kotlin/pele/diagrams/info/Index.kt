@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val info: Diagram<InfoModel> = object : Diagram<InfoModel> {
-  override val type = "info"
+val info: Diagram<InfoModel> =
+  object : Diagram<InfoModel> {
+    override val type = "info"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): InfoModel =
-    buildInfo(parseInfo(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): InfoModel = buildInfo(parseInfo(source), title)
 
-  override fun render(model: InfoModel, config: Config, options: RenderOptions): Rendered = renderInfo(model, config, options)
-}
+    override fun render(model: InfoModel, config: Config, options: RenderOptions): Rendered =
+      renderInfo(model, config, options)
+  }

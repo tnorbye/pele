@@ -51,12 +51,13 @@ private fun classOf(c: Int): Int = if (c >= 0 && c < 128) CLASS[c] else 0
 private val RE_ACC_TITLE = JsRegExp("""accTitle\s*:\s*""", "iy")
 private val RE_ACC_DESCR = JsRegExp("""accDescr\s*:\s*""", "iy")
 private val RE_ACC_DESCR_ML = JsRegExp("""accDescr\s*\{\s*""", "iy")
-private val RE_DIRECTION = listOf(
-  JsRegExp(""".*direction\s+TB[^\n]*""", "iy"),
-  JsRegExp(""".*direction\s+BT[^\n]*""", "iy"),
-  JsRegExp(""".*direction\s+RL[^\n]*""", "iy"),
-  JsRegExp(""".*direction\s+LR[^\n]*""", "iy"),
-)
+private val RE_DIRECTION =
+  listOf(
+    JsRegExp(""".*direction\s+TB[^\n]*""", "iy"),
+    JsRegExp(""".*direction\s+BT[^\n]*""", "iy"),
+    JsRegExp(""".*direction\s+RL[^\n]*""", "iy"),
+    JsRegExp(""".*direction\s+LR[^\n]*""", "iy"),
+  )
 private val RE_DIR_WORD = JsRegExp("direction", "gi")
 private val RE_LINE_END = JsRegExp("""[\n\r  ]""", "g")
 
@@ -230,8 +231,7 @@ fun tokenize(src: String): Tokens {
         else if (kwb("only one")) emit(T.ONLY_ONE, p, p + 8)
         else if (d == 124) emit(T.ZERO_OR_ONE, p, p + 2)
         else if (d == 123) emit(T.ZERO_OR_MORE, p, p + 2)
-        else if (kwb("optionally to")) emit(T.NON_IDENTIFYING, p, p + 13)
-        else return false
+        else if (kwb("optionally to")) emit(T.NON_IDENTIFYING, p, p + 13) else return false
         return true
       }
       122 -> {
@@ -243,8 +243,7 @@ fun tokenize(src: String): Tokens {
       109 -> {
         if (kw("many(0)")) emit(T.ZERO_OR_MORE, p, p + 7)
         else if (kw("many(1)")) emit(T.ONE_OR_MORE, p, p + 7)
-        else if (kwb("many")) emit(T.ZERO_OR_MORE, p, p + 4)
-        else return false
+        else if (kwb("many")) emit(T.ZERO_OR_MORE, p, p + 4) else return false
         return true
       }
       116 -> {
@@ -260,14 +259,12 @@ fun tokenize(src: String): Tokens {
       124 -> {
         if (lower(p + 1) == 111 && !isWord(src.charCodeAt(p + 2))) emit(T.ZERO_OR_ONE, p, p + 2)
         else if (d == 124) emit(T.ONLY_ONE, p, p + 2)
-        else if (d == 123) emit(T.ONE_OR_MORE, p, p + 2)
-        else return false
+        else if (d == 123) emit(T.ONE_OR_MORE, p, p + 2) else return false
         return true
       }
       125 -> {
         if (lower(p + 1) == 111 && !isWord(src.charCodeAt(p + 2))) emit(T.ZERO_OR_MORE, p, p + 2)
-        else if (d == 124) emit(T.ONE_OR_MORE, p, p + 2)
-        else return false
+        else if (d == 124) emit(T.ONE_OR_MORE, p, p + 2) else return false
         return true
       }
       46 -> {
@@ -277,8 +274,7 @@ fun tokenize(src: String): Tokens {
       }
       45 -> {
         if (d == 45) emit(T.IDENTIFYING, p, p + 2)
-        else if (d == 46) emit(T.NON_IDENTIFYING, p, p + 2)
-        else return false
+        else if (d == 46) emit(T.NON_IDENTIFYING, p, p + 2) else return false
         return true
       }
     }
@@ -310,7 +306,9 @@ fun tokenize(src: String): Tokens {
     if (direction()) return
 
     when (c) {
-      32, 9, 13 -> {
+      32,
+      9,
+      13 -> {
         e = p + 1
         var d = src.charCodeAt(e)
         while (d == 32 || d == 9 || d == 13) {
@@ -344,7 +342,8 @@ fun tokenize(src: String): Tokens {
         return
       }
       58 -> {
-        if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58) emit(T.STYLE_SEPARATOR, p, p + 3)
+        if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58)
+          emit(T.STYLE_SEPARATOR, p, p + 3)
         else emit(T.COLON, p, p + 1)
         return
       }
@@ -375,7 +374,8 @@ fun tokenize(src: String): Tokens {
     emit(T.CHAR, p, p + 1)
   }
 
-  // Mermaid's generic type rule: a run of non-space characters holding a `~`, through the last `~` on the line.
+  // Mermaid's generic type rule: a run of non-space characters holding a `~`, through the last `~`
+  // on the line.
   fun generic(): Boolean {
     if (tildeNext == -1) return false
     if (tildeNext < p) {
@@ -406,7 +406,11 @@ fun tokenize(src: String): Tokens {
       return
     }
     val lc = c or 32
-    if ((lc == 112 || lc == 102 || lc == 117) && (src.charCodeAt(p + 1) or 32) == 107 && !isWord(src.charCodeAt(p + 2))) {
+    if (
+      (lc == 112 || lc == 102 || lc == 117) &&
+        (src.charCodeAt(p + 1) or 32) == 107 &&
+        !isWord(src.charCodeAt(p + 2))
+    ) {
       emit(T.ATTRIBUTE_KEY, p, p + 2)
       return
     }
@@ -453,9 +457,14 @@ fun tokenize(src: String): Tokens {
           emit(T.ATTRIBUTE_WORD, p, if (e == -1) n else e)
         }
 
-      S.acc_title, S.acc_descr -> {
+      S.acc_title,
+      S.acc_descr -> {
         e = src.indexOf('\n', p)
-        emit(if (state == S.acc_title) T.acc_title_value else T.acc_descr_value, p, if (e == -1) n else e)
+        emit(
+          if (state == S.acc_title) T.acc_title_value else T.acc_descr_value,
+          p,
+          if (e == -1) n else e,
+        )
         state = S.INITIAL
       }
 
@@ -508,8 +517,7 @@ fun tokenize(src: String): Tokens {
     if (state == S.INITIAL) T.EOF
     else if (state == S.acc_title) T.acc_title_value
     else if (state == S.acc_descr) T.acc_descr_value
-    else if (state == S.acc_descr_multiline) T.acc_descr_multiline_value
-    else -1
+    else if (state == S.acc_descr_multiline) T.acc_descr_multiline_value else -1
   if (last != -1) {
     types.add(last)
     texts.add("")

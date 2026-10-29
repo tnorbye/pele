@@ -8,15 +8,23 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val sankey: Diagram<SankeyDb> = object : Diagram<SankeyDb> {
-  override val type = "sankey"
+val sankey: Diagram<SankeyDb> =
+  object : Diagram<SankeyDb> {
+    override val type = "sankey"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): SankeyDb {
-    val db = SankeyDb()
-    if (!title.isNullOrEmpty()) db.title = title
-    parseSankey(prepareTextForParsing(source), db, source)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): SankeyDb {
+      val db = SankeyDb()
+      if (!title.isNullOrEmpty()) db.title = title
+      parseSankey(prepareTextForParsing(source), db, source)
+      return db
+    }
+
+    override fun render(model: SankeyDb, config: Config, options: RenderOptions): Rendered =
+      renderSankey(model, config, options)
   }
-
-  override fun render(model: SankeyDb, config: Config, options: RenderOptions): Rendered = renderSankey(model, config, options)
-}

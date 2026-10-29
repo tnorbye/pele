@@ -70,7 +70,8 @@ class JourneyDb : JourneyModel {
   // `data` is the rest of the line from its first colon: `:score` or `:score:actor, actor`.
   fun addTask(task: String, data: String) {
     val pieces = data.jsSubstring(1).jsSplit(":")
-    val people = if (pieces.size == 1) emptyList() else pieces[1].jsSplit(",").map { name -> name.jsTrim() }
+    val people =
+      if (pieces.size == 1) emptyList() else pieces[1].jsSplit(",").map { name -> name.jsTrim() }
     this.tasks.add(JourneyTask(task, jsNumber(pieces[0]), people, currentSection))
   }
 

@@ -13,9 +13,11 @@ private fun flags(vararg tokens: Int): ByteArray {
 }
 
 // PORT: an index outside the array reads as undefined in JS, which is neither 0 nor 1.
-private fun flag(array: ByteArray, t: Int): Int = if (t >= 0 && t < array.size) array[t].toInt() else -1
+private fun flag(array: ByteArray, t: Int): Int =
+  if (t >= 0 && t < array.size) array[t].toInt() else -1
 
-private val WORD = flags(T.AMP, T.NUM, T.ALPHA, T.PLUS, T.EQUALS, T.MULT, T.DOT, T.BRKT, T.MINUS, T.UNDERSCORE)
+private val WORD =
+  flags(T.AMP, T.NUM, T.ALPHA, T.PLUS, T.EQUALS, T.MULT, T.DOT, T.BRKT, T.MINUS, T.UNDERSCORE)
 private val EOL = flags(T.NEWLINE, T.SEMI, T.EOF)
 
 fun parseXyChart(src: String, db: XyChartDb) {
@@ -77,7 +79,8 @@ fun parseXyChart(src: String, db: XyChartDb) {
     val t = typeAt(i++)
     when (t) {
       T.title -> db.setDiagramTitle(text().text.jsTrim())
-      T.X_AXIS, T.Y_AXIS -> {
+      T.X_AXIS,
+      T.Y_AXIS -> {
         val title = if (isText(typeAt(i))) text() else null
         if (t == T.X_AXIS && typeAt(i) == T.SQUARE_BRACES_START) {
           val categories = ArrayList<XyText>()
@@ -89,24 +92,25 @@ fun parseXyChart(src: String, db: XyChartDb) {
           db.setXAxisBand(categories)
         } else if (typeAt(i) == T.NUMBER_WITH_DECIMAL || title == null) {
           val (min, max) = range()
-          if (t == T.X_AXIS) db.setXAxisRangeData(min, max)
-          else db.setYAxisRangeData(min, max)
+          if (t == T.X_AXIS) db.setXAxisRangeData(min, max) else db.setYAxisRangeData(min, max)
         }
         if (t == T.X_AXIS) db.setXAxisTitle(title ?: XyText("", "text"))
         else db.setYAxisTitle(title ?: XyText("", "text"))
       }
-      T.LINE, T.BAR -> {
+      T.LINE,
+      T.BAR -> {
         val title: XyText = if (typeAt(i) == T.SQUARE_BRACES_START) XyText("", "text") else text()
         val data = points()
-        if (t == T.LINE) db.setLineData(title, data)
-        else db.setBarData(title, data)
+        if (t == T.LINE) db.setLineData(title, data) else db.setBarData(title, data)
       }
       T.acc_title -> db.setAccTitle(expect(T.acc_title_value).jsTrim())
       T.acc_descr -> db.setAccDescription(expect(T.acc_descr_value).jsTrim())
       T.acc_descr_multiline_value -> db.setAccDescription(texts[i - 1].jsTrim())
       else -> {
         i--
-        fail("'title', 'X_AXIS', 'Y_AXIS', 'LINE', 'BAR', 'acc_title', 'acc_descr', 'acc_descr_multiline_value'")
+        fail(
+          "'title', 'X_AXIS', 'Y_AXIS', 'LINE', 'BAR', 'acc_title', 'acc_descr', 'acc_descr_multiline_value'"
+        )
       }
     }
     while (flag(EOL, typeAt(i)) == 1) i++

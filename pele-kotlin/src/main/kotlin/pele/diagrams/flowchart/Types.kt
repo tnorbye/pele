@@ -48,7 +48,11 @@ class FlowEdge(
   var animation: Any? = null,
 )
 
-class FlowClassDef(val id: String, val styles: MutableList<String>, val textStyles: MutableList<String>)
+class FlowClassDef(
+  val id: String,
+  val styles: MutableList<String>,
+  val textStyles: MutableList<String>,
+)
 
 class FlowSubgraph(
   val id: String,
@@ -72,7 +76,8 @@ class LinkInfo(
 typealias DocItem = Any
 
 class DirStatement(val value: String) {
-  val stmt: String get() = "dir"
+  val stmt: String
+    get() = "dir"
 }
 
 interface FlowchartModel : Accessible {

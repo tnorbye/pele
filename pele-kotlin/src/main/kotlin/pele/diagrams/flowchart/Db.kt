@@ -145,7 +145,11 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
       try {
         parsed = parseYaml(yaml)
       } catch (error: Exception) {
-        throw PeleError("Metadata of \"$id\" is not valid YAML. ${error.message}", PeleErrorCode.SYNTAX, PeleErrorInfo(type = "flowchart"))
+        throw PeleError(
+          "Metadata of \"$id\" is not valid YAML. ${error.message}",
+          PeleErrorCode.SYNTAX,
+          PeleErrorInfo(type = "flowchart"),
+        )
       }
       @Suppress("UNCHECKED_CAST")
       doc = if (parsed is MutableMap<*, *>) parsed as MutableMap<String, YamlValue> else null
@@ -165,8 +169,10 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
     if (edge != null) {
       if (doc != null && doc.containsKey("animate")) edge.animate = doc["animate"]
       if (doc != null && doc.containsKey("animation")) edge.animation = doc["animation"]
-      // PORT: upstream stores the value as it is; one that is not a string only matters by its truthiness.
-      if (doc != null && doc.containsKey("curve")) edge.interpolate = doc["curve"].let { if (isTruthy(it)) jsString(it) else null }
+      // PORT: upstream stores the value as it is; one that is not a string only matters by its
+      // truthiness.
+      if (doc != null && doc.containsKey("curve"))
+        edge.interpolate = doc["curve"].let { if (isTruthy(it)) jsString(it) else null }
       return
     }
 
@@ -174,7 +180,7 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
     if (vertex == null) {
       if (textObj == null && type == null && style != null) {
         options.warn?.invoke(
-          "Style applied to unknown node \"$id\". This may indicate a typo. The node will be created automatically.",
+          "Style applied to unknown node \"$id\". This may indicate a typo. The node will be created automatically."
         )
       }
       vertex = FlowNode(id = id, labelType = "text", styles = ArrayList(), classes = ArrayList())
@@ -200,10 +206,18 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
     if (isTruthy(doc["shape"])) {
       val shape = jsString(doc["shape"])
       if (shape != shape.lowercase() || shape.contains('_')) {
-        throw PeleError("No such shape: $shape. Shape names should be lowercase.", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "flowchart"))
+        throw PeleError(
+          "No such shape: $shape. Shape names should be lowercase.",
+          PeleErrorCode.SEMANTIC,
+          PeleErrorInfo(type = "flowchart"),
+        )
       }
       if (!isValidShape(shape)) {
-        throw PeleError("No such shape: $shape.", PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "flowchart"))
+        throw PeleError(
+          "No such shape: $shape.",
+          PeleErrorCode.SEMANTIC,
+          PeleErrorInfo(type = "flowchart"),
+        )
       }
       vertex.type = shape
     }
@@ -228,16 +242,17 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
   }
 
   fun addSingleLink(start: String, end: String, type: LinkInfo?, id: String? = null) {
-    val edge = FlowEdge(
-      start = start,
-      end = end,
-      type = null,
-      text = "",
-      labelType = "text",
-      classes = ArrayList(),
-      isUserDefinedId = false,
-      interpolate = defaultInterpolate,
-    )
+    val edge =
+      FlowEdge(
+        start = start,
+        end = end,
+        type = null,
+        text = "",
+        labelType = "text",
+        classes = ArrayList(),
+        isUserDefinedId = false,
+        interpolate = defaultInterpolate,
+      )
     val linkText = type?.text
     if (linkText != null) {
       edge.text = unquote(linkText.text.jsTrim())
@@ -260,7 +275,11 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
 
     val max = options.maxEdges
     if (max != null && edges.size >= max) {
-      throw PeleError("Edge limit exceeded. The limit is $max.", PeleErrorCode.LIMIT, PeleErrorInfo(type = "flowchart"))
+      throw PeleError(
+        "Edge limit exceeded. The limit is $max.",
+        PeleErrorCode.LIMIT,
+        PeleErrorInfo(type = "flowchart"),
+      )
     }
     edges.add(edge)
     pairCount[pair] = count + 1
@@ -300,7 +319,10 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
   private fun edgeAt(pos: String): FlowEdge {
     val index = jsNumber(pos)
     // PORT: an array index must be an integer in range; anything else is undefined.
-    val edge = if (index >= 0 && index < edges.size && index == kotlin.math.floor(index)) edges[index.toInt()] else null
+    val edge =
+      if (index >= 0 && index < edges.size && index == kotlin.math.floor(index))
+        edges[index.toInt()]
+      else null
     if (edge == null) {
       throw PeleError(
         "The index $pos for linkStyle is out of bounds. Valid indices for linkStyle are between 0 and ${
@@ -314,7 +336,13 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
   }
 
   fun addClass(ids: String, styles: List<String>) {
-    val style = styles.joinToString(",").jsReplace(RE_ESCAPED_COMMA, "§§§").jsReplace(RE_COMMA, ";").jsReplace(RE_MARK, ",").jsSplit(";")
+    val style =
+      styles
+        .joinToString(",")
+        .jsReplace(RE_ESCAPED_COMMA, "§§§")
+        .jsReplace(RE_COMMA, ";")
+        .jsReplace(RE_MARK, ",")
+        .jsSplit(";")
     for (id in ids.jsSplit(",")) {
       var classNode = classes[id]
       if (classNode == null) {
@@ -405,23 +433,26 @@ class FlowDb(options: FlowDbOptions = FlowDbOptions()) : FlowchartModel {
         dir = (entry as DirStatement).value
       }
     }
-    if (dir == null) dir = if (options.inheritDir == true) (direction ?: options.direction) else null
+    if (dir == null)
+      dir = if (options.inheritDir == true) (direction ?: options.direction) else null
 
     val sgId = id ?: ("subGraph" + subCount)
     title = if (title != "") title else ""
     subCount++
 
-    val subgraph = FlowSubgraph(
-      id = sgId,
-      nodes = nodeList,
-      title = title.jsTrim(),
-      classes = ArrayList(),
-      dir = dir,
-      labelType = labelType(titleText?.type),
-    )
+    val subgraph =
+      FlowSubgraph(
+        id = sgId,
+        nodes = nodeList,
+        title = title.jsTrim(),
+        classes = ArrayList(),
+        dir = dir,
+        labelType = labelType(titleText?.type),
+      )
     // A node belongs to the first subgraph that lists it, and a subgraph never contains itself.
     val members = this.members
-    subgraph.nodes = nodeList.filter { nodeId -> !members.contains(nodeId) && nodeId != sgId }.toMutableList()
+    subgraph.nodes =
+      nodeList.filter { nodeId -> !members.contains(nodeId) && nodeId != sgId }.toMutableList()
     for (nodeId in subgraph.nodes) members.add(nodeId)
 
     val existing = subgraphLookup[sgId]

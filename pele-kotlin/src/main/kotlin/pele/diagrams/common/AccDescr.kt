@@ -4,7 +4,8 @@ package pele.diagrams.common
 
 import pele.js.JsRegExp
 
-private val RE_HEAD = JsRegExp("""[\t ]*accDescr(?:[\t ]*:(?:[^\n\r]*?(?=%%)|[^\n\r]*)|\s*({))""", "y")
+private val RE_HEAD =
+  JsRegExp("""[\t ]*accDescr(?:[\t ]*:(?:[^\n\r]*?(?=%%)|[^\n\r]*)|\s*({))""", "y")
 
 // The braced form scans for its closing brace. Once none is found there is none further on,
 // so later braced descriptions fail without scanning the rest of the text again.
@@ -31,5 +32,7 @@ private fun scanner(): Scanner {
 }
 
 // The common accDescr terminal for grammars where lexing goes on after an `accDescr {` that never
-// closes, because `accDescr` is also a name there. Each one would otherwise read to the end of the text.
-fun accDescr(name: String = "ACC_DESCR"): TokenType = ACC_DESCR.copy(name = name, scanner = ::scanner)
+// closes, because `accDescr` is also a name there. Each one would otherwise read to the end of the
+// text.
+fun accDescr(name: String = "ACC_DESCR"): TokenType =
+  ACC_DESCR.copy(name = name, scanner = ::scanner)

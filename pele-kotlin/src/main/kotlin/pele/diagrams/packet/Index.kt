@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val packet: Diagram<PacketModel> = object : Diagram<PacketModel> {
-  override val type = "packet"
+val packet: Diagram<PacketModel> =
+  object : Diagram<PacketModel> {
+    override val type = "packet"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): PacketModel =
-    buildPacket(parsePacket(source), config, title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): PacketModel = buildPacket(parsePacket(source), config, title)
 
-  override fun render(model: PacketModel, config: Config, options: RenderOptions): Rendered = renderPacket(model, config, options)
-}
+    override fun render(model: PacketModel, config: Config, options: RenderOptions): Rendered =
+      renderPacket(model, config, options)
+  }

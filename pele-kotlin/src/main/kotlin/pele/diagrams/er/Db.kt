@@ -28,14 +28,15 @@ class ErDb : ErModel {
   fun addEntity(name: String, alias: String = ""): ErEntity {
     var entity = entities[name]
     if (entity == null) {
-      entity = ErEntity(
-        id = "entity-$name-${entities.size}",
-        label = name,
-        alias = alias,
-        attributes = ArrayList(),
-        cssClasses = "default",
-        cssStyles = ArrayList(),
-      )
+      entity =
+        ErEntity(
+          id = "entity-$name-${entities.size}",
+          label = name,
+          alias = alias,
+          attributes = ArrayList(),
+          cssClasses = "default",
+          cssStyles = ArrayList(),
+        )
       entities[name] = entity
     } else if (entity.alias.isEmpty() && alias.isNotEmpty()) {
       entity.alias = alias
@@ -50,7 +51,9 @@ class ErDb : ErModel {
       val attribute = attributes[i]
       if (attribute.keys == null) attribute.keys = emptyList()
       if (attribute.comment == null) attribute.comment = ""
-      entity.attributes.add(ErAttribute(attribute.type, attribute.name, attribute.keys!!, attribute.comment!!))
+      entity.attributes.add(
+        ErAttribute(attribute.type, attribute.name, attribute.keys!!, attribute.comment!!)
+      )
     }
   }
 
@@ -100,7 +103,12 @@ class ErDb : ErModel {
   }
 
   // PORT: `{ text }` and `{ text, type }` objects are passed as their fields.
-  fun addSubGraph(idText: String, list: List<DocItem>, titleText: String, titleType: String? = null): String {
+  fun addSubGraph(
+    idText: String,
+    list: List<DocItem>,
+    titleText: String,
+    titleType: String? = null,
+  ): String {
     val id = idText.jsTrim()
     val seen = LinkedHashSet<String>()
     val nodes = ArrayList<String>()
@@ -117,15 +125,16 @@ class ErDb : ErModel {
       if (!claimed.contains(item)) nodes.add(item)
     }
     for (node in nodes) claimed.add(node)
-    val subgraph = ErSubgraph(
-      id = id,
-      nodes = nodes,
-      title = titleText.jsTrim(),
-      classes = ArrayList(),
-      cssStyles = ArrayList(),
-      dir = dir,
-      labelType = labelType(titleType),
-    )
+    val subgraph =
+      ErSubgraph(
+        id = id,
+        nodes = nodes,
+        title = titleText.jsTrim(),
+        classes = ArrayList(),
+        cssStyles = ArrayList(),
+        dir = dir,
+        labelType = labelType(titleType),
+      )
     subgraphs.add(subgraph)
     subgraphLookup[id] = subgraph
     return id

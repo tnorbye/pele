@@ -143,7 +143,8 @@ class EdgeOccurrence(
 
 // One statement of the source with the positions of its parts, as in Mermaid's use case AST.
 class GraphStatement(
-  // 'node' | 'edge' | 'group' | 'note' | 'json' | 'metadata' | 'edgeMetadata' | 'classDef' | 'classAssign' | 'style'
+  // 'node' | 'edge' | 'group' | 'note' | 'json' | 'metadata' | 'edgeMetadata' | 'classDef' |
+  // 'classAssign' | 'style'
   // | 'direction' | 'accTitle' | 'accDescr' | 'comment' | 'blank'
   var kind: String,
   var span: Span,

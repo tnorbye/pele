@@ -29,10 +29,23 @@ private object S {
 }
 
 // The token each state gives for the empty rest of the input.
-private val AT_END = intArrayOf(T.EOF, T.EOF, T.EOF, T.EOF, T.EOF, T.STR, T.acc_title_value, T.acc_descr_value, T.acc_descr_multiline_value)
+private val AT_END =
+  intArrayOf(
+    T.EOF,
+    T.EOF,
+    T.EOF,
+    T.EOF,
+    T.EOF,
+    T.STR,
+    T.acc_title_value,
+    T.acc_descr_value,
+    T.acc_descr_multiline_value,
+  )
 
-// Mermaid's grammar means to open a markdown string at `"` followed by a backtick, but its quoting turns
-// the rule into one that matches this text and leaves the current state. Markdown strings are never read.
+// Mermaid's grammar means to open a markdown string at `"` followed by a backtick, but its quoting
+// turns
+// the rule into one that matches this text and leaves the current state. Markdown strings are never
+// read.
 private val BROKEN_RULE =
   "`)" +
     " ".repeat(36) +
@@ -42,19 +55,20 @@ private val BROKEN_RULE =
 
 private val SINGLE: IntArray = run {
   val single = IntArray(128)
-  val table = listOf(
-    ':' to T.COLON,
-    '+' to T.PLUS,
-    ',' to T.COMMA,
-    '=' to T.EQUALS,
-    '*' to T.MULT,
-    '#' to T.BRKT,
-    '_' to T.UNDERSCORE,
-    '.' to T.DOT,
-    '&' to T.AMP,
-    '-' to T.MINUS,
-    ';' to T.SEMI,
-  )
+  val table =
+    listOf(
+      ':' to T.COLON,
+      '+' to T.PLUS,
+      ',' to T.COMMA,
+      '=' to T.EQUALS,
+      '*' to T.MULT,
+      '#' to T.BRKT,
+      '_' to T.UNDERSCORE,
+      '.' to T.DOT,
+      '&' to T.AMP,
+      '-' to T.MINUS,
+      ';' to T.SEMI,
+    )
   for ((char, type) in table) single[char.code] = type
   single
 }
@@ -78,9 +92,7 @@ fun tokenize(src: String): Tokens {
     stack.add(state)
     state = s
   }
-  val pop = {
-    if (stack.size > 0) state = stack.removeAt(stack.size - 1)
-  }
+  val pop = { if (stack.size > 0) state = stack.removeAt(stack.size - 1) }
   val lineEnd = { q: Int ->
     val e = src.indexOf('\n', q)
     if (e == -1) n else e
@@ -132,7 +144,8 @@ fun tokenize(src: String): Tokens {
       continue
     }
     if (c == 10 || c == 13) {
-      // Only a line break that directly follows an axis or a series ends it; one after spaces is skipped
+      // Only a line break that directly follows an axis or a series ends it; one after spaces is
+      // skipped
       // with them, and the state carries on to the next line.
       if ((state == S.axis_data || state == S.data) && (c == 10 || next == 10)) {
         emit(T.NEWLINE, p, if (c == 10) p + 1 else p + 2)
@@ -226,8 +239,7 @@ fun tokenize(src: String): Tokens {
     }
 
     if (c == 91) {
-      if (state == S.axis_data) push(S.axis_band_data)
-      else if (state == S.data) push(S.data_inner)
+      if (state == S.axis_data) push(S.axis_band_data) else if (state == S.data) push(S.data_inner)
       emit(T.SQUARE_BRACES_START, p, p + 1)
       continue
     }

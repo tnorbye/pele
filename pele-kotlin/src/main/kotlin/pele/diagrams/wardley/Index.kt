@@ -8,12 +8,19 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val wardley: Diagram<WardleyModel> = object : Diagram<WardleyModel> {
-  override val type = "wardley"
-  override val section: String? = "wardley-beta"
+val wardley: Diagram<WardleyModel> =
+  object : Diagram<WardleyModel> {
+    override val type = "wardley"
+    override val section: String? = "wardley-beta"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): WardleyModel =
-    buildWardley(parseWardley(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): WardleyModel = buildWardley(parseWardley(source), title)
 
-  override fun render(model: WardleyModel, config: Config, options: RenderOptions): Rendered = renderWardley(model, config, options)
-}
+    override fun render(model: WardleyModel, config: Config, options: RenderOptions): Rendered =
+      renderWardley(model, config, options)
+  }

@@ -2,6 +2,10 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.classdiagram
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
 import pele.Config
 import pele.LinkInfo
 import pele.RenderOptions
@@ -56,10 +60,6 @@ import pele.text.defaultMeasurer
 import pele.text.hasMath
 import pele.text.layoutLabel
 import pele.util.linked
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
 
 private const val NODE_SEP = 40.0
 private const val EDGE_SEP = 16.0
@@ -131,22 +131,36 @@ private class Card(
 private val NO_LINES: List<Line> = emptyList()
 private val NO_TEXT: List<String> = emptyList()
 
-private fun memberLine(member: ClassMember, measurer: TextMeasurer, size: Double, mono: Boolean): Line {
+private fun memberLine(
+  member: ClassMember,
+  measurer: TextMeasurer,
+  size: Double,
+  mono: Boolean,
+): Line {
   val text = decodeEntities(member.getDisplayDetails().displayText).jsTrim()
   val style = (if (member.classifier == "*") Style.Italic else 0) or (if (mono) Style.Mono else 0)
   return Line(text, measurer.width(text, size, style), member.classifier)
 }
 
 fun renderClass(db: ClassDb, config: Config, options: RenderOptions): Rendered {
-  val fitted = { down: Boolean -> tighten(options) { tight -> draw(db, config, options, down, tight) } }
+  val fitted = { down: Boolean ->
+    tighten(options) { tight -> draw(db, config, options, down, tight) }
+  }
   return if (runsAcross(db.direction)) turnToFit(options, fitted) else fitted(false)
 }
 
 // `turned` draws a diagram that runs across as one that runs down. `tight` gives up the room
 // that keeps a namespace's name clear of an edge coming in beside it.
-private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Boolean, tight: Boolean): Rendered {
+private fun draw(
+  db: ClassDb,
+  config: Config,
+  options: RenderOptions,
+  turned: Boolean,
+  tight: Boolean,
+): Rendered {
   @Suppress("UNCHECKED_CAST")
-  val conf: Map<String, Any?> = ((config["class"] as? Map<*, *>) ?: emptyMap<String, Any?>()) as Map<String, Any?>
+  val conf: Map<String, Any?> =
+    ((config["class"] as? Map<*, *>) ?: emptyMap<String, Any?>()) as Map<String, Any?>
   val graph = buildClassGraph(db, conf["hierarchicalNamespaces"] != false)
   val hideEmpty = conf["hideEmptyMembersBox"] == true
   val monospaced = options.monospace?.contains("members") == true
@@ -168,7 +182,9 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
     }
   }
   val cardWidth = { raw: String ->
-    if (raw.isNotEmpty()) (mathText(raw, tiny)?.width ?: measurer.width(decodeEntities(raw), tiny, 0)) else 0.0
+    if (raw.isNotEmpty())
+      (mathText(raw, tiny)?.width ?: measurer.width(decodeEntities(raw), tiny, 0))
+    else 0.0
   }
   val rootDir = if (turned) "TB" else direction(db.direction)
 
@@ -181,7 +197,9 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
     var prop = effect[decl]
     if (prop == null) {
       val one = resolveStyle(listOf(decl))
-      prop = if (one.shape == "" && one.text == "") "" else decl.jsSlice(0, decl.indexOf(':')).jsTrim().lowercase()
+      prop =
+        if (one.shape == "" && one.text == "") ""
+        else decl.jsSlice(0, decl.indexOf(':')).jsTrim().lowercase()
       effect[decl] = prop
     }
     if (prop != "") kept[prop] = decl
@@ -250,12 +268,35 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
     val memberSize = jsRound(fontSize * 0.875)
     val lineHeight = jsRound(memberSize * 1.5)
     // The generic type is escaped so that `<T>` is not read as a tag.
-    val generic = if (cls.type.isNotEmpty()) "&lt;" + parseGenericTypes(cls.type).jsReplace(RE_LT, "&lt;").jsReplace(RE_GT, "&gt;") + "&gt;" else ""
-    val label = layoutLabel(cls.label + generic, false, measurer, fontSize, 4000.0, Style.Bold or (if (style.italic) Style.Italic else 0))
+    val generic =
+      if (cls.type.isNotEmpty())
+        "&lt;" +
+          parseGenericTypes(cls.type).jsReplace(RE_LT, "&lt;").jsReplace(RE_GT, "&gt;") +
+          "&gt;"
+      else ""
+    val label =
+      layoutLabel(
+        cls.label + generic,
+        false,
+        measurer,
+        fontSize,
+        4000.0,
+        Style.Bold or (if (style.italic) Style.Italic else 0),
+      )
     val annotations: List<Any> =
-      if (cls.annotations.size > 0) cls.annotations.map { a -> mathText("«${a.jsTrim()}»", tiny) ?: "«${decodeEntities(a).jsTrim()}»" } else NO_TEXT
-    val attributes = if (cls.members.size > 0) cls.members.map { m -> memberLine(m, measurer, memberSize, mono(style)) } else NO_LINES
-    val methods = if (cls.methods.size > 0) cls.methods.map { m -> memberLine(m, measurer, memberSize, mono(style)) } else NO_LINES
+      if (cls.annotations.size > 0)
+        cls.annotations.map { a ->
+          mathText("«${a.jsTrim()}»", tiny) ?: "«${decodeEntities(a).jsTrim()}»"
+        }
+      else NO_TEXT
+    val attributes =
+      if (cls.members.size > 0)
+        cls.members.map { m -> memberLine(m, measurer, memberSize, mono(style)) }
+      else NO_LINES
+    val methods =
+      if (cls.methods.size > 0)
+        cls.methods.map { m -> memberLine(m, measurer, memberSize, mono(style)) }
+      else NO_LINES
     var inner = label.width
     var annotationsH = 0.0
     for (a in annotations) {
@@ -265,7 +306,9 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
     for (line in attributes) inner = max(inner, line.width)
     for (line in methods) inner = max(inner, line.width)
     val sections = !(hideEmpty && attributes.size == 0 && methods.size == 0)
-    val section = { count: Int -> if (!sections) 0.0 else if (count > 0) 2 * SECTION_PAD + count * lineHeight else EMPTY_SECTION }
+    val section = { count: Int ->
+      if (!sections) 0.0 else if (count > 0) 2 * SECTION_PAD + count * lineHeight else EMPTY_SECTION
+    }
     val titleH = 2 * TITLE_PAD + annotationsH + max(label.height, jsRound(fontSize * 1.5))
     val attributesH = section(attributes.size)
     return View(
@@ -296,7 +339,9 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
         c.padX = GROUP_PAD
         c.padTop = if (label.height > 0) label.height + 16 else GROUP_PAD
         c.padBottom = GROUP_PAD
-        c.minW = label.width + 2 * GROUP_PAD - 12 + (if (crossed[i] == 1 && !tight) min(label.width + 24, 240.0) else 0.0)
+        c.minW =
+          label.width + 2 * GROUP_PAD - 12 +
+            (if (crossed[i] == 1 && !tight) min(label.width + 24, 240.0) else 0.0)
       } else {
         view.w = max(label.width + 2 * GROUP_PAD, 80.0)
         view.h = label.height + 2 * GROUP_PAD
@@ -307,7 +352,8 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       c = cnode(view.w, view.h)
     } else if (node.shape == "note") {
       val label = layoutLabel(node.label, true, measurer, small, 260.0)
-      view = base(node, label, max(label.width + 2 * PAD_X, 40.0), label.height + 2 * TITLE_PAD, small)
+      view =
+        base(node, label, max(label.width + 2 * PAD_X, 40.0), label.height + 2 * TITLE_PAD, small)
       c = cnode(view.w, view.h)
     } else {
       val label = layoutLabel(node.label, false, measurer, small, 200.0)
@@ -390,24 +436,33 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
   // Cardinalities at both ends of a vertical edge need room for their height between the ranks.
   var tallCards = 0.0
   if (rootDir == "TB" || rootDir == "BT") {
-    val cardHeight = { raw: String -> if (raw.isNotEmpty()) max(tinyHeight, mathText(raw, tiny)?.height ?: 0.0) else 0.0 }
-    for (edge in drawn) tallCards = max(tallCards, cardHeight(edge.startLabelRight) + cardHeight(edge.endLabelLeft) - 2 * tinyHeight)
+    val cardHeight = { raw: String ->
+      if (raw.isNotEmpty()) max(tinyHeight, mathText(raw, tiny)?.height ?: 0.0) else 0.0
+    }
+    for (edge in drawn) tallCards =
+      max(
+        tallCards,
+        cardHeight(edge.startLabelRight) + cardHeight(edge.endLabelLeft) - 2 * tinyHeight,
+      )
   }
-  val layout = compoundLayout(
-    cnodes,
-    cedges,
-    rootDir,
-    LayeredOptions(
-      nodeSep = numberOption(conf, "nodeSpacing", NODE_SEP),
-      edgeSep = EDGE_SEP,
-      rankSep = numberOption(conf, "rankSpacing", if (lettered) RANK_SEP + 16 else RANK_SEP) + tallCards,
-      portSep = 20.0,
-      apart = true,
-    ),
-  )
+  val layout =
+    compoundLayout(
+      cnodes,
+      cedges,
+      rootDir,
+      LayeredOptions(
+        nodeSep = numberOption(conf, "nodeSpacing", NODE_SEP),
+        edgeSep = EDGE_SEP,
+        rankSep =
+          numberOption(conf, "rankSpacing", if (lettered) RANK_SEP + 16 else RANK_SEP) + tallCards,
+        portSep = 20.0,
+        apart = true,
+      ),
+    )
 
   // Every edge reaches the middle of a side. Where several share a side they are spread along it,
-  // in the order of where they come from. An end with text runs straight for the length of the text,
+  // in the order of where they come from. An end with text runs straight for the length of the
+  // text,
   // which sits beside it on the side the line then bends toward, away from the neighbors that bend
   // the other way. Neighbors are set apart far enough for the text between them.
   val sides = LinkedHashMap<Int, MutableList<End>>()
@@ -420,8 +475,7 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       null
     } else {
       val slack = (c.w - views[item].w) / 2
-      if (side == 1) route[at] = route[at] - slack
-      else if (side == 3) route[at] = route[at] + slack
+      if (side == 1) route[at] = route[at] - slack else if (side == 3) route[at] = route[at] + slack
       val across = side and 1
       val toward = route[(if (at == 0) 3 else at - 3) + across]
       val bend = toward - route[at + across]
@@ -449,7 +503,10 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       val c = cnodes[g]
       val dx = abs(x - c.x)
       val dy = abs(y - c.y)
-      if ((abs(dy - c.h / 2) < 0.5 && dx <= c.w / 2 + 0.5) || (abs(dx - c.w / 2) < 0.5 && dy <= c.h / 2 + 0.5)) {
+      if (
+        (abs(dy - c.h / 2) < 0.5 && dx <= c.w / 2 + 0.5) ||
+          (abs(dx - c.w / 2) < 0.5 && dy <= c.h / 2 + 0.5)
+      ) {
         found = true
         break
       }
@@ -529,26 +586,27 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
   var minY = 0.0
   var maxX = layout.width
   var maxY = layout.height
-  val card = { parent: Int, raw: String, width: Double, x: Double, y: Double, side: Int, after: Boolean ->
-    if (raw.isNotEmpty()) {
-      val math = mathText(raw, tiny)
-      val h = if (math != null) max(tinyHeight, math.height) else tinyHeight
-      var cx = x
-      var cy = y
-      if ((side and 1) != 0) {
-        cx += (if (side == 3) -1 else 1) * (5 + width / 2)
-        cy += (if (after) 1 else -1) * (7 + h / 2)
-      } else {
-        cx += (if (after) 1 else -1) * (9 + width / 2)
-        cy += (if (side == 0) -1 else 1) * (3 + h / 2)
+  val card =
+    { parent: Int, raw: String, width: Double, x: Double, y: Double, side: Int, after: Boolean ->
+      if (raw.isNotEmpty()) {
+        val math = mathText(raw, tiny)
+        val h = if (math != null) max(tinyHeight, math.height) else tinyHeight
+        var cx = x
+        var cy = y
+        if ((side and 1) != 0) {
+          cx += (if (side == 3) -1 else 1) * (5 + width / 2)
+          cy += (if (after) 1 else -1) * (7 + h / 2)
+        } else {
+          cx += (if (after) 1 else -1) * (9 + width / 2)
+          cy += (if (side == 0) -1 else 1) * (3 + h / 2)
+        }
+        cards.add(Card(decodeEntities(raw), math, cx, cy, width, h, parent))
+        minX = min(minX, cx - width / 2)
+        maxX = max(maxX, cx + width / 2)
+        minY = min(minY, cy - h / 2)
+        maxY = max(maxY, cy + h / 2)
       }
-      cards.add(Card(decodeEntities(raw), math, cx, cy, width, h, parent))
-      minX = min(minX, cx - width / 2)
-      maxX = max(maxX, cx + width / 2)
-      minY = min(minY, cy - h / 2)
-      maxY = max(maxY, cy + h / 2)
     }
-  }
   val loopSeen = LinkedHashMap<Int, Int>()
   val loopAt = IntArray(cedges.size)
   for (i in 0 until cedges.size) {
@@ -571,8 +629,24 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       val last = route.size - 3
       val from = starts[i]
       val to = ends[i]
-      card(ce.src, edge.startLabelRight, startRoom[i], route[0], route[1], if (from != null) from.side else 2, if (from != null) from.after else true)
-      card(ce.dst, edge.endLabelLeft, endRoom[i], route[last], route[last + 1], if (to != null) to.side else 0, if (to != null) to.after else true)
+      card(
+        ce.src,
+        edge.startLabelRight,
+        startRoom[i],
+        route[0],
+        route[1],
+        if (from != null) from.side else 2,
+        if (from != null) from.after else true,
+      )
+      card(
+        ce.dst,
+        edge.endLabelLeft,
+        endRoom[i],
+        route[last],
+        route[last + 1],
+        if (to != null) to.side else 0,
+        if (to != null) to.after else true,
+      )
     }
   }
 
@@ -584,7 +658,13 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       c.y = item.y
       c
     }
-    val wrapped = wrapComponents(cnodes + cardNodes, cedges, max(1.0, available - 2 * pad), numberOption(conf, "nodeSpacing", NODE_SEP))
+    val wrapped =
+      wrapComponents(
+        cnodes + cardNodes,
+        cedges,
+        max(1.0, available - 2 * pad),
+        numberOption(conf, "nodeSpacing", NODE_SEP),
+      )
     if (wrapped != null) {
       cards.forEachIndexed { i, item ->
         item.x = cardNodes[i].x
@@ -616,52 +696,83 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
     val top = -h / 2
     val memberSize = jsRound(view.fontSize * 0.875)
     val lineHeight = jsRound(memberSize * 1.5)
-    var body = "<rect x=\"${num(left)}\" y=\"${num(top)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"${rounded(style.shape)}/>"
+    var body =
+      "<rect x=\"${num(left)}\" y=\"${num(top)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"${rounded(style.shape)}/>"
     val ink = inkFill(style)
     val first = top + view.titleH
     val second = first + view.attributesH
     if (h > view.titleH) {
-      val stroke = if (!style.stroke.isNullOrEmpty()) " style=\"stroke:${esc(style.stroke)}\"" else ""
-      body += "<path class=\"pele-divider\" d=\"M${num(left)},${num(first)}H${num(-left)}M${num(left)},${num(second)}H${num(-left)}\" fill=\"none\" stroke=\"var(--_b)\"$stroke/>"
+      val stroke =
+        if (!style.stroke.isNullOrEmpty()) " style=\"stroke:${esc(style.stroke)}\"" else ""
+      body +=
+        "<path class=\"pele-divider\" d=\"M${num(left)},${num(first)}H${num(-left)}M${num(left)},${num(second)}H${num(-left)}\" fill=\"none\" stroke=\"var(--_b)\"$stroke/>"
     }
     var y = top + TITLE_PAD
     for (annotation in view.annotations) {
       if (annotation is String) {
-        body += "<text class=\"pele-annotation\" x=\"0\" y=\"${num(y + tinyHeight / 2 + tiny * 0.35)}\" text-anchor=\"middle\" font-size=\"${jsStr(tiny)}\"${ink.ifEmpty { " fill=\"var(--_m)\"" }}>${esc(annotation)}</text>"
+        body +=
+          "<text class=\"pele-annotation\" x=\"0\" y=\"${num(y + tinyHeight / 2 + tiny * 0.35)}\" text-anchor=\"middle\" font-size=\"${jsStr(tiny)}\"${ink.ifEmpty { " fill=\"var(--_m)\"" }}>${esc(annotation)}</text>"
         y += tinyHeight
       } else {
         val label = annotation as Label
         val ah = max(tinyHeight, label.height)
-        body += labelSvg(label, 0.0, y + ah / 2, " class=\"pele-annotation\" font-size=\"${jsStr(tiny)}\"${ink.ifEmpty { " fill=\"var(--_m)\"" }}", options.icons)
+        body +=
+          labelSvg(
+            label,
+            0.0,
+            y + ah / 2,
+            " class=\"pele-annotation\" font-size=\"${jsStr(tiny)}\"${ink.ifEmpty { " fill=\"var(--_m)\"" }}",
+            options.icons,
+          )
         y += ah
       }
     }
     val titleSize = if (view.fontSize == size) "" else " font-size=\"${num(view.fontSize)}\""
-    body += labelSvg(view.label, 0.0, (y + first - TITLE_PAD) / 2, " class=\"pele-label\"$titleSize font-weight=\"var(--_hw)\"$ink${style.text}", options.icons)
+    body +=
+      labelSvg(
+        view.label,
+        0.0,
+        (y + first - TITLE_PAD) / 2,
+        " class=\"pele-label\"$titleSize font-weight=\"var(--_hw)\"$ink${style.text}",
+        options.icons,
+      )
     val lines = { list: List<Line>, kind: String, from: Double ->
       var out = ""
       var baseline = from + SECTION_PAD + lineHeight / 2 + memberSize * 0.35
       for (line in list) {
         val mark =
           if (line.classifier == "$") {
-            " pele-static\"" + (if (style.text.isNotEmpty()) style.text.jsSlice(0, -1) + "text-decoration:underline\"" else " style=\"text-decoration:underline\"")
+            " pele-static\"" +
+              (if (style.text.isNotEmpty())
+                style.text.jsSlice(0, -1) + "text-decoration:underline\""
+              else " style=\"text-decoration:underline\"")
           } else if (line.classifier == "*") {
             " pele-abstract\" font-style=\"italic\"${style.text}"
           } else {
             "\"${style.text}"
           }
-        out += "<text class=\"pele-member pele-$kind$mark x=\"${num(left + PAD_X)}\" y=\"${num(baseline)}\">${esc(line.text)}</text>"
+        out +=
+          "<text class=\"pele-member pele-$kind$mark x=\"${num(left + PAD_X)}\" y=\"${num(baseline)}\">${esc(line.text)}</text>"
         baseline += lineHeight
       }
       out
     }
     if (view.attributes.size > 0 || view.methods.size > 0) {
-      body += "<g class=\"pele-members\" font-size=\"${jsStr(memberSize)}\"$ink${if (mono(style)) " font-family=\"$FONT_MONO\"" else ""}>${lines(view.attributes, "attribute", first)}${lines(view.methods, "method", second)}</g>"
+      body +=
+        "<g class=\"pele-members\" font-size=\"${jsStr(memberSize)}\"$ink${if (mono(style)) " font-family=\"$FONT_MONO\"" else ""}>${lines(view.attributes, "attribute", first)}${lines(view.methods, "method", second)}</g>"
     }
     if (!cls.tooltip.isNullOrEmpty()) body = "<title>${escText(cls.tooltip!!)}</title>" + body
     if (!cls.link.isNullOrEmpty()) {
       val target = cls.linkTarget
-      body = linked(body, cls.link!!, cls.id, links, options, if (!target.isNullOrEmpty() && TARGETS.contains(target)) " target=\"$target\"" else "")
+      body =
+        linked(
+          body,
+          cls.link!!,
+          cls.id,
+          links,
+          options,
+          if (!target.isNullOrEmpty() && TARGETS.contains(target)) " target=\"$target\"" else "",
+        )
     }
     return "<g class=\"pele-node pele-class${classNames(cls.cssClasses.jsReplace(RE_DEFAULT, ""))}\" data-id=\"$id\"$at>$body</g>"
   }
@@ -686,12 +797,13 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       val titleY = y - h / 2 + 8 + view.label.height / 2
       val titleAttrs = " class=\"pele-cluster-label\" fill=\"var(--_m)\""
       val struck = c.isGroup && titleCrossed(c, view.label.width, titleX, crossings)
-      if (struck) struckTitles += struckTitle(view.label, titleX + ox, titleY, titleAttrs, id, parentNodes, i)
+      if (struck)
+        struckTitles += struckTitle(view.label, titleX + ox, titleY, titleAttrs, id, parentNodes, i)
       clusters +=
         "<g class=\"pele-cluster pele-namespace\" data-id=\"$id\">" +
-        "<rect x=\"${num(x - w / 2)}\" y=\"${num(y - h / 2)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"$ROUNDED/>" +
-        (if (struck) "" else labelSvg(view.label, titleX + ox, titleY, titleAttrs)) +
-        "</g>"
+          "<rect x=\"${num(x - w / 2)}\" y=\"${num(y - h / 2)}\" width=\"${num(w)}\" height=\"${num(h)}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"$ROUNDED/>" +
+          (if (struck) "" else labelSvg(view.label, titleX + ox, titleY, titleAttrs)) +
+          "</g>"
       continue
     }
     val at = " transform=\"translate(${num(x)},${num(y)})\""
@@ -702,15 +814,27 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       val t = -h / 2
       nodesOut +=
         "<g class=\"pele-node pele-note\" data-id=\"$id\"$at>" +
-        "<path d=\"M${num(-r)},${num(t)}H${num(r - FOLD)}L${num(r)},${num(t + FOLD)}V${num(-t)}H${num(-r)}Z\" fill=\"var(--_a)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>" +
-        "<path d=\"M${num(r - FOLD)},${num(t)}V${num(t + FOLD)}H${num(r)}\" fill=\"none\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>" +
-        labelSvg(view.label, 0.0, 0.0, " class=\"pele-label\" font-size=\"${jsStr(small)}\"", options.icons) +
-        "</g>"
+          "<path d=\"M${num(-r)},${num(t)}H${num(r - FOLD)}L${num(r)},${num(t + FOLD)}V${num(-t)}H${num(-r)}Z\" fill=\"var(--_a)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>" +
+          "<path d=\"M${num(r - FOLD)},${num(t)}V${num(t + FOLD)}H${num(r)}\" fill=\"none\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>" +
+          labelSvg(
+            view.label,
+            0.0,
+            0.0,
+            " class=\"pele-label\" font-size=\"${jsStr(small)}\"",
+            options.icons,
+          ) +
+          "</g>"
     } else {
       nodesOut +=
         "<g class=\"pele-node pele-interface\" data-id=\"$id\"$at>" +
-        labelSvg(view.label, 0.0, 0.0, " class=\"pele-label\" font-size=\"${jsStr(small)}\"", options.icons) +
-        "</g>"
+          labelSvg(
+            view.label,
+            0.0,
+            0.0,
+            " class=\"pele-label\" font-size=\"${jsStr(small)}\"",
+            options.icons,
+          ) +
+          "</g>"
     }
   }
 
@@ -733,19 +857,21 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       val y = c.y + oy
       val spread = min(view.h / 2 - 4, 8.0 + k * 6)
       val reach = LOOP + k * 8
-      path = EdgePath(
-        d = "M${num(x + startTrim)},${num(y - spread)}C${num(x + reach + startTrim)},${num(y - spread)} ${num(
+      path =
+        EdgePath(
+          d =
+            "M${num(x + startTrim)},${num(y - spread)}C${num(x + reach + startTrim)},${num(y - spread)} ${num(
           x + reach + endTrim
         )},${num(y + spread)} ${num(x + endTrim)},${num(y + spread)}",
-        sx = x,
-        sy = y - spread,
-        sdx = -1.0,
-        sdy = 0.0,
-        ex = x,
-        ey = y + spread,
-        edx = -1.0,
-        edy = 0.0,
-      )
+          sx = x,
+          sy = y - spread,
+          sdx = -1.0,
+          sdy = 0.0,
+          ex = x,
+          ey = y + spread,
+          edx = -1.0,
+          edy = 0.0,
+        )
     } else {
       val route = ce.route
       var k = 0
@@ -756,13 +882,15 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       }
       path = routePath(route, null, startTrim, endTrim)
     }
-    val attrs = if (edge.pattern == "dashed") " stroke-dasharray=\"6 4\"" else if (edge.pattern == "dotted") " stroke-dasharray=\"2 4\"" else ""
+    val attrs =
+      if (edge.pattern == "dashed") " stroke-dasharray=\"6 4\""
+      else if (edge.pattern == "dotted") " stroke-dasharray=\"2 4\"" else ""
     edgesOut +=
       "<g class=\"pele-edge${if (edge.pattern == "dotted") " pele-note-edge" else " pele-relation"}\" data-id=\"${escText(edge.id)}\">" +
-      "<path d=\"${path.d}\"$attrs/>" +
-      classMarker(startType, path.sx, path.sy, path.sdx, path.sdy, LINE) +
-      classMarker(endType, path.ex, path.ey, path.edx, path.edy, LINE) +
-      "</g>"
+        "<path d=\"${path.d}\"$attrs/>" +
+        classMarker(startType, path.sx, path.sy, path.sdx, path.sdy, LINE) +
+        classMarker(endType, path.ex, path.ey, path.edx, path.edy, LINE) +
+        "</g>"
     if (label.width > 0) {
       val x = ce.labelX + ox
       val y = ce.labelY + oy
@@ -780,20 +908,28 @@ private fun draw(db: ClassDb, config: Config, options: RenderOptions, turned: Bo
       }
   }
 
-  val titled = withTitle(
-    db.title,
-    measurer,
-    size,
-    pad,
-    width,
-    height,
-    (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
-      (if (edgesOut.isNotEmpty()) "<g class=\"pele-edges\" fill=\"none\" stroke=\"$LINE\" stroke-linecap=\"round\">$edgesOut</g>" else "") +
-      (if (struckTitles.isNotEmpty()) "<g class=\"pele-cluster-titles\">$struckTitles</g>" else "") +
-      (if (labelsOut.isNotEmpty()) "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>" else "") +
-      (if (cardsOut.isNotEmpty()) "<g class=\"pele-cardinalities\" font-size=\"${jsStr(tiny)}\" fill=\"var(--_m)\">$cardsOut</g>" else "") +
-      "<g class=\"pele-nodes\">$nodesOut</g>",
-  )
+  val titled =
+    withTitle(
+      db.title,
+      measurer,
+      size,
+      pad,
+      width,
+      height,
+      (if (clusters.isNotEmpty()) "<g class=\"pele-clusters\">$clusters</g>" else "") +
+        (if (edgesOut.isNotEmpty())
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"$LINE\" stroke-linecap=\"round\">$edgesOut</g>"
+        else "") +
+        (if (struckTitles.isNotEmpty()) "<g class=\"pele-cluster-titles\">$struckTitles</g>"
+        else "") +
+        (if (labelsOut.isNotEmpty())
+          "<g class=\"pele-edge-labels\" font-size=\"${jsStr(small)}\">$labelsOut</g>"
+        else "") +
+        (if (cardsOut.isNotEmpty())
+          "<g class=\"pele-cardinalities\" font-size=\"${jsStr(tiny)}\" fill=\"var(--_m)\">$cardsOut</g>"
+        else "") +
+        "<g class=\"pele-nodes\">$nodesOut</g>",
+    )
   val svg = svgDocument("class", titled.width, titled.height, size, options, db, titled.content)
 
   return Rendered(svg, titled.width, titled.height, links)

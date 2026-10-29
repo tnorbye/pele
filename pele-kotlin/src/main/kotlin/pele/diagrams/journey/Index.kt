@@ -8,15 +8,23 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val journey: Diagram<JourneyModel> = object : Diagram<JourneyModel> {
-  override val type = "journey"
+val journey: Diagram<JourneyModel> =
+  object : Diagram<JourneyModel> {
+    override val type = "journey"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): JourneyModel {
-    val db = JourneyDb()
-    db.title = title
-    parseJourney(source, db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): JourneyModel {
+      val db = JourneyDb()
+      db.title = title
+      parseJourney(source, db)
+      return db
+    }
+
+    override fun render(model: JourneyModel, config: Config, options: RenderOptions): Rendered =
+      renderJourney(model, config, options)
   }
-
-  override fun render(model: JourneyModel, config: Config, options: RenderOptions): Rendered = renderJourney(model, config, options)
-}

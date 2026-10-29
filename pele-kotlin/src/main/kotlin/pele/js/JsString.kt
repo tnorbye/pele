@@ -1,16 +1,31 @@
 // PORT: JVM-only helper with no upstream counterpart (see UPDATE.md).
 package pele.js
 
-/** The characters JS `\s` and `String.prototype.trim` treat as whitespace, as a regex class body. */
+/**
+ * The characters JS `\s` and `String.prototype.trim` treat as whitespace, as a regex class body.
+ */
 const val JS_WHITESPACE_CLASS_BODY =
   "\\t-\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff"
 
 /** JS WhiteSpace or LineTerminator, as `trim()` and `\s` see it. */
-fun isJsWhitespace(c: Char): Boolean = when (c) {
-  '\t', '\n', '\u000B', '\u000C', '\r', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '　',
-  '﻿' -> true
-  else -> c in ' '..' '
-}
+fun isJsWhitespace(c: Char): Boolean =
+  when (c) {
+    '\t',
+    '\n',
+    '\u000B',
+    '\u000C',
+    '\r',
+    ' ',
+    ' ',
+    ' ',
+    ' ',
+    ' ',
+    ' ',
+    ' ',
+    '　',
+    '﻿' -> true
+    else -> c in ' '..' '
+  }
 
 fun String.jsTrim(): String {
   var start = 0
@@ -142,7 +157,10 @@ fun String.jsSplit(separator: String, limit: Int = Int.MAX_VALUE): List<String> 
   return out
 }
 
-/** `String.prototype.replace(string, replacement)`: the first occurrence, with `$` patterns expanded. */
+/**
+ * `String.prototype.replace(string, replacement)`: the first occurrence, with `$` patterns
+ * expanded.
+ */
 fun String.jsReplace(search: String, replacement: String): String {
   val i = indexOf(search)
   if (i == -1) return this
@@ -181,7 +199,12 @@ fun String.jsReplaceAll(search: String, replacement: String): String {
 }
 
 /** GetSubstitution: expands `$$`, `$&`, `` $` ``, `$'`, `$n` and `$nn` like JS. */
-internal fun expandReplacement(replacement: String, input: String, position: Int, groups: List<String?>): String {
+internal fun expandReplacement(
+  replacement: String,
+  input: String,
+  position: Int,
+  groups: List<String?>,
+): String {
   if (replacement.indexOf('$') == -1) return replacement
   val matched = groups[0] ?: ""
   val m = groups.size - 1
@@ -263,13 +286,17 @@ fun jsonQuote(s: String): String {
 }
 
 /** `JSON.stringify` for the plain values a port passes it (strings, numbers, lists, maps). */
-fun jsonStringify(value: Any?): String = when (value) {
-  null -> "null"
-  is String -> jsonQuote(value)
-  is Boolean -> value.toString()
-  is Double -> if (value.isNaN() || value.isInfinite()) "null" else jsStr(value)
-  is Number -> jsonStringify(value.toDouble())
-  is List<*> -> value.joinToString(",", "[", "]") { jsonStringify(it) }
-  is Map<*, *> -> value.entries.joinToString(",", "{", "}") { (k, v) -> jsonQuote(k.toString()) + ":" + jsonStringify(v) }
-  else -> jsonQuote(value.toString())
-}
+fun jsonStringify(value: Any?): String =
+  when (value) {
+    null -> "null"
+    is String -> jsonQuote(value)
+    is Boolean -> value.toString()
+    is Double -> if (value.isNaN() || value.isInfinite()) "null" else jsStr(value)
+    is Number -> jsonStringify(value.toDouble())
+    is List<*> -> value.joinToString(",", "[", "]") { jsonStringify(it) }
+    is Map<*, *> ->
+      value.entries.joinToString(",", "{", "}") { (k, v) ->
+        jsonQuote(k.toString()) + ":" + jsonStringify(v)
+      }
+    else -> jsonQuote(value.toString())
+  }

@@ -8,15 +8,23 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val architecture: Diagram<ArchitectureDb> = object : Diagram<ArchitectureDb> {
-  override val type = "architecture"
+val architecture: Diagram<ArchitectureDb> =
+  object : Diagram<ArchitectureDb> {
+    override val type = "architecture"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): ArchitectureDb {
-    val db = ArchitectureDb()
-    if (!title.isNullOrEmpty()) db.title = title
-    populate(parseArchitecture(source), db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): ArchitectureDb {
+      val db = ArchitectureDb()
+      if (!title.isNullOrEmpty()) db.title = title
+      populate(parseArchitecture(source), db)
+      return db
+    }
+
+    override fun render(model: ArchitectureDb, config: Config, options: RenderOptions): Rendered =
+      renderArchitecture(model, config, options)
   }
-
-  override fun render(model: ArchitectureDb, config: Config, options: RenderOptions): Rendered = renderArchitecture(model, config, options)
-}

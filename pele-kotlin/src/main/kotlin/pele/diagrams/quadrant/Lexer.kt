@@ -32,25 +32,34 @@ private object S {
 }
 
 // The token each state gives for the empty rest of the input, where it gives one.
-private val AT_END = intArrayOf(T.EOF, T.title_value, T.acc_title_value, T.acc_descr_value, T.acc_descr_multiline_value, T.STR)
+private val AT_END =
+  intArrayOf(
+    T.EOF,
+    T.title_value,
+    T.acc_title_value,
+    T.acc_descr_value,
+    T.acc_descr_multiline_value,
+    T.STR,
+  )
 
 private val SINGLE: IntArray = run {
   val single = IntArray(128)
-  val table = listOf(
-    ":" to T.COLON,
-    "+" to T.PLUS,
-    "," to T.COMMA,
-    "=" to T.EQUALS,
-    "*" to T.MULT,
-    "#" to T.BRKT,
-    "_" to T.UNDERSCORE,
-    "." to T.DOT,
-    "&" to T.AMP,
-    "-" to T.MINUS,
-    " \t\u000B\u000C" to T.SPACE,
-    ";" to T.SEMI,
-    "!$%'`?\\/" to T.PUNCTUATION,
-  )
+  val table =
+    listOf(
+      ":" to T.COLON,
+      "+" to T.PLUS,
+      "," to T.COMMA,
+      "=" to T.EQUALS,
+      "*" to T.MULT,
+      "#" to T.BRKT,
+      "_" to T.UNDERSCORE,
+      "." to T.DOT,
+      "&" to T.AMP,
+      "-" to T.MINUS,
+      " \t\u000B\u000C" to T.SPACE,
+      ";" to T.SEMI,
+      "!$%'`?\\/" to T.PUNCTUATION,
+    )
   for ((chars, type) in table) {
     for (k in chars.indices) single[chars[k].code] = type
   }
@@ -65,7 +74,8 @@ fun tokenize(src: String): Tokens {
   val stack = ArrayList<Int>()
   var state = S.INITIAL
   var p = 0
-  // The last run scanned of each kind, so that a long run is not scanned again from each of its characters.
+  // The last run scanned of each kind, so that a long run is not scanned again from each of its
+  // characters.
   var spaceFrom = 0
   var spaceTo = 0
   var dashFrom = 0
@@ -85,9 +95,7 @@ fun tokenize(src: String): Tokens {
     stack.add(state)
     state = s
   }
-  val pop = {
-    if (stack.size > 0) state = stack.removeAt(stack.size - 1)
-  }
+  val pop = { if (stack.size > 0) state = stack.removeAt(stack.size - 1) }
   val lineEnd = { q: Int ->
     val e = src.indexOf('\n', q)
     if (e == -1) n else e
@@ -126,7 +134,9 @@ fun tokenize(src: String): Tokens {
     when (state) {
       S.INITIAL -> {}
 
-      S.title, S.acc_title, S.acc_descr -> {
+      S.title,
+      S.acc_title,
+      S.acc_descr -> {
         emit(AT_END[state], p, lineEnd(p))
         pop()
         continue@lexing

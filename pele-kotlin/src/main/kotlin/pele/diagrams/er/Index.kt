@@ -8,16 +8,24 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val er: Diagram<ErDb> = object : Diagram<ErDb> {
-  override val type = "er"
-  override val math = true
+val er: Diagram<ErDb> =
+  object : Diagram<ErDb> {
+    override val type = "er"
+    override val math = true
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): ErDb {
-    val db = ErDb()
-    if (!title.isNullOrEmpty()) db.title = title
-    parseEr(source, db)
-    return db
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): ErDb {
+      val db = ErDb()
+      if (!title.isNullOrEmpty()) db.title = title
+      parseEr(source, db)
+      return db
+    }
+
+    override fun render(model: ErDb, config: Config, options: RenderOptions): Rendered =
+      renderEr(model, config, options)
   }
-
-  override fun render(model: ErDb, config: Config, options: RenderOptions): Rendered = renderEr(model, config, options)
-}

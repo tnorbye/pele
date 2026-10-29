@@ -27,63 +27,65 @@ private object S {
   const val acc_descr_multiline = 8
 }
 
-private val KEYWORDS: Map<String, Int> = mapOf(
-  "C4Context" to T.C4_CONTEXT,
-  "C4Container" to T.C4_CONTAINER,
-  "C4Component" to T.C4_COMPONENT,
-  "C4Dynamic" to T.C4_DYNAMIC,
-  "C4Deployment" to T.C4_DEPLOYMENT,
-  "Person" to T.PERSON,
-  "Person_Ext" to T.PERSON_EXT,
-  "System" to T.SYSTEM,
-  "SystemDb" to T.SYSTEM_DB,
-  "SystemQueue" to T.SYSTEM_QUEUE,
-  "System_Ext" to T.SYSTEM_EXT,
-  "SystemDb_Ext" to T.SYSTEM_EXT_DB,
-  "SystemQueue_Ext" to T.SYSTEM_EXT_QUEUE,
-  "Container" to T.CONTAINER,
-  "ContainerDb" to T.CONTAINER_DB,
-  "ContainerQueue" to T.CONTAINER_QUEUE,
-  "Container_Ext" to T.CONTAINER_EXT,
-  "ContainerDb_Ext" to T.CONTAINER_EXT_DB,
-  "ContainerQueue_Ext" to T.CONTAINER_EXT_QUEUE,
-  "Component" to T.COMPONENT,
-  "ComponentDb" to T.COMPONENT_DB,
-  "ComponentQueue" to T.COMPONENT_QUEUE,
-  "Component_Ext" to T.COMPONENT_EXT,
-  "ComponentDb_Ext" to T.COMPONENT_EXT_DB,
-  "ComponentQueue_Ext" to T.COMPONENT_EXT_QUEUE,
-  "Enterprise_Boundary" to T.ENTERPRISE_BOUNDARY,
-  "System_Boundary" to T.SYSTEM_BOUNDARY,
-  "Boundary" to T.BOUNDARY,
-  "Container_Boundary" to T.CONTAINER_BOUNDARY,
-  "Deployment_Node" to T.NODE,
-  "Node" to T.NODE,
-  "Node_L" to T.NODE_L,
-  "Node_R" to T.NODE_R,
-  "Rel" to T.REL,
-  "BiRel" to T.BIREL,
-  "Rel_Up" to T.REL_U,
-  "Rel_U" to T.REL_U,
-  "Rel_Down" to T.REL_D,
-  "Rel_D" to T.REL_D,
-  "Rel_Left" to T.REL_L,
-  "Rel_L" to T.REL_L,
-  "Rel_Right" to T.REL_R,
-  "Rel_R" to T.REL_R,
-  "Rel_Back" to T.REL_B,
-  "RelIndex" to T.REL_INDEX,
-  "UpdateElementStyle" to T.UPDATE_EL_STYLE,
-  "UpdateRelStyle" to T.UPDATE_REL_STYLE,
-  "UpdateLayoutConfig" to T.UPDATE_LAYOUT_CONFIG,
-)
+private val KEYWORDS: Map<String, Int> =
+  mapOf(
+    "C4Context" to T.C4_CONTEXT,
+    "C4Container" to T.C4_CONTAINER,
+    "C4Component" to T.C4_COMPONENT,
+    "C4Dynamic" to T.C4_DYNAMIC,
+    "C4Deployment" to T.C4_DEPLOYMENT,
+    "Person" to T.PERSON,
+    "Person_Ext" to T.PERSON_EXT,
+    "System" to T.SYSTEM,
+    "SystemDb" to T.SYSTEM_DB,
+    "SystemQueue" to T.SYSTEM_QUEUE,
+    "System_Ext" to T.SYSTEM_EXT,
+    "SystemDb_Ext" to T.SYSTEM_EXT_DB,
+    "SystemQueue_Ext" to T.SYSTEM_EXT_QUEUE,
+    "Container" to T.CONTAINER,
+    "ContainerDb" to T.CONTAINER_DB,
+    "ContainerQueue" to T.CONTAINER_QUEUE,
+    "Container_Ext" to T.CONTAINER_EXT,
+    "ContainerDb_Ext" to T.CONTAINER_EXT_DB,
+    "ContainerQueue_Ext" to T.CONTAINER_EXT_QUEUE,
+    "Component" to T.COMPONENT,
+    "ComponentDb" to T.COMPONENT_DB,
+    "ComponentQueue" to T.COMPONENT_QUEUE,
+    "Component_Ext" to T.COMPONENT_EXT,
+    "ComponentDb_Ext" to T.COMPONENT_EXT_DB,
+    "ComponentQueue_Ext" to T.COMPONENT_EXT_QUEUE,
+    "Enterprise_Boundary" to T.ENTERPRISE_BOUNDARY,
+    "System_Boundary" to T.SYSTEM_BOUNDARY,
+    "Boundary" to T.BOUNDARY,
+    "Container_Boundary" to T.CONTAINER_BOUNDARY,
+    "Deployment_Node" to T.NODE,
+    "Node" to T.NODE,
+    "Node_L" to T.NODE_L,
+    "Node_R" to T.NODE_R,
+    "Rel" to T.REL,
+    "BiRel" to T.BIREL,
+    "Rel_Up" to T.REL_U,
+    "Rel_U" to T.REL_U,
+    "Rel_Down" to T.REL_D,
+    "Rel_D" to T.REL_D,
+    "Rel_Left" to T.REL_L,
+    "Rel_L" to T.REL_L,
+    "Rel_Right" to T.REL_R,
+    "Rel_R" to T.REL_R,
+    "Rel_Back" to T.REL_B,
+    "RelIndex" to T.REL_INDEX,
+    "UpdateElementStyle" to T.UPDATE_EL_STYLE,
+    "UpdateRelStyle" to T.UPDATE_REL_STYLE,
+    "UpdateLayoutConfig" to T.UPDATE_LAYOUT_CONFIG,
+  )
 
-private val RE_DIRECTION = listOf(
-  JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
-  JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
-)
+private val RE_DIRECTION =
+  listOf(
+    JsRegExp(""".*direction\s+TB[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+BT[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+RL[^\n]*""", "y"),
+    JsRegExp(""".*direction\s+LR[^\n]*""", "y"),
+  )
 private val RE_LINE_END = JsRegExp("""[\n\r  ]""", "g")
 // Consume line breaks too: the grammar rejects blank statements.
 private val RE_BARE_TITLE = JsRegExp("""title[^\S\r\n]*(?=[\r\n]|$)\s*""", "y")
@@ -99,7 +101,8 @@ fun tokenize(src: String): Tokens {
   var accValue: Int = T.acc_title_value
   var p = 0
   var done = false
-  // Where the next `direction` is; -2 until the first search. The search is made inside the loop on purpose:
+  // Where the next `direction` is; -2 until the first search. The search is made inside the loop on
+  // purpose:
   // made up here, one optimized version of this function in V8 ran it again for every statement,
   // which took seconds on 50,000 characters.
   var dirNext = -2
@@ -218,8 +221,7 @@ fun tokenize(src: String): Tokens {
           if (d == 10) last = q
           q++
         }
-        if (last != -1) emit(T.NEWLINE, p, last + 1)
-        else p = q
+        if (last != -1) emit(T.NEWLINE, p, last + 1) else p = q
         continue
       }
       if (c == 123) {
@@ -250,8 +252,7 @@ fun tokenize(src: String): Tokens {
       } else if (c == 40) {
         var q = p + 1
         while (src.charCodeAt(q) == 32) q++
-        if (src.charCodeAt(q) == 44) emit(T.ATTRIBUTE_EMPTY, p, q + 1)
-        else p++
+        if (src.charCodeAt(q) == 44) emit(T.ATTRIBUTE_EMPTY, p, q + 1) else p++
         state = S.attribute
       } else if (c == 41) {
         p++
@@ -269,8 +270,7 @@ fun tokenize(src: String): Tokens {
         p++
         state = S.INITIAL
       } else if (c == 44) {
-        if (src.charCodeAt(p + 1) == 44) emit(T.ATTRIBUTE_EMPTY, p, p + 2)
-        else p++
+        if (src.charCodeAt(p + 1) == 44) emit(T.ATTRIBUTE_EMPTY, p, p + 2) else p++
       } else {
         var q = p
         while (src.charCodeAt(q) == 32) q++

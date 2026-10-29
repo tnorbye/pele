@@ -11,8 +11,7 @@ enum class PeleErrorCode(val wireName: String) {
   UNSUPPORTED_DIAGRAM("unsupported-diagram"),
   SYNTAX("syntax"),
   SEMANTIC("semantic"),
-  LIMIT("limit"),
-  ;
+  LIMIT("limit");
 
   override fun toString(): String = wireName
 }
@@ -38,15 +37,21 @@ class PeleError(
   val column: Int = info.column ?: 0
   var snippet: String = info.snippet ?: ""
 
-  constructor(message: String, code: PeleErrorCode, found: Detected) :
-    this(message, code, PeleErrorInfo(type = found.type, mermaidType = found.mermaidType))
+  constructor(
+    message: String,
+    code: PeleErrorCode,
+    found: Detected,
+  ) : this(message, code, PeleErrorInfo(type = found.type, mermaidType = found.mermaidType))
 }
 
 // Input range [from, to) replaced by `length` output characters.
 typealias Edit = IntArray
 
 fun replacements(text: String, re: JsRegExp, length: Int): MutableList<Edit> =
-  text.jsMatchAll(re).map { match -> intArrayOf(match.index, match.index + match.value.length, length) }.toMutableList()
+  text
+    .jsMatchAll(re)
+    .map { match -> intArrayOf(match.index, match.index + match.value.length, length) }
+    .toMutableList()
 
 private fun stepInput(edits: List<Edit>, at: Int): Int {
   var shift = 0
@@ -118,9 +123,21 @@ fun locate(srcIn: String, offsetIn: Int): Location {
   return Location(line, column, text + "\n" + "-".repeat(maxOf(column - 1, 0)) + "^")
 }
 
-fun syntaxError(type: String, src: String, offset: Int, detail: String, lexical: Boolean = false): PeleError {
+fun syntaxError(
+  type: String,
+  src: String,
+  offset: Int,
+  detail: String,
+  lexical: Boolean = false,
+): PeleError {
   val loc = locate(src, offset)
-  val head = if (lexical) "Lexical error on line ${loc.line}. Unrecognized text." else "Parse error on line ${loc.line}:"
+  val head =
+    if (lexical) "Lexical error on line ${loc.line}. Unrecognized text."
+    else "Parse error on line ${loc.line}:"
   val message = if (lexical) "$head\n${loc.snippet}" else "$head\n${loc.snippet}\n$detail"
-  return PeleError(message, PeleErrorCode.SYNTAX, PeleErrorInfo(type = type, line = loc.line, column = loc.column, snippet = loc.snippet))
+  return PeleError(
+    message,
+    PeleErrorCode.SYNTAX,
+    PeleErrorInfo(type = type, line = loc.line, column = loc.column, snippet = loc.snippet),
+  )
 }

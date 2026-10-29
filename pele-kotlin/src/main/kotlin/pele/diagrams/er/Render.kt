@@ -2,6 +2,11 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.er
 
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sign
 import pele.Config
 import pele.IconResolver
 import pele.LinkInfo
@@ -65,11 +70,6 @@ import pele.text.layoutLabel
 import pele.text.lineMiddle
 import pele.util.internalLink
 import pele.util.relAttr
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sign
 
 private const val NODE_SEP = 48.0
 private const val EDGE_SEP = 20.0
@@ -104,12 +104,13 @@ private fun numberOption(config: Config, key: String, fallback: Double): Double 
 
 // Type, name, keys, comment.
 private class Cells(val type: Label, val name: Label, val keys: Label, val comment: Label) {
-  operator fun get(k: Int): Label = when (k) {
-    0 -> type
-    1 -> name
-    2 -> keys
-    else -> comment
-  }
+  operator fun get(k: Int): Label =
+    when (k) {
+      0 -> type
+      1 -> name
+      2 -> keys
+      else -> comment
+    }
 }
 
 private class Row(
@@ -142,13 +143,26 @@ private class Loop(
 )
 
 // Writes a measured label starting at x, with the baseline of its first line at y.
-private fun textLeft(label: Label, x: Double, yIn: Double, attrs: String, icons: IconResolver?, mono: Int = 0): String {
+private fun textLeft(
+  label: Label,
+  x: Double,
+  yIn: Double,
+  attrs: String,
+  icons: IconResolver?,
+  mono: Int = 0,
+): String {
   var y = yIn
   val lines = label.lines
   if (lines.isEmpty()) return ""
   val only = if (lines.size == 1 && lines[0].size == 1) lines[0][0] else null
   // The short form collapses repeated spaces in monospace text.
-  if (only != null && only.icon == null && only.math == null && only.style == mono && !(mono != 0 && only.text.contains("  "))) {
+  if (
+    only != null &&
+      only.icon == null &&
+      only.math == null &&
+      only.style == mono &&
+      !(mono != 0 && only.text.contains("  "))
+  ) {
     return "<text${textStyle(attrs, mono)} x=\"${num(x)}\" y=\"${num(y)}\">${esc(only.text)}</text>"
   }
   val shared = sharedStyle(label)
@@ -171,7 +185,8 @@ private fun textLeft(label: Label, x: Double, yIn: Double, attrs: String, icons:
     for (span in line) {
       if (span.icon != null) {
         val side = label.size * 1.1
-        extra += "<svg class=\"pele-icon\" data-icon=\"${escText(span.icon)}\" x=\"${num(sx)}\" y=\"${
+        extra +=
+          "<svg class=\"pele-icon\" data-icon=\"${escText(span.icon)}\" x=\"${num(sx)}\" y=\"${
           num(y - label.size * 0.35 - side / 2)
         }\" width=\"${num(side)}\" height=\"${num(side)}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">${
           icons?.invoke(span.icon) ?: ""
@@ -243,11 +258,12 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
         route = ArrayList(),
         labelX = 0.0,
         labelY = 0.0,
-      ),
+      )
     )
   }
 
-  // The direction of the level a node is laid out in: its nearest subgraph that sets one, or the diagram's.
+  // The direction of the level a node is laid out in: its nearest subgraph that sets one, or the
+  // diagram's.
   fun horizontal(i: Int): Boolean {
     var at = i
     // Subgraphs can name each other as members, so the walk up is bounded.
@@ -264,24 +280,48 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
 
   for (i in graph.nodes.indices) {
     val node = graph.nodes[i]
-    val style = resolveStyle(
-      if (node.cssStyles.isNotEmpty()) node.cssCompiledStyles + node.cssStyles else node.cssCompiledStyles,
-    )
+    val style =
+      resolveStyle(
+        if (node.cssStyles.isNotEmpty()) node.cssCompiledStyles + node.cssStyles
+        else node.cssCompiledStyles
+      )
     val base = (if (style.bold) Style.Bold else 0) or (if (style.italic) Style.Italic else 0)
     val mono = if (monospaced && !RE_FONT_FAMILY.test(style.text)) Style.Mono else 0
     val nameSize = style.fontSize ?: size
     val rowSize = style.fontSize ?: smallSize
     val keySize = style.fontSize ?: jsRound(size * 0.75)
-    val label = if (node.isGroup) {
-      layoutLabel(node.label, true, measurer, nameSize, 4000.0, base)
-    } else {
-      layoutLabel(if (node.alias.isNotEmpty()) node.alias else node.label, true, measurer, nameSize, 240.0, base)
-    }
+    val label =
+      if (node.isGroup) {
+        layoutLabel(node.label, true, measurer, nameSize, 4000.0, base)
+      } else {
+        layoutLabel(
+          if (node.alias.isNotEmpty()) node.alias else node.label,
+          true,
+          measurer,
+          nameSize,
+          240.0,
+          base,
+        )
+      }
     val own = loops[i] ?: NO_LOOPS
     // Loops leave by a side the layout keeps free of other edges: the right when ranks run down,
     // the bottom when they run across.
     val below = own.size > 0 && !node.isGroup && horizontal(i)
-    val view = NodeView(node, style, label, 0.0, 0.0, 0.0, ArrayList(), ArrayList(), rowSize, keySize, mono, below)
+    val view =
+      NodeView(
+        node,
+        style,
+        label,
+        0.0,
+        0.0,
+        0.0,
+        ArrayList(),
+        ArrayList(),
+        rowSize,
+        keySize,
+        mono,
+        below,
+      )
     var reach = 0.0
     var bands = 0.0
     for (loop in own) {
@@ -308,12 +348,20 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
         val rowLine = jsRound(rowSize * 1.5)
         val widths = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
         for (attribute in node.attributes) {
-          val cells = Cells(
-            layoutLabel(cellText(attribute.type), true, measurer, rowSize, NO_WRAP, base or mono),
-            layoutLabel(cellText(attribute.name), true, measurer, rowSize, NO_WRAP, base or mono),
-            layoutLabel(attribute.keys.joinToString(", "), false, measurer, keySize, NO_WRAP, base or mono),
-            layoutLabel(cellText(attribute.comment), true, measurer, rowSize, COMMENT_WRAP, base),
-          )
+          val cells =
+            Cells(
+              layoutLabel(cellText(attribute.type), true, measurer, rowSize, NO_WRAP, base or mono),
+              layoutLabel(cellText(attribute.name), true, measurer, rowSize, NO_WRAP, base or mono),
+              layoutLabel(
+                attribute.keys.joinToString(", "),
+                false,
+                measurer,
+                keySize,
+                NO_WRAP,
+                base or mono,
+              ),
+              layoutLabel(cellText(attribute.comment), true, measurer, rowSize, COMMENT_WRAP, base),
+            )
           var h = rowLine
           for (k in 0 until 4) {
             if (cells[k].width > widths[k]) widths[k] = cells[k].width
@@ -352,21 +400,23 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
     cnodes[i].parent = if (node.parentId != null) (index[node.parentId] ?: -1) else -1
   }
 
-  val layout = compoundLayout(
-    cnodes,
-    cedges,
-    if (turned) "TB" else direction(db.direction),
-    LayeredOptions(
-      nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
-      edgeSep = EDGE_SEP,
-      rankSep = numberOption(config, "rankSpacing", RANK_SEP),
-      portSep = 24.0,
-    ),
-  )
+  val layout =
+    compoundLayout(
+      cnodes,
+      cedges,
+      if (turned) "TB" else direction(db.direction),
+      LayeredOptions(
+        nodeSep = numberOption(config, "nodeSpacing", NODE_SEP),
+        edgeSep = EDGE_SEP,
+        rankSep = numberOption(config, "rankSpacing", RANK_SEP),
+        portSep = 24.0,
+      ),
+    )
 
   spreadEnds(cedges, cnodes, views)
 
-  // A subgraph gets its size from the layout, so its loops hang outside it and may widen the diagram.
+  // A subgraph gets its size from the layout, so its loops hang outside it and may widen the
+  // diagram.
   var layoutWidth = layout.width
   for ((i, own) in loops) {
     val c = cnodes[i]
@@ -407,12 +457,19 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
       val x = c.x - c.w / 2
       val y = c.y - c.h / 2
       val titleX = clusterTitleX(c, view.label.width, crossings, GROUP_PAD)
-      if (paints(view.style.shape)) fills.add(Fill(doubleArrayOf(x, y, x + c.w, y + c.h), view.style.shape))
+      if (paints(view.style.shape))
+        fills.add(Fill(doubleArrayOf(x, y, x + c.w, y + c.h), view.style.shape))
       clusters +=
         "<g class=\"pele-cluster$classes\" data-id=\"${escText(node.id)}\">" +
-        "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(c.w)}\" height=\"${num(c.h)}\" fill=\"var(--_a)\"${if (setsFill(view.style.shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"${rounded(view.style.shape)}/>" +
-        labelSvg(view.label, titleX, y + 8 + view.label.height / 2, " class=\"pele-cluster-label\"${inkFill(view.style, "var(--_m)")}${view.style.text}", icons) +
-        "</g>"
+          "<rect x=\"${num(x)}\" y=\"${num(y)}\" width=\"${num(c.w)}\" height=\"${num(c.h)}\" fill=\"var(--_a)\"${if (setsFill(view.style.shape)) "" else " fill-opacity=\"0.5\""} stroke=\"var(--_b)\"${rounded(view.style.shape)}/>" +
+          labelSvg(
+            view.label,
+            titleX,
+            y + 8 + view.label.height / 2,
+            " class=\"pele-cluster-label\"${inkFill(view.style, "var(--_m)")}${view.style.text}",
+            icons,
+          ) +
+          "</g>"
       continue
     }
 
@@ -424,13 +481,21 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
     val color = inkFill(view.style)
     val muted = if (color.isNotEmpty()) color else " fill=\"var(--_m)\""
     val shape = "x=\"${num(x0)}\" y=\"${num(y0)}\" width=\"${num(w)}\" height=\"${num(h)}\""
-    var name = labelSvg(view.label, 0.0, if (view.rows.size > 0) y0 + view.headH / 2 else 0.0, " class=\"pele-label\"$color$text", icons)
+    var name =
+      labelSvg(
+        view.label,
+        0.0,
+        if (view.rows.size > 0) y0 + view.headH / 2 else 0.0,
+        " class=\"pele-label\"$color$text",
+        icons,
+      )
     val display = decodeEntities(if (node.alias.isNotEmpty()) node.alias else node.label)
     if (RE_INTERNAL_LINK.test("$classes ") && name != "" && options.links != false) {
       // The name ends up in an href, so it gets the same check as a URL.
       val safe = internalLink(display, options)
       val target = esc(display)
-      name = "<a class=\"internal-link\"${if (safe) " href=\"$target\"${relAttr(options)}" else ""} data-href=\"$target\">$name</a>"
+      name =
+        "<a class=\"internal-link\"${if (safe) " href=\"$target\"${relAttr(options)}" else ""} data-href=\"$target\">$name</a>"
       links.add(LinkInfo(node.label, display, true))
     }
 
@@ -439,7 +504,8 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
       body = "<rect $shape${rounded(BOX_ATTRS + view.style.shape)}/>" + name
     } else {
       val rowLine = jsRound(view.rowSize * 1.5)
-      val lineColor = if (!view.style.stroke.isNullOrEmpty()) esc(view.style.stroke) else "var(--_b)"
+      val lineColor =
+        if (!view.style.stroke.isNullOrEmpty()) esc(view.style.stroke) else "var(--_b)"
       var stripes = ""
       var cells = ""
       var y = y0 + view.headH
@@ -448,10 +514,11 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
         if (r % 2 == 0) {
           val span = "x=\"${num(x0)}\" width=\"${num(w)}\""
           if (r == view.rows.size - 1) {
-            // The last row follows the box's rounded bottom corners: a rounded rect, squared off on top.
+            // The last row follows the box's rounded bottom corners: a rounded rect, squared off on
+            // top.
             stripes +=
               "<rect $span y=\"${num(y)}\" height=\"${num(row.h)}\"$ROUNDED/>" +
-              "<rect $span y=\"${num(y)}\" height=\"${num(row.h / 2)}\"/>"
+                "<rect $span y=\"${num(y)}\" height=\"${num(row.h / 2)}\"/>"
           } else {
             stripes += "<rect $span y=\"${num(y)}\" height=\"${num(row.h)}\"/>"
           }
@@ -462,10 +529,37 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
         val keys = row.cells.keys
         val comment = row.cells.comment
         cells +=
-          textLeft(type, x0 + view.cols[0], baseline, " class=\"pele-er-type\"$muted$text", icons, view.mono) +
-          textLeft(attribute, x0 + view.cols[1], baseline, " class=\"pele-er-name\"$color$text", icons, view.mono) +
-          textLeft(keys, x0 + view.cols[2], baseline, " class=\"pele-er-keys\" font-size=\"${jsStr(view.keySize)}\"$muted$text", icons, view.mono) +
-          textLeft(comment, x0 + view.cols[3], baseline, " class=\"pele-er-comment\"$muted$text", icons)
+          textLeft(
+            type,
+            x0 + view.cols[0],
+            baseline,
+            " class=\"pele-er-type\"$muted$text",
+            icons,
+            view.mono,
+          ) +
+            textLeft(
+              attribute,
+              x0 + view.cols[1],
+              baseline,
+              " class=\"pele-er-name\"$color$text",
+              icons,
+              view.mono,
+            ) +
+            textLeft(
+              keys,
+              x0 + view.cols[2],
+              baseline,
+              " class=\"pele-er-keys\" font-size=\"${jsStr(view.keySize)}\"$muted$text",
+              icons,
+              view.mono,
+            ) +
+            textLeft(
+              comment,
+              x0 + view.cols[3],
+              baseline,
+              " class=\"pele-er-comment\"$muted$text",
+              icons,
+            )
         y += row.h
       }
       val dividerY = num(y0 + view.headH)
@@ -474,20 +568,23 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
       val shade = if (tone == ON_LIGHT) ON_DARK else if (tone == ON_DARK) ON_LIGHT else "var(--_bg)"
       body =
         "<rect $shape${rounded(BOX_ATTRS + view.style.shape)}/>" +
-        // Over a fill the diagram chose, the shading is a tint of that fill. The opacity is on the
-        // group because the two parts of the last row overlap.
-        "<g class=\"pele-er-stripes\" fill=\"$shade\"${if (view.style.shape.contains("fill:")) " opacity=\"0.6\"" else ""}>$stripes</g>" +
-        "<path class=\"pele-er-divider\" d=\"M${num(x0)},${dividerY}H${num(x0 + w)}\" stroke=\"$lineColor\"/>" +
-        "<rect $shape fill=\"none\" stroke=\"var(--_b)\"${rounded(view.style.line)}/>" +
-        name +
-        "<g class=\"pele-er-attributes\" font-size=\"${jsStr(view.rowSize)}\">$cells</g>"
+          // Over a fill the diagram chose, the shading is a tint of that fill. The opacity is on
+          // the
+          // group because the two parts of the last row overlap.
+          "<g class=\"pele-er-stripes\" fill=\"$shade\"${if (view.style.shape.contains("fill:")) " opacity=\"0.6\"" else ""}>$stripes</g>" +
+          "<path class=\"pele-er-divider\" d=\"M${num(x0)},${dividerY}H${num(x0 + w)}\" stroke=\"$lineColor\"/>" +
+          "<rect $shape fill=\"none\" stroke=\"var(--_b)\"${rounded(view.style.line)}/>" +
+          name +
+          "<g class=\"pele-er-attributes\" font-size=\"${jsStr(view.rowSize)}\">$cells</g>"
     }
-    nodesOut += "<g class=\"pele-node pele-entity$classes\" data-id=\"${escText(node.label)}\" transform=\"translate(${
+    nodesOut +=
+      "<g class=\"pele-node pele-entity$classes\" data-id=\"${escText(node.label)}\" transform=\"translate(${
       num(c.x)
     },${num(c.y)})\">$body</g>"
   }
 
-  // Self-relationships share the side they loop out of, squeezed together if it is too short for them.
+  // Self-relationships share the side they loop out of, squeezed together if it is too short for
+  // them.
   for ((i, own) in loops) {
     val view = views[i]
     var total = 0.0
@@ -522,7 +619,10 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
         val y = c.y + view.h / 2
         val turn = num(y + MARKER_LENGTH)
         val out = num(y + MARKER_LENGTH + LOOP)
-        d = "M${num(x - spread)},${num(y)}V$turn" + "C${num(x - spread)},$out ${num(x + spread)},$out ${num(x + spread)},$turn" + "V${num(y)}"
+        d =
+          "M${num(x - spread)},${num(y)}V$turn" +
+            "C${num(x - spread)},$out ${num(x + spread)},$out ${num(x + spread)},$turn" +
+            "V${num(y)}"
         start = erMarker(edge.arrowTypeStart, x - spread, y, 0.0, -1.0)
         end = erMarker(edge.arrowTypeEnd, x + spread, y, 0.0, -1.0)
         ce.labelX = x
@@ -532,7 +632,10 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
         val y = c.y + loop.at
         val turn = num(x + MARKER_LENGTH)
         val out = num(x + MARKER_LENGTH + LOOP)
-        d = "M${num(x)},${num(y - spread)}H$turn" + "C$out,${num(y - spread)} $out,${num(y + spread)} $turn,${num(y + spread)}" + "H${num(x)}"
+        d =
+          "M${num(x)},${num(y - spread)}H$turn" +
+            "C$out,${num(y - spread)} $out,${num(y + spread)} $turn,${num(y + spread)}" +
+            "H${num(x)}"
         start = erMarker(edge.arrowTypeStart, x, y - spread, -1.0, 0.0)
         end = erMarker(edge.arrowTypeEnd, x, y + spread, -1.0, 0.0)
         ce.labelX = x + far + label.width / 2
@@ -546,10 +649,14 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
       // A curve stops short of each box so that the marker sits on a straight run of line.
       val dx = abs(route[route.size - 3] - route[0])
       val dy = abs(route[route.size - 2] - route[1])
-      val direct = route.size == 6 && (dx < 0.01 || dy < 0.01 || jsHypot(dx, dy) <= 3 * MARKER_LENGTH)
+      val direct =
+        route.size == 6 && (dx < 0.01 || dy < 0.01 || jsHypot(dx, dy) <= 3 * MARKER_LENGTH)
       val stub = if (direct) 0.0 else MARKER_LENGTH
       val path = routePath(route, null, stub, stub)
-      d = if (stub > 0) "M${num(path.sx)},${num(path.sy)}L${path.d.jsSlice(1)}L${num(path.ex)},${num(path.ey)}" else path.d
+      d =
+        if (stub > 0)
+          "M${num(path.sx)},${num(path.sy)}L${path.d.jsSlice(1)}L${num(path.ex)},${num(path.ey)}"
+        else path.d
       start = erMarker(edge.arrowTypeStart, path.sx, path.sy, path.sdx, path.sdy)
       end = erMarker(edge.arrowTypeEnd, path.ex, path.ey, path.edx, path.edy)
     }
@@ -563,10 +670,10 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
     val dashed = edge.pattern == "dashed"
     edgesOut +=
       "<g class=\"pele-edge pele-er-${if (dashed) "non-identifying" else "identifying"}\" data-id=\"${escText(edge.id)}\"${if (!over.isNullOrEmpty()) " stroke=\"$over\"" else ""}>" +
-      "<path d=\"$d\"${if (dashed) " stroke-dasharray=\"4 3\"" else ""}/>" +
-      start +
-      end +
-      "</g>"
+        "<path d=\"$d\"${if (dashed) " stroke-dasharray=\"4 3\"" else ""}/>" +
+        start +
+        end +
+        "</g>"
     if (label.width > 0) {
       val x = ce.labelX
       val y = ce.labelY
@@ -574,20 +681,30 @@ private fun draw(db: ErDb, config: Config, options: RenderOptions, turned: Boole
     }
   }
 
-  val svg = svgDocument(
-    "er",
-    width,
-    height,
-    size,
-    options,
-    db,
-    labelSvg(title, width / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (clusters != "") "<g class=\"pele-clusters\">$clusters</g>" else "") +
-      casingsSvg(casings) +
-      (if (edgesOut != "") "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>" else "") +
-      (if (labelsOut != "") "<g class=\"pele-edge-labels\" font-size=\"${jsStr(smallSize)}\">$labelsOut</g>" else "") +
-      "<g class=\"pele-nodes\">$nodesOut</g>",
-  )
+  val svg =
+    svgDocument(
+      "er",
+      width,
+      height,
+      size,
+      options,
+      db,
+      labelSvg(
+        title,
+        width / 2,
+        pad + title.height / 2,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+      ) +
+        (if (clusters != "") "<g class=\"pele-clusters\">$clusters</g>" else "") +
+        casingsSvg(casings) +
+        (if (edgesOut != "")
+          "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">$edgesOut</g>"
+        else "") +
+        (if (labelsOut != "")
+          "<g class=\"pele-edge-labels\" font-size=\"${jsStr(smallSize)}\">$labelsOut</g>"
+        else "") +
+        "<g class=\"pele-nodes\">$nodesOut</g>",
+    )
 
   return Rendered(svg, width, height, links)
 }
@@ -598,7 +715,8 @@ private fun straighten(route: List<Double>): MutableList<Double> {
   while (k < route.size) {
     val prev = out.size - 3
     val flat = { axis: Int ->
-      abs(out[prev + axis] - route[k + axis]) < 0.01 && abs(route[k + axis] - route[k + 3 + axis]) < 0.01
+      abs(out[prev + axis] - route[k + axis]) < 0.01 &&
+        abs(route[k + axis] - route[k + 3 + axis]) < 0.01
     }
     if (k + 3 < route.size && (flat(0) || flat(1))) {
       k += 3
@@ -628,8 +746,7 @@ private fun spreadEnds(cedges: List<CEdge>, cnodes: List<CNode>, views: List<Nod
     val dy = route[at + 1] - c.y
     val side: Int
     if (abs(abs(dy) - c.h / 2) < 0.5) side = if (dy < 0) 0 else 2
-    else if (abs(abs(dx) - c.w / 2) < 0.5) side = if (dx < 0) 3 else 1
-    else return
+    else if (abs(abs(dx) - c.w / 2) < 0.5) side = if (dx < 0) 3 else 1 else return
     val key = node * 4 + side
     val end = End(route, at, route[next + (if ((side and 1) != 0) 1 else 0)])
     val list = sides[key]
@@ -645,12 +762,15 @@ private fun spreadEnds(cedges: List<CEdge>, cnodes: List<CNode>, views: List<Nod
     if (ends.size < 2) continue
     val node = key shr 2
     val vertical = (key and 1) == 1
-    val length = if (cnodes[node].isGroup) (if (vertical) cnodes[node].h else cnodes[node].w) else (if (vertical) views[node].h else views[node].w)
+    val length =
+      if (cnodes[node].isGroup) (if (vertical) cnodes[node].h else cnodes[node].w)
+      else (if (vertical) views[node].h else views[node].w)
     val step = max(min(PORT_GAP, (length - 2 * PORT_MARGIN) / (ends.size - 1)), 0.0)
     val center = if (vertical) cnodes[node].y else cnodes[node].x
     ends.sortWith { a, b -> cmp(a.toward - b.toward) }
     for (i in ends.indices) {
-      ends[i].route[ends[i].at + (if (vertical) 1 else 0)] = center + (i - (ends.size - 1).toDouble() / 2) * step
+      ends[i].route[ends[i].at + (if (vertical) 1 else 0)] =
+        center + (i - (ends.size - 1).toDouble() / 2) * step
     }
   }
 }
@@ -661,6 +781,8 @@ private fun inset(route: MutableList<Double>, at: Int, view: NodeView, c: CNode)
   if (c.isGroup) return
   val dx = route[at] - c.x
   val dy = route[at + 1] - c.y
-  if (c.w != view.w && abs(abs(dx) - c.w / 2) < 0.5) route[at] = route[at] - (sign(dx) * (c.w - view.w)) / 2
-  if (c.h != view.h && abs(abs(dy) - c.h / 2) < 0.5) route[at + 1] = route[at + 1] - (sign(dy) * (c.h - view.h)) / 2
+  if (c.w != view.w && abs(abs(dx) - c.w / 2) < 0.5)
+    route[at] = route[at] - (sign(dx) * (c.w - view.w)) / 2
+  if (c.h != view.h && abs(abs(dy) - c.h / 2) < 0.5)
+    route[at + 1] = route[at + 1] - (sign(dy) * (c.h - view.h)) / 2
 }

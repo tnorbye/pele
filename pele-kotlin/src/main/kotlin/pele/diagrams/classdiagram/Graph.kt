@@ -25,7 +25,8 @@ class GraphEdge(
   val id: String,
   val start: String,
   val end: String,
-  // Indexes into the node list. Ids alone are ambiguous: a class may be named `note0` or `interface0`.
+  // Indexes into the node list. Ids alone are ambiguous: a class may be named `note0` or
+  // `interface0`.
   val source: Int,
   val target: Int,
   val label: String?,
@@ -43,9 +44,11 @@ class ClassGraph(
   val edges: List<GraphEdge>,
 )
 
-private val MARKERS: List<EndMarker> = listOf("aggregation", "extension", "composition", "dependency", "lollipop")
+private val MARKERS: List<EndMarker> =
+  listOf("aggregation", "extension", "composition", "dependency", "lollipop")
 
-private fun marker(type: RelationEnd): EndMarker = (if (type >= 0) MARKERS.getOrNull(type) else null) ?: "none"
+private fun marker(type: RelationEnd): EndMarker =
+  (if (type >= 0) MARKERS.getOrNull(type) else null) ?: "none"
 
 // Resolves a parsed class diagram into the nodes and edges that are drawn. With `hierarchical`
 // off, only namespaces the source declares are kept and each is labeled with its full name.
@@ -161,8 +164,12 @@ fun buildClassGraph(model: ClassModel, hierarchical: Boolean = true): ClassGraph
     val type1 = relation.relation.type1
     val type2 = relation.relation.type2
     // addRelation swaps in an interface for the lollipop end of a relation with no other marker.
-    val startAt = if (type1 == RELATION_TYPE.LOLLIPOP && type2 == RELATION_NONE) interfaceAt else classAt
-    val endAt = if (startAt === classAt && type2 == RELATION_TYPE.LOLLIPOP && type1 == RELATION_NONE) interfaceAt else classAt
+    val startAt =
+      if (type1 == RELATION_TYPE.LOLLIPOP && type2 == RELATION_NONE) interfaceAt else classAt
+    val endAt =
+      if (startAt === classAt && type2 == RELATION_TYPE.LOLLIPOP && type1 == RELATION_NONE)
+        interfaceAt
+      else classAt
     edges.add(
       GraphEdge(
         id = "id_${relation.id1}_${relation.id2}_$count",

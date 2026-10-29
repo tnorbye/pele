@@ -13,7 +13,9 @@ fun isArrayIndex(key: String): Boolean {
   return key.toLong() < 4294967295L
 }
 
-/** The key order `Object.keys` reports: array indexes ascending, then the rest in insertion order. */
+/**
+ * The key order `Object.keys` reports: array indexes ascending, then the rest in insertion order.
+ */
 fun <V> jsKeys(map: Map<String, V>): List<String> {
   val keys = map.keys
   if (keys.none(::isArrayIndex)) return keys.toList()
@@ -22,7 +24,8 @@ fun <V> jsKeys(map: Map<String, V>): List<String> {
 }
 
 /** `Object.entries` order. */
-fun <V> jsEntries(map: Map<String, V>): List<Pair<String, V>> = jsKeys(map).map { it to map.getValue(it) }
+fun <V> jsEntries(map: Map<String, V>): List<Pair<String, V>> =
+  jsKeys(map).map { it to map.getValue(it) }
 
 /** A new map with JS object key order, as a JS object literal or JSON.parse would have. */
 fun <V> jsOrdered(map: Map<String, V>): LinkedHashMap<String, V> {
@@ -69,12 +72,21 @@ private class JsonParser(val s: String) {
     if (c == -1) throw JsonSyntaxError("Unexpected end of JSON input")
     if (c == '-'.code || (c >= '0'.code && c <= '9'.code)) failAt("Unexpected number in JSON")
     if (c == '"'.code) failAt("Unexpected string in JSON")
-    if (s == "NaN" || s == "Infinity" || s == "undefined" || s == "[object Object]") throw JsonSyntaxError("\"$s\" is not valid JSON")
+    if (s == "NaN" || s == "Infinity" || s == "undefined" || s == "[object Object]")
+      throw JsonSyntaxError("\"$s\" is not valid JSON")
     val token = s[i].toString()
     if (n < 21) throw JsonSyntaxError("Unexpected token '$token', \"$s\" is not valid JSON")
-    if (i < 10) throw JsonSyntaxError("Unexpected token '$token', \"${s.substring(0, i + 10)}\"... is not valid JSON")
-    if (i < n - 10) throw JsonSyntaxError("Unexpected token '$token', ...\"${s.substring(i - 10, i + 10)}\"... is not valid JSON")
-    throw JsonSyntaxError("Unexpected token '$token', ...\"${s.substring(i - 10)}\" is not valid JSON")
+    if (i < 10)
+      throw JsonSyntaxError(
+        "Unexpected token '$token', \"${s.substring(0, i + 10)}\"... is not valid JSON"
+      )
+    if (i < n - 10)
+      throw JsonSyntaxError(
+        "Unexpected token '$token', ...\"${s.substring(i - 10, i + 10)}\"... is not valid JSON"
+      )
+    throw JsonSyntaxError(
+      "Unexpected token '$token', ...\"${s.substring(i - 10)}\" is not valid JSON"
+    )
   }
 
   fun ws() {

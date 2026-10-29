@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.text
 
+import kotlin.math.ceil
 import pele.MathMarkup
 import pele.js.JsRegExp
 import pele.js.fromCharCode
@@ -14,7 +15,6 @@ import pele.js.jsSplitStrings
 import pele.js.jsTrim
 import pele.js.jsTrimEnd
 import pele.js.jsTrimStart
-import kotlin.math.ceil
 
 data class Span(
   var text: String,
@@ -44,34 +44,37 @@ private val RE_BREAK = JsRegExp("""<br\s*\/?>|\\n|\n""", "gi")
 private val RE_TAG = JsRegExp("""<\/?([a-zA-Z][\w-]*)(?:\s[^<>]*)?\/?>""", "y")
 private val RE_ICON = JsRegExp("""(fa[bklrs]?):fa-([\w-]+)""", "g")
 private val RE_MARKUP = JsRegExp("""[<\\\n*_]|fa[bklrs]?:fa-""")
-private val TAG_STYLES = mapOf(
-  "b" to Style.Bold,
-  "strong" to Style.Bold,
-  "i" to Style.Italic,
-  "em" to Style.Italic,
-  "cite" to Style.Italic,
-  "dfn" to Style.Italic,
-  "var" to Style.Italic,
-  "code" to Style.Mono,
-  "kbd" to Style.Mono,
-  "samp" to Style.Mono,
-  "tt" to Style.Mono,
-  "sub" to Style.Sub,
-  "sup" to Style.Sup,
-  "u" to Style.Underline,
-  "ins" to Style.Underline,
-)
+private val TAG_STYLES =
+  mapOf(
+    "b" to Style.Bold,
+    "strong" to Style.Bold,
+    "i" to Style.Italic,
+    "em" to Style.Italic,
+    "cite" to Style.Italic,
+    "dfn" to Style.Italic,
+    "var" to Style.Italic,
+    "code" to Style.Mono,
+    "kbd" to Style.Mono,
+    "samp" to Style.Mono,
+    "tt" to Style.Mono,
+    "sub" to Style.Sub,
+    "sup" to Style.Sup,
+    "u" to Style.Underline,
+    "ins" to Style.Underline,
+  )
 private const val SHIFT = Style.Sub or Style.Sup
-private val HTML_TAGS: Set<String> = (
-  "a abbr address article aside audio b bdi bdo big blockquote body br button caption center cite code col " +
-    "colgroup data dd del details dfn dialog div dl dt em embed fieldset figcaption figure font footer form h1 h2 " +
-    "h3 h4 h5 h6 head header hr html i iframe img input ins kbd label legend li link main map mark meta meter nav " +
-    "noscript object ol optgroup option output p picture pre progress q rp rt ruby s samp script section select " +
-    "small source span strike strong style sub summary sup table tbody td template textarea tfoot th thead time " +
-    "title tr track tt u ul var video wbr"
-  ).split(' ').toSet()
+private val HTML_TAGS: Set<String> =
+  ("a abbr address article aside audio b bdi bdo big blockquote body br button caption center cite code col " +
+      "colgroup data dd del details dfn dialog div dl dt em embed fieldset figcaption figure font footer form h1 h2 " +
+      "h3 h4 h5 h6 head header hr html i iframe img input ins kbd label legend li link main map mark meta meter nav " +
+      "noscript object ol optgroup option output p picture pre progress q rp rt ruby s samp script section select " +
+      "small source span strike strong style sub summary sup table tbody td template textarea tfoot th thead time " +
+      "title tr track tt u ul var video wbr")
+    .split(' ')
+    .toSet()
 
-// Break between any two Chinese or Japanese characters. Hangul is left out: Korean puts spaces between words.
+// Break between any two Chinese or Japanese characters. Hangul is left out: Korean puts spaces
+// between words.
 private const val CJK = "\\u2e80-\\u9fff\\uf900-\\ufaff\\uff00-\\uff60"
 private const val CLOSE = "、。，．：；！？）］｝」』】〕〉》〙〗ー…‥・ゝゞぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ,.:;!?)\\]}"
 private const val OPEN = "（［｛「『【〔〈《〘〖([{"
@@ -80,19 +83,24 @@ private val RE_CJK = JsRegExp("[$CJK]")
 // Break hints: a zero-width space, and a soft hyphen, which shows as '-' where a line breaks.
 private const val HINT = "\\u200b\\u00ad"
 private val RE_HINT = JsRegExp("[$HINT]")
-private val RE_PIECE = JsRegExp(
-  "\\s*(?:[$OPEN]*[$CJK][$CLOSE]*|[^\\s$CJK$HINT]+[$HINT]*[$CLOSE]*|[$HINT]+)\\s*|\\s+",
-  "g",
-)
+private val RE_PIECE =
+  JsRegExp(
+    "\\s*(?:[$OPEN]*[$CJK][$CLOSE]*|[^\\s$CJK$HINT]+[$HINT]*[$CLOSE]*|[$HINT]+)\\s*|\\s+",
+    "g",
+  )
 
-// Unique placeholders protect TeX from markup parsing and keep expressions aligned when tags are removed.
+// Unique placeholders protect TeX from markup parsing and keep expressions aligned when tags are
+// removed.
 private const val MARK = 0xe000
 private const val MAX_MARKS = 0x1900
 private val RE_MATH = JsRegExp("""\$\$(.+?)\$\$""", "g")
 private val RE_MARK = JsRegExp("[\\ue000-\\uf8ff]")
 private val RE_MARKS = JsRegExp("([\\ue000-\\uf8ff])")
 
-private class Marks(val tex: MutableList<String> = ArrayList(), val math: MutableList<MathMarkup?> = ArrayList())
+private class Marks(
+  val tex: MutableList<String> = ArrayList(),
+  val math: MutableList<MathMarkup?> = ArrayList(),
+)
 
 // PORT: per-thread state, as renders may run concurrently.
 private val marks = ThreadLocal<Marks?>()
@@ -108,7 +116,9 @@ private fun dedent(text: String): String {
     if (indent < min) min = indent
   }
   if (min == Int.MAX_VALUE || min == 0) return text
-  return lines.joinToString("\n") { line -> line.jsSlice(minOf(min, line.length - line.jsTrimStart().length)) }
+  return lines.joinToString("\n") { line ->
+    line.jsSlice(minOf(min, line.length - line.jsTrimStart().length))
+  }
 }
 
 private fun plain(span: Span?): Boolean = span != null && span.icon == null && span.math == null
@@ -181,7 +191,13 @@ private class Open(
 private val RE_WORD = JsRegExp("""\w""")
 
 // Splits inline HTML and, for markdown labels, emphasis markers into styled spans.
-private fun inline(line: MutableList<Span>, source: String, markdown: Boolean, base: Int, open: Open) {
+private fun inline(
+  line: MutableList<Span>,
+  source: String,
+  markdown: Boolean,
+  base: Int,
+  open: Open,
+) {
   var style = open.style
   var marked = 0
   val text = StringBuilder()
@@ -210,7 +226,8 @@ private fun inline(line: MutableList<Span>, source: String, markdown: Boolean, b
           }
         } else if (bit != 0) {
           flush()
-          open.style = if (closing) (open.style and bit.inv()) or (base and bit) else open.style or bit
+          open.style =
+            if (closing) (open.style and bit.inv()) or (base and bit) else open.style or bit
           style = if (closing) (style and bit.inv()) or (base and bit) else style or bit
         }
         // Other HTML tags are dropped and their text kept. Anything else shaped like a tag, such
@@ -227,7 +244,10 @@ private fun inline(line: MutableList<Span>, source: String, markdown: Boolean, b
       val opening = (marked and bit) == 0
       val prev = if (i > 0) source[i - 1].toString() else " "
       val next = if (i + len < n) source[i + len].toString() else " "
-      val canOpen = opening && next.jsTrim() != "" && source.indexOf(if (double) "$ch$ch" else "$ch", i + len) != -1
+      val canOpen =
+        opening &&
+          next.jsTrim() != "" &&
+          source.indexOf(if (double) "$ch$ch" else "$ch", i + len) != -1
       val canClose = !opening && prev.jsTrim() != ""
       val wordy = ch == '_' && RE_WORD.test(prev) && RE_WORD.test(next)
       if ((canOpen || canClose) && !wordy) {
@@ -247,7 +267,9 @@ private fun inline(line: MutableList<Span>, source: String, markdown: Boolean, b
 private fun measureSpans(line: List<Span>, measurer: TextMeasurer, size: Double): Double {
   var total = 0.0
   for (span in line) {
-    span.width = if (span.icon != null) size * 1.25 else span.math?.width ?: measurer.width(span.text, size, span.style)
+    span.width =
+      if (span.icon != null) size * 1.25
+      else span.math?.width ?: measurer.width(span.text, size, span.style)
     total += span.width
   }
   return total
@@ -302,22 +324,25 @@ private fun wrap(
       val end = pieces[q].jsTrimEnd()
       own[q] = measurer.width(if (shy) end.jsSlice(0, -1) else end, size, span.style)
       // Word width beyond this span is unknown.
-      rest[q] = if (!shy) {
-        own[q]
-      } else if (q == n - 1) {
-        if (span === line[line.size - 1]) own[q] else Double.POSITIVE_INFINITY
-      } else {
-        own[q] + rest[q + 1]
-      }
+      rest[q] =
+        if (!shy) {
+          own[q]
+        } else if (q == n - 1) {
+          if (span === line[line.size - 1]) own[q] else Double.POSITIVE_INFINITY
+        } else {
+          own[q] + rest[q + 1]
+        }
     }
     for (p in pieces.indices) {
       var part = pieces[p]
       val partWidth = if (soft) own[p] else measurer.width(part.jsTrimEnd(), size, span.style)
-      val fits = if (!soft || !part.endsWith("­")) {
-        width + partWidth <= max
-      } else {
-        width + measurer.width(part.jsSlice(0, -1) + "-", size, span.style) <= max || width + rest[p] <= max
-      }
+      val fits =
+        if (!soft || !part.endsWith("­")) {
+          width + partWidth <= max
+        } else {
+          width + measurer.width(part.jsSlice(0, -1) + "-", size, span.style) <= max ||
+            width + rest[p] <= max
+        }
       if (width > 0 && !fits) {
         // Breaking at whitespace leaves a preceding soft hyphen hidden.
         commit(part.jsTrimStart() == part)
@@ -355,14 +380,15 @@ fun layoutLabel(
 
   if (mathActive() && raw.contains("$$") && !RE_MARK.test(raw)) {
     val found = Marks()
-    val marked = raw.jsReplace(RE_MATH) { m ->
-      if (found.tex.size == MAX_MARKS) {
-        m.value
-      } else {
-        found.tex.add(m[1]!!)
-        fromCharCode(MARK + found.tex.size - 1)
+    val marked =
+      raw.jsReplace(RE_MATH) { m ->
+        if (found.tex.size == MAX_MARKS) {
+          m.value
+        } else {
+          found.tex.add(m[1]!!)
+          fromCharCode(MARK + found.tex.size - 1)
+        }
       }
-    }
     if (found.tex.isNotEmpty()) {
       for (tex in found.tex) found.math.add(typeset(decodeEntities(tex), size))
       return layoutMarkup(marked, markdown, measurer, size, maxWidth, base, lineHeight, found)
@@ -384,7 +410,14 @@ fun layoutLabel(
     }
     val lines = ArrayList<MutableList<Span>>()
     val widths = ArrayList<Double>()
-    wrap(listOf(Span(text = text, style = base, width = width)), measurer, size, maxWidth, lines, widths)
+    wrap(
+      listOf(Span(text = text, style = base, width = width)),
+      measurer,
+      size,
+      maxWidth,
+      lines,
+      widths,
+    )
     var widest = 0.0
     for (w in widths) if (w > widest) widest = w
     val snug = if (lines.size > 1) jsRound(size * WRAPPED_LINE_HEIGHT) else lineHeight
@@ -454,11 +487,13 @@ fun withHeights(label: Label): Label {
       val math = span.math
       if (math != null) h = maxOf(h, ceil(math.height + label.size / 4))
     }
-    if (h != label.lineHeight && heights == null) heights = label.lines.map { label.lineHeight }.toMutableList()
+    if (h != label.lineHeight && heights == null)
+      heights = label.lines.map { label.lineHeight }.toMutableList()
     if (heights != null) heights[i] = h
   }
   if (heights == null) {
-    return if (label.heights == null) label else label.copy(heights = null, height = label.lines.size * label.lineHeight)
+    return if (label.heights == null) label
+    else label.copy(heights = null, height = label.lines.size * label.lineHeight)
   }
   var height = 0.0
   for (h in heights) height += h
@@ -480,7 +515,8 @@ fun lineMiddle(label: Label, i: Int): Double {
 fun labelLine(label: Label, i: Int): Label {
   val width = label.widths[i]
   val height = label.heights?.get(i) ?: label.lineHeight
-  val line = Label(listOf(label.lines[i]), listOf(width), width, height, label.size, label.lineHeight)
+  val line =
+    Label(listOf(label.lines[i]), listOf(width), width, height, label.size, label.lineHeight)
   if (height != label.lineHeight) line.heights = listOf(height)
   return line
 }

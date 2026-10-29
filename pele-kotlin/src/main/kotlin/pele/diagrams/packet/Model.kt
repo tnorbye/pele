@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.packet
 
+import kotlin.math.floor
 import pele.Config
 import pele.PeleError
 import pele.PeleErrorCode
@@ -10,7 +11,6 @@ import pele.js.JsRegExp
 import pele.js.jsReplace
 import pele.js.jsStr
 import pele.svg.Accessible
-import kotlin.math.floor
 
 data class PacketBlock(
   var start: Double,
@@ -39,7 +39,8 @@ fun packetOption(config: Config, key: String, fallback: Double, min: Double, max
   return if (value is Double && value >= min) minOf(value, max) else fallback
 }
 
-private fun invalid(message: String): PeleError = PeleError(message, PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "packet"))
+private fun invalid(message: String): PeleError =
+  PeleError(message, PeleErrorCode.SEMANTIC, PeleErrorInfo(type = "packet"))
 
 fun buildPacket(ast: PacketAst, config: Config, title: String?): PacketModel {
   val bitsPerRow = floor(packetOption(config, "bitsPerRow", 32.0, 1.0, 4096.0))
@@ -53,11 +54,15 @@ fun buildPacket(ast: PacketAst, config: Config, title: String?): PacketModel {
     var end: Double? = block.end
     var bits: Double? = block.bits
     if (start != null && end != null && end < start) {
-      throw invalid("Packet block ${jsStr(start)} - ${jsStr(end)} is invalid. End must be greater than start.")
+      throw invalid(
+        "Packet block ${jsStr(start)} - ${jsStr(end)} is invalid. End must be greater than start."
+      )
     }
     if (start == null) start = lastBit + 1
     if (start != lastBit + 1) {
-      throw invalid("Packet block ${jsStr(start)} - ${jsStr(end ?: start)} is not contiguous. It should start from ${jsStr(lastBit + 1)}.")
+      throw invalid(
+        "Packet block ${jsStr(start)} - ${jsStr(end ?: start)} is not contiguous. It should start from ${jsStr(lastBit + 1)}."
+      )
     }
     if (bits == 0.0) {
       throw invalid("Packet block ${jsStr(start)} is invalid. Cannot have a zero bit field.")
@@ -92,8 +97,10 @@ fun buildPacket(ast: PacketAst, config: Config, title: String?): PacketModel {
   return PacketModel(
     type = "packet",
     title = if (!ast.title.isNullOrEmpty()) ast.title else title,
-    accTitle = if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
-    accDescr = if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
+    accTitle =
+      if (!ast.accTitle.isNullOrEmpty()) ast.accTitle!!.jsReplace(RE_LEADING, "") else null,
+    accDescr =
+      if (!ast.accDescr.isNullOrEmpty()) ast.accDescr!!.jsReplace(RE_INDENT, "\n") else null,
     bitsPerRow = bitsPerRow,
     rows = rows,
   )

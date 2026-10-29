@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val railroad: Diagram<RailroadDb> = object : Diagram<RailroadDb> {
-  override val type = "railroad"
+val railroad: Diagram<RailroadDb> =
+  object : Diagram<RailroadDb> {
+    override val type = "railroad"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): RailroadDb =
-    parseRailroad(source, title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): RailroadDb = parseRailroad(source, title)
 
-  override fun render(model: RailroadDb, config: Config, options: RenderOptions): Rendered = renderRailroad(model, config, options)
-}
+    override fun render(model: RailroadDb, config: Config, options: RenderOptions): Rendered =
+      renderRailroad(model, config, options)
+  }

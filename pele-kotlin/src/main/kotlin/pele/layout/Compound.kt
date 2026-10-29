@@ -2,15 +2,15 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.layout
 
-import pele.js.cmp
-import pele.js.jsOr
-import pele.js.jsRound
 import kotlin.math.abs
 import kotlin.math.floor
-import pele.js.jsHypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
+import pele.js.cmp
+import pele.js.jsHypot
+import pele.js.jsOr
+import pele.js.jsRound
 
 // 'TB' | 'BT' | 'LR' | 'RL'
 typealias Dir = String
@@ -30,7 +30,8 @@ class CNode(
   var minW: Double,
   // Declaration order; a group takes the smallest value among its members.
   var seq: Double,
-  // How much of a side its edges may spread along, measured across the flow; 0 keeps them at its middle.
+  // How much of a side its edges may spread along, measured across the flow; 0 keeps them at its
+  // middle.
   var span: Double,
   var x: Double,
   var y: Double,
@@ -100,7 +101,12 @@ private class Snapshot(
   val total: CompoundResult,
 )
 
-private fun snapshot(nodes: List<CNode>, edges: List<CEdge>, levels: List<Level>, total: CompoundResult): Snapshot {
+private fun snapshot(
+  nodes: List<CNode>,
+  edges: List<CEdge>,
+  levels: List<Level>,
+  total: CompoundResult,
+): Snapshot {
   val at = ArrayList<Double>()
   for (c in nodes) {
     at.add(c.x)
@@ -122,10 +128,21 @@ private fun snapshot(nodes: List<CNode>, edges: List<CEdge>, levels: List<Level>
       places.add(port.py)
     }
   }
-  return Snapshot(at.toDoubleArray(), edges.map { e -> e.route }, labels.toDoubleArray(), places.toDoubleArray(), total)
+  return Snapshot(
+    at.toDoubleArray(),
+    edges.map { e -> e.route },
+    labels.toDoubleArray(),
+    places.toDoubleArray(),
+    total,
+  )
 }
 
-private fun restore(s: Snapshot, nodes: List<CNode>, edges: List<CEdge>, levels: List<Level>): CompoundResult {
+private fun restore(
+  s: Snapshot,
+  nodes: List<CNode>,
+  edges: List<CEdge>,
+  levels: List<Level>,
+): CompoundResult {
   nodes.forEachIndexed { i, c ->
     c.x = s.nodes[4 * i]
     c.y = s.nodes[4 * i + 1]
@@ -167,11 +184,14 @@ object Style {
   const val Linear = 2
 }
 
-fun styleOf(opt: LayeredOptions): Int = if (opt.tracks == true) Style.Stepped else if (opt.straight == true) Style.Linear else Style.Curved
+fun styleOf(opt: LayeredOptions): Int =
+  if (opt.tracks == true) Style.Stepped
+  else if (opt.straight == true) Style.Linear else Style.Curved
 
 fun routeCrossings(nodes: List<CNode>, edges: List<CEdge>, style: Int = Style.Curved): Int {
   var size = 0
-  for (e in edges) if (e.src != e.dst && e.route.size > 3) size += (e.route.size / 3 - 1) * STEP_PIECES
+  for (e in edges) if (e.src != e.dst && e.route.size > 3)
+    size += (e.route.size / 3 - 1) * STEP_PIECES
   val ax = DoubleArray(size)
   val ay = DoubleArray(size)
   val bx = DoubleArray(size)
@@ -194,7 +214,12 @@ fun routeCrossings(nodes: List<CNode>, edges: List<CEdge>, style: Int = Style.Cu
     val p = count - 1
     val on = x0 == toX && y0 == toY && ((y1 == y0 && fromY == y0) || (x1 == x0 && fromX == x0))
     // PORT: owner[-1] and ends[-1] are undefined in JS; `on` is false whenever p is -1.
-    if (on && owner[p] == ei && ends[p] == part && (x0 - fromX) * (x1 - x0) + (y0 - fromY) * (y1 - y0) > 0) {
+    if (
+      on &&
+        owner[p] == ei &&
+        ends[p] == part &&
+        (x0 - fromX) * (x1 - x0) + (y0 - fromY) * (y1 - y0) > 0
+    ) {
       count--
       x0 = fromX
       y0 = fromY
@@ -328,7 +353,8 @@ fun routeCrossings(nodes: List<CNode>, edges: List<CEdge>, style: Int = Style.Cu
   // Edges merging into a shared endpoint run do not count as crossings.
   val runs = DoubleArray(edges.size * 8)
   val inLine = { r: List<Double>, a: Int, b: Int, c: Int ->
-    (abs(r[a] - r[b]) < IN_LINE && abs(r[a] - r[c]) < IN_LINE) || (abs(r[a + 1] - r[b + 1]) < IN_LINE && abs(r[a + 1] - r[c + 1]) < IN_LINE)
+    (abs(r[a] - r[b]) < IN_LINE && abs(r[a] - r[c]) < IN_LINE) ||
+      (abs(r[a + 1] - r[b + 1]) < IN_LINE && abs(r[a + 1] - r[c + 1]) < IN_LINE)
   }
   for (ei in edges.indices) {
     val r = edges[ei].route
@@ -377,7 +403,13 @@ fun routeCrossings(nodes: List<CNode>, edges: List<CEdge>, style: Int = Style.Cu
       for (t in s + 1 until bandEnd) {
         val q = inBand[t]
         if (ax[q] > bx[p]) break
-        if (high[q] < low[p] || low[q] > high[p] || owner[p] == owner[q] || (!here && first[q] != band)) continue
+        if (
+          high[q] < low[p] ||
+            low[q] > high[p] ||
+            owner[p] == owner[q] ||
+            (!here && first[q] != band)
+        )
+          continue
         val d1 = dx * (ay[q] - ay[p]) - dy * (ax[q] - ax[p])
         val d2 = dx * (by[q] - ay[p]) - dy * (bx[q] - ax[p])
         // Treat points on the line as one side to count segment-boundary crossings once.
@@ -395,7 +427,8 @@ fun routeCrossings(nodes: List<CNode>, edges: List<CEdge>, style: Int = Style.Cu
         // Exclude fan-in and fan-out at shared nodes.
         val fan = { v: Int, pe: Int, qe: Int ->
           ((ends[p] and pe) != 0 && (ends[q] and qe) != 0) ||
-            (abs(x - nodes[v].x) < nodes[v].w / 2 + FAN && abs(y - nodes[v].y) < nodes[v].h / 2 + FAN) ||
+            (abs(x - nodes[v].x) < nodes[v].w / 2 + FAN &&
+              abs(y - nodes[v].y) < nodes[v].h / 2 + FAN) ||
             (onRun(owner[p], pe, x, y) && onRun(owner[q], qe, x, y))
         }
         if (ep.src == eq.src && fan(ep.src, 1, 1)) continue
@@ -447,25 +480,56 @@ fun shiftLayout(nodes: List<CNode>, edges: List<CEdge>, ox: Double, oy: Double) 
 }
 
 fun cnode(w: Double, h: Double, parent: Int = -1): CNode =
-  CNode(w, h, parent, isGroup = false, dir = null, padX = 0.0, padTop = 0.0, padBottom = 0.0, minW = 0.0, seq = 0.0, span = 0.0, x = 0.0, y = 0.0)
+  CNode(
+    w,
+    h,
+    parent,
+    isGroup = false,
+    dir = null,
+    padX = 0.0,
+    padTop = 0.0,
+    padBottom = 0.0,
+    minW = 0.0,
+    seq = 0.0,
+    span = 0.0,
+    x = 0.0,
+    y = 0.0,
+  )
 
-private fun startSide(dir: Dir): Int = if (dir == "TB") Side.Top else if (dir == "BT") Side.Bottom else if (dir == "LR") Side.Left else Side.Right
+private fun startSide(dir: Dir): Int =
+  if (dir == "TB") Side.Top
+  else if (dir == "BT") Side.Bottom else if (dir == "LR") Side.Left else Side.Right
 
 private fun opposite(side: Int): Int = (side + 2) and 3
 
-private class Built(val lnodes: MutableList<LNode>, val ledges: MutableList<LEdge>, val dummies: IntArray)
+private class Built(
+  val lnodes: MutableList<LNode>,
+  val ledges: MutableList<LEdge>,
+  val dummies: IntArray,
+)
 
-private class Laid(val given: List<Double>, val lnodes: List<LNode>, val ledges: List<LEdge>, val size: LayeredResult)
+private class Laid(
+  val given: List<Double>,
+  val lnodes: List<LNode>,
+  val ledges: List<LEdge>,
+  val size: LayeredResult,
+)
 
 // Lays out a graph whose nodes may be nested in groups. Each group is laid out on its own,
 // in its own direction, and then placed in its parent as a single box. An edge that crosses
 // a group's border passes through a port on the side facing its other end.
-fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: LayeredOptions): CompoundResult {
+fun compoundLayout(
+  nodes: List<CNode>,
+  edges: List<CEdge>,
+  rootDir: Dir,
+  opt: LayeredOptions,
+): CompoundResult {
   val n = nodes.size
   val levelOf = HashMap<Int, Level>()
   val order = ArrayList<Level>()
   val makeLevel = { id: Int, dir: Dir ->
-    val level = Level(id, dir, ArrayList(), ArrayList(), ArrayList(), HashMap(), HashMap(), 0.0, 0.0)
+    val level =
+      Level(id, dir, ArrayList(), ArrayList(), ArrayList(), HashMap(), HashMap(), 0.0, 0.0)
     levelOf[id] = level
     level
   }
@@ -527,7 +591,9 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
     for (item in level.items) if (nodes[item].seq < seq) seq = nodes[item].seq
     if (seq != Double.POSITIVE_INFINITY) nodes[level.id].seq = seq
   }
-  for (level in order) level.items.sortWith { a, b -> cmp((nodes[a].seq - nodes[b].seq).jsOr { (a - b).toDouble() }) }
+  for (level in order) level.items.sortWith { a, b ->
+    cmp((nodes[a].seq - nodes[b].seq).jsOr { (a - b).toDouble() })
+  }
 
   // Every group border an edge crosses costs a port. Past the budget, an edge is drawn between
   // the groups that hold its ends, at the level they share.
@@ -619,17 +685,22 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
     level.items.forEachIndexed { i, item ->
       local[item] = i
       val node = nodes[item]
-      val ln = if (sized) lnode(if (vertical) node.w else node.h, if (vertical) node.h else node.w) else lnode(0.0, 0.0)
+      val ln =
+        if (sized) lnode(if (vertical) node.w else node.h, if (vertical) node.h else node.w)
+        else lnode(0.0, 0.0)
       ln.span = if (node.isGroup) min(node.span, ln.w - 2 * node.padX) else node.span
       ln.key = if (keyed) key[item] else Double.NaN
       lnodes.add(ln)
     }
-    val held = { item: Int, ei: Int, out: Boolean -> nodes[item].isGroup && endpointBelow(item, edges[ei], out) }
-    val offset = fun(item: Int, ei: Int, out: Boolean): Double {
-      if (!sized || !nodes[item].isGroup || !endpointBelow(item, edges[ei], out)) return 0.0
-      val port = levelOf[item]!!.portOf[ei * 2 + (if (out) 0 else 1)]!!
-      return if (vertical) port.px - nodes[item].w / 2 else port.py - nodes[item].h / 2
+    val held = { item: Int, ei: Int, out: Boolean ->
+      nodes[item].isGroup && endpointBelow(item, edges[ei], out)
     }
+    val offset =
+      fun(item: Int, ei: Int, out: Boolean): Double {
+        if (!sized || !nodes[item].isGroup || !endpointBelow(item, edges[ei], out)) return 0.0
+        val port = levelOf[item]!!.portOf[ei * 2 + (if (out) 0 else 1)]!!
+        return if (vertical) port.px - nodes[item].w / 2 else port.py - nodes[item].h / 2
+      }
     for (le in level.edges) {
       val e = edges[le.e]
       val edge = ledge(local[le.a], local[le.b], e.minlen)
@@ -648,7 +719,8 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
       if (port.side == start || port.side == opposite(start)) {
         val d = lnodes.size
         val ln = lnode(0.0, 0.0, if (port.side == start) Kind.StartPort else Kind.EndPort)
-        ln.key = if (keyed) key[if (port.out) edges[port.e].dst else edges[port.e].src] else Double.NaN
+        ln.key =
+          if (keyed) key[if (port.out) edges[port.e].dst else edges[port.e].src] else Double.NaN
         val far = farHint
         ln.hint = if (port.hint.isNaN() && keyed && far != null) far(level, port) else port.hint
         lnodes.add(ln)
@@ -663,7 +735,8 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
         }
         ledges.add(edge)
       } else {
-        lnodes[local[port.inner]].pin = if (port.side == Side.Top || port.side == Side.Left) -1 else 1
+        lnodes[local[port.inner]].pin =
+          if (port.side == Side.Top || port.side == Side.Left) -1 else 1
       }
     }
     Built(lnodes, ledges, dummies)
@@ -688,7 +761,9 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
       if (nodes[i].isGroup) parent[group[i]] = if (p >= 0) group[p] else -1
       else {
         leaf[i] = lnodes.size
-        lnodes.add(lnode(if (vertical) nodes[i].w else nodes[i].h, if (vertical) nodes[i].h else nodes[i].w))
+        lnodes.add(
+          lnode(if (vertical) nodes[i].w else nodes[i].h, if (vertical) nodes[i].h else nodes[i].w)
+        )
         of.add(if (p >= 0) group[p] else -1)
       }
     }
@@ -697,9 +772,22 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
     edges.forEachIndexed { ei, e ->
       if (e.src == e.dst || leaf[e.src] < 0 || leaf[e.dst] < 0) return@forEachIndexed
       ledgeOf[ei] = ledges.size
-      ledges.add(ledge(leaf[e.src], leaf[e.dst], e.minlen, if (vertical) e.labelW else e.labelH, if (vertical) e.labelH else e.labelW))
+      ledges.add(
+        ledge(
+          leaf[e.src],
+          leaf[e.dst],
+          e.minlen,
+          if (vertical) e.labelW else e.labelH,
+          if (vertical) e.labelH else e.labelW,
+        )
+      )
     }
-    val flatLayout = layered(lnodes, ledges, opt.copy(groups = LayeredGroups(of.toIntArray(), parent.toIntArray()), orderOnly = true))
+    val flatLayout =
+      layered(
+        lnodes,
+        ledges,
+        opt.copy(groups = LayeredGroups(of.toIntArray(), parent.toIntArray()), orderOnly = true),
+      )
     flatCrossings = min(flatLayout.crossings ?: 0, flatLayout.declared ?: 0)
     val sum = DoubleArray(n)
     val count = IntArray(n)
@@ -718,62 +806,65 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
     }
     for (i in 0 until n) if (count[i] > 0) key[i] = sum[i] / count[i]
     // Order outgoing ports at the group's last rank; break ties using the next rank.
-    farHint = fun(level: Level, port: PortEdge): Double {
-      val le = ledgeOf[port.e]
-      if (le < 0 || level.id < 0 || !port.out || port.side != opposite(startSide(level.dir))) return Double.NaN
-      val points = ledges[le].points
-      var inside = key[edges[port.e].src]
-      var outside = 0.0
-      var k = 0
-      while (k < points.size) {
-        if (points[k] == last[level.id].toDouble()) inside = points[k + 1]
-        if (points[k] == (last[level.id] + 1).toDouble()) outside = points[k + 1]
-        k += 2
+    farHint =
+      fun(level: Level, port: PortEdge): Double {
+        val le = ledgeOf[port.e]
+        if (le < 0 || level.id < 0 || !port.out || port.side != opposite(startSide(level.dir)))
+          return Double.NaN
+        val points = ledges[le].points
+        var inside = key[edges[port.e].src]
+        var outside = 0.0
+        var k = 0
+        while (k < points.size) {
+          if (points[k] == last[level.id].toDouble()) inside = points[k + 1]
+          if (points[k] == (last[level.id] + 1).toDouble()) outside = points[k + 1]
+          k += 2
+        }
+        return inside + outside * 1e-6
       }
-      return inside + outside * 1e-6
-    }
   }
 
   // Reuse unchanged levels across layout attempts.
   val laid = HashMap<Int, MutableList<Laid>>()
-  val layOut = fun(level: Level, lnodes: List<LNode>, ledges: List<LEdge>): Laid {
-    if (!ordered) return Laid(emptyList(), lnodes, ledges, layered(lnodes, ledges, opt))
-    val given = ArrayList<Double>()
-    for (ln in lnodes) {
-      given.add(ln.w)
-      given.add(ln.h)
-      given.add(ln.kind.toDouble())
-      given.add(ln.pin.toDouble())
-      given.add(ln.hint)
-      given.add(ln.key)
-      given.add(ln.span)
-    }
-    for (le in ledges) {
-      given.add(le.tail.toDouble())
-      given.add(le.head.toDouble())
-      given.add(le.minlen)
-      given.add(le.labelW)
-      given.add(le.labelH)
-      given.add(le.tailDx)
-      given.add(le.headDx)
-      given.add(if (le.tailFixed) 1.0 else 0.0)
-      given.add(if (le.headFixed) 1.0 else 0.0)
-    }
-    val past = laid.getOrPut(level.id) { ArrayList() }
-    for (p in past) {
-      var same = p.given.size == given.size
-      var i = 0
-      // Object.is: NaN is NaN, and -0 is not 0.
-      while (same && i < given.size) {
-        same = p.given[i].toBits() == given[i].toBits()
-        i++
+  val layOut =
+    fun(level: Level, lnodes: List<LNode>, ledges: List<LEdge>): Laid {
+      if (!ordered) return Laid(emptyList(), lnodes, ledges, layered(lnodes, ledges, opt))
+      val given = ArrayList<Double>()
+      for (ln in lnodes) {
+        given.add(ln.w)
+        given.add(ln.h)
+        given.add(ln.kind.toDouble())
+        given.add(ln.pin.toDouble())
+        given.add(ln.hint)
+        given.add(ln.key)
+        given.add(ln.span)
       }
-      if (same) return p
+      for (le in ledges) {
+        given.add(le.tail.toDouble())
+        given.add(le.head.toDouble())
+        given.add(le.minlen)
+        given.add(le.labelW)
+        given.add(le.labelH)
+        given.add(le.tailDx)
+        given.add(le.headDx)
+        given.add(if (le.tailFixed) 1.0 else 0.0)
+        given.add(if (le.headFixed) 1.0 else 0.0)
+      }
+      val past = laid.getOrPut(level.id) { ArrayList() }
+      for (p in past) {
+        var same = p.given.size == given.size
+        var i = 0
+        // Object.is: NaN is NaN, and -0 is not 0.
+        while (same && i < given.size) {
+          same = p.given[i].toBits() == given[i].toBits()
+          i++
+        }
+        if (same) return p
+      }
+      val done = Laid(given, lnodes, ledges, layered(lnodes, ledges, opt))
+      past.add(done)
+      return done
     }
-    val done = Laid(given, lnodes, ledges, layered(lnodes, ledges, opt))
-    past.add(done)
-    return done
-  }
 
   var total = CompoundResult(0.0, 0.0)
   val place = {
@@ -788,7 +879,8 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
       var needed = false
       for (le in level.edges) {
         val e = edges[le.e]
-        if ((nodes[le.a].isGroup && e.src != le.a) || (nodes[le.b].isGroup && e.dst != le.b)) needed = true
+        if ((nodes[le.a].isGroup && e.src != le.a) || (nodes[le.b].isGroup && e.dst != le.b))
+          needed = true
       }
       if (!needed) continue
       val built = build(level, false)
@@ -829,8 +921,12 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
       val boxH = contentH + padTop + (group?.padBottom ?: 0.0)
       val offX = (boxW - contentW) / 2
       val offY = padTop
-      val tx = { lx: Double, ly: Double -> offX + (if (vertical) lx else if (flip) size.height - ly else ly) }
-      val ty = { lx: Double, ly: Double -> offY + (if (vertical) (if (flip) size.height - ly else ly) else lx) }
+      val tx = { lx: Double, ly: Double ->
+        offX + (if (vertical) lx else if (flip) size.height - ly else ly)
+      }
+      val ty = { lx: Double, ly: Double ->
+        offY + (if (vertical) (if (flip) size.height - ly else ly) else lx)
+      }
       val axis = if (vertical) 0.0 else 1.0
       val convert = { points: List<Double> ->
         val out = ArrayList<Double>()
@@ -867,8 +963,7 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
           var by = route[at + 1]
           if (port.side == Side.Top) by = 0.0
           else if (port.side == Side.Bottom) by = boxH
-          else if (port.side == Side.Left) bx = 0.0
-          else bx = boxW
+          else if (port.side == Side.Left) bx = 0.0 else bx = boxW
           if (port.out) {
             route.add(bx)
             route.add(by)
@@ -889,18 +984,17 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
           iy += inner.py - item.h / 2
         } else if (port.side == Side.Top) iy -= item.h / 2
         else if (port.side == Side.Bottom) iy += item.h / 2
-        else if (port.side == Side.Left) ix -= item.w / 2
-        else ix += item.w / 2
+        else if (port.side == Side.Left) ix -= item.w / 2 else ix += item.w / 2
         var bx = ix
         var by = iy
         if (port.side == Side.Top) by = 0.0
         else if (port.side == Side.Bottom) by = boxH
-        else if (port.side == Side.Left) bx = 0.0
-        else bx = boxW
+        else if (port.side == Side.Left) bx = 0.0 else bx = boxW
         val a = if (port.side == Side.Top || port.side == Side.Bottom) 0.0 else 1.0
         port.px = bx
         port.py = by
-        port.route = if (port.out) arrayListOf(ix, iy, a, bx, by, a) else arrayListOf(bx, by, a, ix, iy, a)
+        port.route =
+          if (port.out) arrayListOf(ix, iy, a, bx, by, a) else arrayListOf(bx, by, a, ix, iy, a)
       }
 
       if (group != null) {
@@ -1014,7 +1108,9 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
         if (at < 0) continue
         val a = if (vertical) 0 else 1
         var next = if (port.out) at + 3 else at - 3
-        while (next >= 0 && next < route.size && abs(route[next + a] - route[at + a]) < IN_LINE) next += if (port.out) 3 else -3
+        while (
+          next >= 0 && next < route.size && abs(route[next + a] - route[at + a]) < IN_LINE
+        ) next += if (port.out) 3 else -3
         if (next < 0 || next >= route.size) continue
         port.hint = route[next + a] - (if (vertical) box.x - box.w / 2 else box.y - box.h / 2)
         seen.add(doubleArrayOf(if (vertical) port.px else port.py, port.hint))
@@ -1027,7 +1123,8 @@ fun compoundLayout(nodes: List<CNode>, edges: List<CEdge>, rootDir: Dir, opt: La
       val first = if (before > 0) snapshot(nodes, edges, order, total) else null
       if (first != null) {
         place()
-        if (routeCrossings(nodes, edges, style) >= before) total = restore(first, nodes, edges, order)
+        if (routeCrossings(nodes, edges, style) >= before)
+          total = restore(first, nodes, edges, order)
       }
     }
   }

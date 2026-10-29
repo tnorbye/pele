@@ -20,8 +20,10 @@ class UsecaseGraphNode(
   val id: String,
   val label: String,
   val labelType: LabelType,
-  // Mermaid's shape names: 'usecaseActor' | 'usecaseActorHollow' | 'usecaseActorAwesome' | 'usecaseActorIcon'
-  // | 'usecaseEllipse' | 'usecaseBusiness' | 'rect' | 'note' | 'usecaseJsonTable' | 'usecaseSystemBoundary'
+  // Mermaid's shape names: 'usecaseActor' | 'usecaseActorHollow' | 'usecaseActorAwesome' |
+  // 'usecaseActorIcon'
+  // | 'usecaseEllipse' | 'usecaseBusiness' | 'rect' | 'note' | 'usecaseJsonTable' |
+  // 'usecaseSystemBoundary'
   val shape: String,
   val isGroup: Boolean,
   val padding: Double,
@@ -66,35 +68,42 @@ class UsecaseGraph(
   val edges: List<UsecaseGraphEdge>,
 )
 
-private val ACTOR_SHAPES = mapOf(
-  "normal" to "usecaseActor",
-  "hollow" to "usecaseActorHollow",
-  "awesome" to "usecaseActorAwesome",
-  "icon" to "usecaseActorIcon",
-)
+private val ACTOR_SHAPES =
+  mapOf(
+    "normal" to "usecaseActor",
+    "hollow" to "usecaseActorHollow",
+    "awesome" to "usecaseActorAwesome",
+    "icon" to "usecaseActorIcon",
+  )
 
 // Start and end markers for each arrow type, in the order of the Arrow enum.
-private val MARKERS = listOf(
-  listOf("none", "arrow_point"),
-  listOf("arrow_point", "none"),
-  listOf("none", "none"),
-  listOf("none", "arrow_circle"),
-  listOf("none", "arrow_cross"),
-  listOf("arrow_circle", "none"),
-  listOf("arrow_cross", "none"),
-)
+private val MARKERS =
+  listOf(
+    listOf("none", "arrow_point"),
+    listOf("arrow_point", "none"),
+    listOf("none", "none"),
+    listOf("none", "arrow_circle"),
+    listOf("none", "arrow_cross"),
+    listOf("arrow_circle", "none"),
+    listOf("arrow_cross", "none"),
+  )
 
 // PORT: stands for a value `undefined`, which JSON.parse never produces but a missing key reads as.
 private object Undefined
 
 private fun scalar(value: Any?): String =
-  if (value is String) value else if (value == null) "null" else if (value === Undefined) "undefined" else jsString(value)
+  if (value is String) value
+  else if (value == null) "null" else if (value === Undefined) "undefined" else jsString(value)
 
 // One row for each leaf of a JSON object, depth first in the order the keys were written.
 // Nesting is kept on a stack of its own, so depth is limited by memory and not by the call stack.
-fun flattenJsonRows(json: UsecaseJsonNode): List<JsonRow> = flattenJsonRows(json.value, json.propertyOrder)
+fun flattenJsonRows(json: UsecaseJsonNode): List<JsonRow> =
+  flattenJsonRows(json.value, json.propertyOrder)
 
-fun flattenJsonRows(value: Map<String, Any?>, propertyOrder: Map<String, List<String>>): List<JsonRow> {
+fun flattenJsonRows(
+  value: Map<String, Any?>,
+  propertyOrder: Map<String, List<String>>,
+): List<JsonRow> {
   val rows = ArrayList<JsonRow>()
   val stack = ArrayList<Triple<Any?, String, String>>()
   stack.add(Triple(value, "", ""))
@@ -105,11 +114,13 @@ fun flattenJsonRows(value: Map<String, Any?>, propertyOrder: Map<String, List<St
     if (current is List<*>) {
       if (current.size == 0) rows.add(JsonRow(path, path, "[]"))
       else if (current.all { item -> item == null || (item !is Map<*, *> && item !is List<*>) }) {
-        current.forEachIndexed { i, item -> rows.add(JsonRow(if (i == 0) path else "", path, scalar(item))) }
-      } else current.forEachIndexed { i, item -> children.add(Triple(item, "$path[$i]", "$pointer/$i")) }
+        current.forEachIndexed { i, item ->
+          rows.add(JsonRow(if (i == 0) path else "", path, scalar(item)))
+        }
+      } else
+        current.forEachIndexed { i, item -> children.add(Triple(item, "$path[$i]", "$pointer/$i")) }
     } else if (current is Map<*, *>) {
-      @Suppress("UNCHECKED_CAST")
-      val obj = current as Map<String, Any?>
+      @Suppress("UNCHECKED_CAST") val obj = current as Map<String, Any?>
       val keys = propertyOrder[pointer] ?: jsKeys(obj)
       if (keys.size == 0) rows.add(JsonRow(path, path, "{}"))
       for (key in keys) {
@@ -118,7 +129,7 @@ fun flattenJsonRows(value: Map<String, Any?>, propertyOrder: Map<String, List<St
             if (obj.containsKey(key)) obj[key] else Undefined,
             if (path.isNotEmpty()) "$path.$key" else key,
             "$pointer/${key.jsReplaceAll("~", "~0").jsReplaceAll("/", "~1")}",
-          ),
+          )
         )
       }
     } else rows.add(JsonRow(path, path, scalar(current)))
@@ -127,7 +138,8 @@ fun flattenJsonRows(value: Map<String, Any?>, propertyOrder: Map<String, List<St
   return rows
 }
 
-private fun classList(names: List<String?>): String = names.filter { !it.isNullOrEmpty() }.joinToString(" ")
+private fun classList(names: List<String?>): String =
+  names.filter { !it.isNullOrEmpty() }.joinToString(" ")
 
 private fun markers(relationship: Relationship): List<String> {
   if (relationship.type == "generalization") return listOf("none", "extension")
@@ -166,14 +178,15 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
         shape = ACTOR_SHAPES.getValue(actor.type),
         isGroup = false,
         padding = 10.0,
-        cssClasses = classList(
-          listOf<String?>(
-            "default",
-            "usecase-actor",
-            "usecase-actor-${actor.type}",
-            if (actor.business) "usecase-business" else null,
-          ) + actor.classes,
-        ),
+        cssClasses =
+          classList(
+            listOf<String?>(
+              "default",
+              "usecase-actor",
+              "usecase-actor-${actor.type}",
+              if (actor.business) "usecase-business" else null,
+            ) + actor.classes
+          ),
         cssStyles = actor.styles.toList(),
         cssCompiledStyles = compiled(actor.classes),
         actorType = actor.type,
@@ -181,7 +194,7 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
         icon = if (actor.icon.isNullOrEmpty()) null else actor.icon,
         stereotype = if (actor.stereotype.isNullOrEmpty()) null else actor.stereotype,
         parentId = if (actor.parentId.isNullOrEmpty()) null else actor.parentId,
-      ),
+      )
     )
   }
   for (useCase in model.useCases.values) {
@@ -191,23 +204,25 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
         id = useCase.id,
         label = useCase.label,
         labelType = useCase.labelType,
-        shape = if (!ellipse) "rect" else if (useCase.business) "usecaseBusiness" else "usecaseEllipse",
+        shape =
+          if (!ellipse) "rect" else if (useCase.business) "usecaseBusiness" else "usecaseEllipse",
         isGroup = false,
         padding = if (ellipse) 20.0 else 10.0,
-        cssClasses = classList(
-          listOf<String?>(
-            "default",
-            "usecase-element",
-            "usecase-${useCase.shape}",
-            if (useCase.business) "usecase-business" else null,
-          ) + useCase.classes,
-        ),
+        cssClasses =
+          classList(
+            listOf<String?>(
+              "default",
+              "usecase-element",
+              "usecase-${useCase.shape}",
+              if (useCase.business) "usecase-business" else null,
+            ) + useCase.classes
+          ),
         cssStyles = useCase.styles.toList(),
         cssCompiledStyles = compiled(useCase.classes),
         business = useCase.business,
         stereotype = if (useCase.stereotype.isNullOrEmpty()) null else useCase.stereotype,
         parentId = if (useCase.parentId.isNullOrEmpty()) null else useCase.parentId,
-      ),
+      )
     )
   }
   for (note in model.notes.values) {
@@ -223,7 +238,7 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
         cssStyles = listOf(),
         cssCompiledStyles = compiled(listOf()),
         noteTarget = note.target,
-      ),
+      )
     )
   }
   for (json in model.jsonNodes.values) {
@@ -239,7 +254,7 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
         cssStyles = json.styles.toList(),
         cssCompiledStyles = compiled(json.classes),
         jsonRows = flattenJsonRows(json),
-      ),
+      )
     )
   }
   for (boundary in model.systemBoundaries.values) {
@@ -251,11 +266,15 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
         shape = "usecaseSystemBoundary",
         isGroup = true,
         padding = 20.0,
-        cssClasses = classList(listOf<String?>("default", "system-boundary", "system-boundary-${boundary.type}") + boundary.classes),
+        cssClasses =
+          classList(
+            listOf<String?>("default", "system-boundary", "system-boundary-${boundary.type}") +
+              boundary.classes
+          ),
         cssStyles = boundary.styles.toList(),
         cssCompiledStyles = compiled(boundary.classes),
         boundaryType = boundary.type,
-      ),
+      )
     )
   }
 
@@ -263,29 +282,33 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
     val semantic = relationship.type == "include" || relationship.type == "extend"
     val (arrowTypeStart, arrowTypeEnd) = markers(relationship)
     val animated = relationship.animate || relationship.animation != null
-    val edge = UsecaseGraphEdge(
-      id = relationship.id,
-      start = relationship.source,
-      end = relationship.target,
-      relationshipType = relationship.type,
-      pattern = if (semantic) "dotted" else "solid",
-      arrowTypeStart = arrowTypeStart,
-      arrowTypeEnd = arrowTypeEnd,
-      classes = classList(
-        listOf<String?>(
-          "default",
-          "relationship",
-          "relationship-${relationship.type}",
-        ) + relationship.classes + listOf(if (animated) "edge-animation-${relationship.animation ?: "fast"}" else null),
-      ),
-      style = relationship.styles.toList(),
-      cssCompiledStyles = compiled(relationship.classes),
-      animate = relationship.animate,
-      animation = relationship.animation,
-      minlen = relationship.minlen,
-      explicitId = relationship.explicitId,
-      internal = false,
-    )
+    val edge =
+      UsecaseGraphEdge(
+        id = relationship.id,
+        start = relationship.source,
+        end = relationship.target,
+        relationshipType = relationship.type,
+        pattern = if (semantic) "dotted" else "solid",
+        arrowTypeStart = arrowTypeStart,
+        arrowTypeEnd = arrowTypeEnd,
+        classes =
+          classList(
+            listOf<String?>(
+              "default",
+              "relationship",
+              "relationship-${relationship.type}",
+            ) +
+              relationship.classes +
+              listOf(if (animated) "edge-animation-${relationship.animation ?: "fast"}" else null)
+          ),
+        style = relationship.styles.toList(),
+        cssCompiledStyles = compiled(relationship.classes),
+        animate = relationship.animate,
+        animation = relationship.animation,
+        minlen = relationship.minlen,
+        explicitId = relationship.explicitId,
+        internal = false,
+      )
     // Include and extend are labelled with their kind, whatever label the relationship carries.
     if (semantic) {
       edge.label = relationship.type
@@ -313,7 +336,7 @@ fun buildUsecaseGraph(model: UsecaseModel): UsecaseGraph {
         minlen = 1,
         explicitId = false,
         internal = true,
-      ),
+      )
     )
   }
   return UsecaseGraph(nodes, edges)

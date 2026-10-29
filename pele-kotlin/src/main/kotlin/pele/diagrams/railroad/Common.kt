@@ -21,7 +21,8 @@ import pele.js.jsSlice
 
 // What the four railroad grammars share: the title and accessibility tokens (which, unlike
 // the ones in Mermaid's common grammar, do not take leading blanks), the hidden tokens, the
-// statements before the first rule, string values, and the walk from a syntax tree to the rule model.
+// statements before the first rule, string values, and the walk from a syntax tree to the rule
+// model.
 
 private val RE_SPACE = JsRegExp("""\s""")
 
@@ -72,19 +73,22 @@ fun title(rest: String): TokenType =
     first = "t",
   )
 
-val ACC_TITLE = TokenType(
-  name = "ACC_TITLE",
-  pattern = JsRegExp("""accTitle[\t ]*:(?:[^\n\r]*?(?=%%)|[^\n\r]*)""", "y"),
-  first = "a",
-)
-val ACC_DESCR = TokenType(
-  name = "ACC_DESCR",
-  pattern = JsRegExp("""accDescr(?:[\t ]*:([^\n\r]*?(?=%%)|[^\n\r]*)|\s*{([^}]*)})""", "y"),
-  first = "a",
-  scanner = ::accDescrScanner,
-)
+val ACC_TITLE =
+  TokenType(
+    name = "ACC_TITLE",
+    pattern = JsRegExp("""accTitle[\t ]*:(?:[^\n\r]*?(?=%%)|[^\n\r]*)""", "y"),
+    first = "a",
+  )
+val ACC_DESCR =
+  TokenType(
+    name = "ACC_DESCR",
+    pattern = JsRegExp("""accDescr(?:[\t ]*:([^\n\r]*?(?=%%)|[^\n\r]*)|\s*{([^}]*)})""", "y"),
+    first = "a",
+    scanner = ::accDescrScanner,
+  )
 
-fun literal(name: String, longer: List<TokenType>? = null): TokenType = TokenType(name = name, pattern = name, longer = longer)
+fun literal(name: String, longer: List<TokenType>? = null): TokenType =
+  TokenType(name = name, pattern = name, longer = longer)
 
 // The diagram's keyword. A name that starts with it and goes on is a name.
 fun opening(word: String, name: TokenType): TokenType = keyword(word).copy(longer = listOf(name))
@@ -93,18 +97,30 @@ fun identifier(name: String): TokenType =
   TokenType(name = name, pattern = JsRegExp("""[A-Z_a-z][\w-]*""", "y"), first = LETTERS + "_")
 
 fun quoted(name: String): TokenType =
-  TokenType(name = name, pattern = JsRegExp("""\"([^"\\]|\\.)*"|'([^'\\]|\\.)*'""", "y"), first = "\"'", match = ::quotedEnd)
+  TokenType(
+    name = name,
+    pattern = JsRegExp("""\"([^"\\]|\\.)*"|'([^'\\]|\\.)*'""", "y"),
+    first = "\"'",
+    match = ::quotedEnd,
+  )
 
-// Whitespace, front matter, directive, and `%%` comment, in the order every railroad grammar lists them.
+// Whitespace, front matter, directive, and `%%` comment, in the order every railroad grammar lists
+// them.
 fun hiddenTokens(prefix: String): List<TokenType> =
   listOf(
-    TokenType(name = prefix + "_WHITESPACE", pattern = JsRegExp("""[\t \r\n]+""", "y"), hidden = true, first = "\t \r\n"),
+    TokenType(
+      name = prefix + "_WHITESPACE",
+      pattern = JsRegExp("""[\t \r\n]+""", "y"),
+      hidden = true,
+      first = "\t \r\n",
+    ),
     YAML.copy(name = prefix + "_YAML", first = "-"),
     DIRECTIVE.copy(name = prefix + "_DIRECTIVE", first = "\t %"),
     SINGLE_LINE_COMMENT.copy(name = prefix + "_SINGLE_LINE_COMMENT", first = "\t %"),
   )
 
-// Mermaid's railroad value converters know three escapes; any other escaped character stands for itself.
+// Mermaid's railroad value converters know three escapes; any other escaped character stands for
+// itself.
 fun unescape(text: String): String {
   if (!text.contains('\\')) return text.jsSlice(1, -1)
   val end = text.length - 1
@@ -114,7 +130,9 @@ fun unescape(text: String): String {
     var c = text[i]
     if (c == '\\' && i + 1 < end) {
       c = text[++i]
-      out.append(if (c == 'n') "\n" else if (c == 'r') "\r" else if (c == 't') "\t" else c.toString())
+      out.append(
+        if (c == 'n') "\n" else if (c == 'r') "\r" else if (c == 't') "\t" else c.toString()
+      )
     } else {
       out.append(c)
     }
@@ -131,7 +149,8 @@ class Grammar<Rule>(
   val rules: MutableList<Rule> = ArrayList(),
 )
 
-// Parses the keyword, then any titles and accessibility statements, then rules to the end of the text.
+// Parses the keyword, then any titles and accessibility statements, then rules to the end of the
+// text.
 // Every table starts with its keyword and has TITLE, ACC_TITLE, and ACC_DESCR in a row from `meta`.
 fun <Rule> parseGrammar(
   src: String,
@@ -149,7 +168,8 @@ fun <Rule> parseGrammar(
     if (kind == meta) {
       val title = titleValue(r.take())
       val quote = title.firstOrNull()
-      ast.title = if ((quote == '"' || quote == '\'') && title.endsWith(quote)) unquote(title) else title
+      ast.title =
+        if ((quote == '"' || quote == '\'') && title.endsWith(quote)) unquote(title) else title
     } else if (kind == meta + 1) {
       ast.accTitle = accTitleValue(r.take())
     } else if (kind == meta + 2) {
@@ -166,17 +186,31 @@ val NONE: List<Nothing> = emptyList()
 
 // The fields that hold a node's parts, in any of the four syntax trees and in the rule model.
 interface Parent {
-  val alternatives: List<Parent>? get() = null
-  val elements: List<Parent>? get() = null
-  val element: Parent? get() = null
-  val primary: Parent? get() = null
-  val suffix: Parent? get() = null
-  val base: Parent? get() = null
-  val postfixes: List<Postfix>? get() = null
+  val alternatives: List<Parent>?
+    get() = null
+
+  val elements: List<Parent>?
+    get() = null
+
+  val element: Parent?
+    get() = null
+
+  val primary: Parent?
+    get() = null
+
+  val suffix: Parent?
+    get() = null
+
+  val base: Parent?
+    get() = null
+
+  val postfixes: List<Postfix>?
+    get() = null
 }
 
 interface Postfix {
-  val except: Parent? get() = null
+  val except: Parent?
+    get() = null
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -200,11 +234,15 @@ fun special(text: String): RailroadNode = RailroadNode.Special(text)
 
 fun optional(element: RailroadNode): RailroadNode = RailroadNode.Optional(element)
 
-fun repetition(element: RailroadNode, min: Double, max: Double = Double.POSITIVE_INFINITY): RailroadNode =
-  RailroadNode.Repetition(element, min, max)
+fun repetition(
+  element: RailroadNode,
+  min: Double,
+  max: Double = Double.POSITIVE_INFINITY,
+): RailroadNode = RailroadNode.Repetition(element, min, max)
 
 // A sequence or a choice of one is that one, in every notation.
-fun sequence(elements: List<RailroadNode>): RailroadNode = if (elements.size == 1) elements[0] else RailroadNode.Sequence(elements)
+fun sequence(elements: List<RailroadNode>): RailroadNode =
+  if (elements.size == 1) elements[0] else RailroadNode.Sequence(elements)
 
 fun choice(alternatives: List<RailroadNode>): RailroadNode =
   if (alternatives.size == 1) alternatives[0] else RailroadNode.Choice(alternatives)
@@ -215,11 +253,19 @@ interface Rule {
 }
 
 // Turns each rule's syntax tree into the common model, given how one node is built from its parts.
-fun <R : Rule> toRules(ast: Grammar<R>, build: (part: Parent, kids: List<RailroadNode>) -> RailroadNode): List<RailroadRule> =
+fun <R : Rule> toRules(
+  ast: Grammar<R>,
+  build: (part: Parent, kids: List<RailroadNode>) -> RailroadNode,
+): List<RailroadRule> =
   ast.rules.map { rule -> RailroadRule(rule.name, fold(rule.definition, { n -> parts(n) }, build)) }
 
-// Rebuilds a tree bottom-up without recursion, so that nesting depth is bounded by memory, not by the stack.
-fun <T, R> fold(root: T, children: (node: T) -> List<T>, build: (node: T, results: List<R>) -> R): R {
+// Rebuilds a tree bottom-up without recursion, so that nesting depth is bounded by memory, not by
+// the stack.
+fun <T, R> fold(
+  root: T,
+  children: (node: T) -> List<T>,
+  build: (node: T, results: List<R>) -> R,
+): R {
   val nodes = arrayListOf(root)
   val lists = arrayListOf(children(root))
   val done = arrayListOf<MutableList<R>>(ArrayList())

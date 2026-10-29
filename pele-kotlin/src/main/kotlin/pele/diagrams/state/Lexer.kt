@@ -41,7 +41,8 @@ private object S {
 }
 
 private val RE_DIRECTION = JsRegExp("direction", "gi")
-private val RE_STEREOTYPE = JsRegExp("""<<(?:fork|join|choice)>>|\[\[(?:fork|join|choice)\]\]""", "gi")
+private val RE_STEREOTYPE =
+  JsRegExp("""<<(?:fork|join|choice)>>|\[\[(?:fork|join|choice)\]\]""", "gi")
 private val RE_LINE_END = JsRegExp("""[\n\r  ]""", "g")
 private val RE_PERCENT = JsRegExp("%%", "g")
 private val RE_BRACE = JsRegExp("""\{""", "g")
@@ -152,7 +153,9 @@ fun tokenize(src: String): Tokens {
       while (d != -1 && d < end) {
         val w = wsEnd(d + 9)
         if (w != d + 9) {
-          val kind = if (word("tb", w)) 0 else if (word("bt", w)) 1 else if (word("rl", w)) 2 else if (word("lr", w)) 3 else -1
+          val kind =
+            if (word("tb", w)) 0
+            else if (word("bt", w)) 1 else if (word("rl", w)) 2 else if (word("lr", w)) 3 else -1
           if (kind != -1) {
             dirAt[kind] = d
             dirEnd[kind] = w + 2
@@ -175,7 +178,9 @@ fun tokenize(src: String): Tokens {
       var d = first
       while (d != -1 && d < end) {
         val letter = src.charCodeAt(d + 2) or 32
-        stereoAt[(if (src.charCodeAt(d) == 60) 0 else 3) + (if (letter == 102) 0 else if (letter == 106) 1 else 2)] = d
+        stereoAt[
+          (if (src.charCodeAt(d) == 60) 0 else 3) +
+            (if (letter == 102) 0 else if (letter == 106) 1 else 2)] = d
         d = nextStereotype.at(d + 1)
       }
     }
@@ -183,7 +188,8 @@ fun tokenize(src: String): Tokens {
     return -1
   }
 
-  // The grammar's processId(): an id ends at an inline `%%`, and a text that starts with one is dropped.
+  // The grammar's processId(): an id ends at an inline `%%`, and a text that starts with one is
+  // dropped.
   fun emitId(s: Int, e: Int): Boolean {
     val at = nextPercent.at(s)
     if (at == -1 || at + 2 > e) {
@@ -218,14 +224,16 @@ fun tokenize(src: String): Tokens {
         S.STYLEDEF_STYLES -> emit(T.STYLEDEF_STYLEOPTS, n, n)
         S.STATE_STRING -> emit(T.STATE_DESCR, n, n)
         S.FLOATING_NOTE -> emit(T.NOTE_TEXT, n, n)
-        S.STATE_ID, S.FLOATING_NOTE_ID -> emit(T.ID, n, n)
+        S.STATE_ID,
+        S.FLOATING_NOTE_ID -> emit(T.ID, n, n)
       }
       return finish(T.END)
     }
 
     val c = src.charCodeAt(p)
     when (state) {
-      S.INITIAL, S.struct -> {
+      S.INITIAL,
+      S.struct -> {
         val root = state == S.INITIAL
         val lc = c or 32
         if (root) {
@@ -364,7 +372,9 @@ fun tokenize(src: String): Tokens {
             continue
           }
         }
-        if (root && lc == 104 && word("hide empty description", p) && !isWord(src.charCodeAt(p + 22))) {
+        if (
+          root && lc == 104 && word("hide empty description", p) && !isWord(src.charCodeAt(p + 22))
+        ) {
           emit(T.HIDE_EMPTY, p, p + 22)
           continue
         }
@@ -472,7 +482,8 @@ fun tokenize(src: String): Tokens {
           if (second > first && isWord(src.charCodeAt(second))) {
             val brace = nextBrace.at(second + 1)
             if (brace != -1 && brace < lineEnd(second)) {
-              error = "Error: State name must be a single word. Found: \"${src.jsSlice(p, brace + 1).jsTrim()}\""
+              error =
+                "Error: State name must be a single word. Found: \"${src.jsSlice(p, brace + 1).jsTrim()}\""
               return finish(T.ERROR)
             }
           }

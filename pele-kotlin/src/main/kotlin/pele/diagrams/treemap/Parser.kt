@@ -37,23 +37,27 @@ private object T {
 // Mermaid's treemap grammar has its own terminals. Every run of spaces or tabs is an INDENTATION
 // token, since that comes before WS, and line breaks are hidden, so rows are told apart by their
 // tokens alone and the indentation of a row is whatever whitespace precedes it.
-val TREEMAP_TOKENS: List<TokenType> = listOf(
-  ACC_DESCR,
-  ACC_TITLE,
-  titleBefore("""\w"""),
-  TokenType(name = "TREEMAP_KEYWORD", pattern = JsRegExp("""treemap-beta|treemap""", "y")),
-  TokenType(name = "CLASS_DEF", pattern = JsRegExp("""classDef\s+([a-zA-Z_][a-zA-Z0-9_]+)(?:\s+([^;\r\n]*))?(?:;)?""", "y")),
-  TokenType(name = "STYLE_SEPARATOR", pattern = JsRegExp(""":::""", "y")),
-  TokenType(name = "SEPARATOR", pattern = JsRegExp(""":""", "y")),
-  TokenType(name = "COMMA", pattern = JsRegExp(""",""", "y")),
-  TokenType(name = "INDENTATION", pattern = JsRegExp("""[ \t]{1,}""", "y")),
-  TokenType(name = "WS", pattern = JsRegExp("""[ \t]+""", "y"), hidden = true),
-  TokenType(name = "ML_COMMENT", pattern = JsRegExp("""\%\%[^\n]*""", "y"), hidden = true),
-  TokenType(name = "NL", pattern = JsRegExp("""\r?\n""", "y"), hidden = true),
-  TokenType(name = "ID2", pattern = JsRegExp("""[a-zA-Z_][a-zA-Z0-9_]*""", "y")),
-  TokenType(name = "NUMBER2", pattern = JsRegExp("""[0-9_\.\,]+""", "y")),
-  TokenType(name = "STRING2", pattern = JsRegExp(""""[^"]*"|'[^']*'""", "y")),
-)
+val TREEMAP_TOKENS: List<TokenType> =
+  listOf(
+    ACC_DESCR,
+    ACC_TITLE,
+    titleBefore("""\w"""),
+    TokenType(name = "TREEMAP_KEYWORD", pattern = JsRegExp("""treemap-beta|treemap""", "y")),
+    TokenType(
+      name = "CLASS_DEF",
+      pattern = JsRegExp("""classDef\s+([a-zA-Z_][a-zA-Z0-9_]+)(?:\s+([^;\r\n]*))?(?:;)?""", "y"),
+    ),
+    TokenType(name = "STYLE_SEPARATOR", pattern = JsRegExp(""":::""", "y")),
+    TokenType(name = "SEPARATOR", pattern = JsRegExp(""":""", "y")),
+    TokenType(name = "COMMA", pattern = JsRegExp(""",""", "y")),
+    TokenType(name = "INDENTATION", pattern = JsRegExp("""[ \t]{1,}""", "y")),
+    TokenType(name = "WS", pattern = JsRegExp("""[ \t]+""", "y"), hidden = true),
+    TokenType(name = "ML_COMMENT", pattern = JsRegExp("""\%\%[^\n]*""", "y"), hidden = true),
+    TokenType(name = "NL", pattern = JsRegExp("""\r?\n""", "y"), hidden = true),
+    TokenType(name = "ID2", pattern = JsRegExp("""[a-zA-Z_][a-zA-Z0-9_]*""", "y")),
+    TokenType(name = "NUMBER2", pattern = JsRegExp("""[0-9_\.\,]+""", "y")),
+    TokenType(name = "STRING2", pattern = JsRegExp(""""[^"]*"|'[^']*'""", "y")),
+  )
 
 private val RE_CLASS_DEF = JsRegExp("""classDef\s+([A-Z_a-z]\w+)(?:\s+([^\n\r;]*))?;?""")
 private val RE_COMMAS = JsRegExp(""",""", "g")
@@ -116,7 +120,8 @@ fun parseTreemap(src: String): TreemapAst {
       ast.title = titleValue(r.take())
       continue
     }
-    if (kind != T.indentation && kind != T.string && kind != T.classDef) r.fail("a node, a class definition, or a title")
+    if (kind != T.indentation && kind != T.string && kind != T.classDef)
+      r.fail("a node, a class definition, or a title")
 
     val indent: Double? = if (kind == T.indentation) r.take().length.toDouble() else null
     if (r.kind == T.classDef) {

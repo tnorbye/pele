@@ -196,7 +196,8 @@ fun tokenize(src: String): Tokens {
   fun dash() {
     val d = src.charCodeAt(p + 1)
     val e = src.charCodeAt(p + 2)
-    if (d == 62) emit(if (e == 62) T.SOLID_ARROW else T.SOLID_OPEN_ARROW, p, p + (if (e == 62) 3 else 2))
+    if (d == 62)
+      emit(if (e == 62) T.SOLID_ARROW else T.SOLID_OPEN_ARROW, p, p + (if (e == 62) 3 else 2))
     else if (d == 120 || d == 88) emit(T.SOLID_CROSS, p, p + 2)
     else if (d == 41) emit(T.SOLID_POINT, p, p + 2)
     else if (d == 124 && e == 92) emit(T.SOLID_ARROW_TOP, p, p + 3)
@@ -205,7 +206,8 @@ fun tokenize(src: String): Tokens {
     else if (d == 47 && e == 47) emit(T.STICK_ARROW_BOTTOM, p, p + 3)
     else if (d == 45) {
       val f = src.charCodeAt(p + 3)
-      if (e == 62) emit(if (f == 62) T.DOTTED_ARROW else T.DOTTED_OPEN_ARROW, p, p + (if (f == 62) 4 else 3))
+      if (e == 62)
+        emit(if (f == 62) T.DOTTED_ARROW else T.DOTTED_OPEN_ARROW, p, p + (if (f == 62) 4 else 3))
       else if (e == 120 || e == 88) emit(T.DOTTED_CROSS, p, p + 3)
       else if (e == 41) emit(T.DOTTED_POINT, p, p + 3)
       else if (e == 124 && f == 92) emit(T.SOLID_ARROW_TOP_DOTTED, p, p + 4)
@@ -223,9 +225,12 @@ fun tokenize(src: String): Tokens {
     val top = c == 47
     val type: Int
     if (d == 124) {
-      type = if (dotted) (if (top) T.SOLID_ARROW_TOP_REVERSE_DOTTED else T.SOLID_ARROW_BOTTOM_REVERSE_DOTTED)
-      else (if (top) T.SOLID_ARROW_TOP_REVERSE else T.SOLID_ARROW_BOTTOM_REVERSE)
-    } else if (dotted) type = if (top) T.STICK_ARROW_TOP_REVERSE_DOTTED else T.STICK_ARROW_BOTTOM_REVERSE_DOTTED
+      type =
+        if (dotted)
+          (if (top) T.SOLID_ARROW_TOP_REVERSE_DOTTED else T.SOLID_ARROW_BOTTOM_REVERSE_DOTTED)
+        else (if (top) T.SOLID_ARROW_TOP_REVERSE else T.SOLID_ARROW_BOTTOM_REVERSE)
+    } else if (dotted)
+      type = if (top) T.STICK_ARROW_TOP_REVERSE_DOTTED else T.STICK_ARROW_BOTTOM_REVERSE_DOTTED
     else type = if (top) T.STICK_ARROW_TOP_REVERSE else T.STICK_ARROW_BOTTOM_REVERSE
     emit(type, p, p + (if (dotted) 4 else 3))
     return true
@@ -278,13 +283,21 @@ fun tokenize(src: String): Tokens {
       98 -> keyword("box", T.box, S.LINE) || keyword("break", T.`break`, S.LINE)
       99 -> keyword("create", T.create) || keyword("critical", T.critical, S.LINE)
       100 ->
-        keyword("destroy", T.destroy, S.ID) || menu("details", T.details) || keyword("deactivate", T.deactivate, S.ID)
+        keyword("destroy", T.destroy, S.ID) ||
+          menu("details", T.details) ||
+          keyword("deactivate", T.deactivate, S.ID)
       101 -> keyword("else", T.`else`, S.LINE) || keyword("end", T.end)
       108 ->
-        keyword("loop", T.loop, S.LINE) || keyword("left of", T.left_of) || menu("links", T.links) || menu("link", T.link)
+        keyword("loop", T.loop, S.LINE) ||
+          keyword("left of", T.left_of) ||
+          menu("links", T.links) ||
+          menu("link", T.link)
       110 -> keyword("note", T.note)
       111 ->
-        keyword("opt", T.opt, S.LINE) || keyword("option", T.option, S.LINE) || keyword("over", T.over) || keyword("off", T.off)
+        keyword("opt", T.opt, S.LINE) ||
+          keyword("option", T.option, S.LINE) ||
+          keyword("over", T.over) ||
+          keyword("off", T.off)
       112 ->
         keyword("participant", T.participant, S.ID) ||
           keyword("par", T.par, S.LINE) ||
@@ -358,7 +371,8 @@ fun tokenize(src: String): Tokens {
     while (b < n && has(b, C.IdWide)) b++
     if (b > p) {
       val end = src.charCodeAt(b)
-      // Before any other delimiter the name must be followed by a comment, so it ends at the last one.
+      // Before any other delimiter the name must be followed by a comment, so it ends at the last
+      // one.
       var cut = b
       if (b < n && end != 10 && end != 59) {
         cut--
@@ -427,7 +441,8 @@ fun tokenize(src: String): Tokens {
           return true
         }
       }
-      S.acc_title, S.acc_descr -> {
+      S.acc_title,
+      S.acc_descr -> {
         emit(if (state == S.acc_title) T.acc_title_value else T.acc_descr_value, p, eol(p))
         pop()
         return true

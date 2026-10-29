@@ -2,6 +2,8 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.diagrams.treeview
 
+import java.util.IdentityHashMap
+import kotlin.math.ceil
 import pele.Config
 import pele.RenderOptions
 import pele.Rendered
@@ -25,8 +27,6 @@ import pele.text.Style
 import pele.text.decodeEntities
 import pele.text.defaultMeasurer
 import pele.text.layoutLabel
-import java.util.IdentityHashMap
-import kotlin.math.ceil
 
 private const val ICON_GAP = 6.0
 private const val DESC_GAP = 16.0
@@ -36,12 +36,23 @@ private const val HIGHLIGHT_OVERHANG = 4.0
 
 private val RE_SPACES = JsRegExp("""\s+""")
 
-private fun setting(config: Config, key: String, fallback: Double, min: Double, max: Double): Double {
+private fun setting(
+  config: Config,
+  key: String,
+  fallback: Double,
+  min: Double,
+  max: Double,
+): Double {
   val value = (config["treeView"] as? Map<*, *>)?.get(key)
   return if (value is Double && value >= min && value <= max) value else fallback
 }
 
-class TreeSettings(val paddingX: Double, val paddingY: Double, val rowIndent: Double, val lineThickness: Double)
+class TreeSettings(
+  val paddingX: Double,
+  val paddingY: Double,
+  val rowIndent: Double,
+  val lineThickness: Double,
+)
 
 // Mermaid's layout options, with Pele's defaults.
 fun treeSettings(config: Config): TreeSettings =
@@ -71,7 +82,12 @@ fun renderTreeView(model: TreeViewModel, config: Config, options: RenderOptions)
 
 private class Pending(val node: TreeNode, val depth: Int, val slot: Boolean)
 
-private fun draw(model: TreeViewModel, config: Config, options: RenderOptions, tight: Boolean): Rendered {
+private fun draw(
+  model: TreeViewModel,
+  config: Config,
+  options: RenderOptions,
+  tight: Boolean,
+): Rendered {
   val size = options.fontSize ?: 16.0
   val measurer = options.measurer ?: defaultMeasurer(options.fontFamily, options.fontFamilyMono)
   val pad = options.padding ?: 8.0
@@ -94,11 +110,25 @@ private fun draw(model: TreeViewModel, config: Config, options: RenderOptions, t
     for (child in node.children) depths.add(Pair(child, depth + 1))
     d++
   }
-  val step = if (tight) minOf(rowIndent + paddingX, maxOf(2.0, ((options.maxWidth ?: 320.0) - 120) / maxOf(1, maxDepth))) else rowIndent + paddingX
+  val step =
+    if (tight)
+      minOf(
+        rowIndent + paddingX,
+        maxOf(2.0, ((options.maxWidth ?: 320.0) - 120) / maxOf(1, maxDepth)),
+      )
+    else rowIndent + paddingX
   val rowHeight = jsRound(size * 1.5) + 2 * paddingY
   val iconSize = size
 
-  val title = layoutLabel(model.title, false, measurer, size, if (tight) titleRoom(options) else 4000.0, Style.Bold)
+  val title =
+    layoutLabel(
+      model.title,
+      false,
+      measurer,
+      size,
+      if (tight) titleRoom(options) else 4000.0,
+      Style.Bold,
+    )
   val titleHeight = if (title.height > 0) title.height + 12 else 0.0
 
   // Siblings line up: when one entry of a folder has an icon, the others leave room for one.
@@ -115,22 +145,44 @@ private fun draw(model: TreeViewModel, config: Config, options: RenderOptions, t
   var anyHighlight = false
   var rowsHeight = 0.0
   while (pending.size > 0) {
-    val (node, depth, slot) = pending.removeAt(pending.size - 1).let { Triple(it.node, it.depth, it.slot) }
+    val (node, depth, slot) =
+      pending.removeAt(pending.size - 1).let { Triple(it.node, it.depth, it.slot) }
     val x = depth * step
     val text = decodeEntities(node.name)
     val labelX = x + (if (slot) iconSize + ICON_GAP else 0.0)
     val room = maxOf(40.0, (options.maxWidth ?: 320.0) - 2 * pad - 2 * HIGHLIGHT_OVERHANG - labelX)
-    val style = (if (node.nodeType == "directory") Style.Bold else 0) or (if (mono) Style.Mono else 0)
+    val style =
+      (if (node.nodeType == "directory") Style.Bold else 0) or (if (mono) Style.Mono else 0)
     val label = if (tight) literalLabel(text, measurer, size, room, style) else null
     val description =
-      if (tight && !node.description.isNullOrEmpty()) literalLabel(decodeEntities(node.description), measurer, size, room, Style.Italic) else null
+      if (tight && !node.description.isNullOrEmpty())
+        literalLabel(decodeEntities(node.description), measurer, size, room, Style.Italic)
+      else null
     val width = if (label != null) label.width else measurer.width(text, size, style)
     if (labelX + width > labelRight) labelRight = labelX + width
-    val highlighted = node.cssClass != null && node.cssClass.jsSplitStrings(RE_SPACES).contains("highlight")
+    val highlighted =
+      node.cssClass != null && node.cssClass.jsSplitStrings(RE_SPACES).contains("highlight")
     if (highlighted) anyHighlight = true
-    val height = if (tight) maxOf(rowHeight, (label?.height ?: 0.0) + (description?.height ?: 0.0) + 2 * paddingY) else rowHeight
-    val cy = rowsHeight + (if (tight) paddingY + maxOf(iconSize, label?.height ?: 0.0) / 2 else height / 2)
-    val row = Row(node, x, cy, getNodeIcon(node, icons), text, labelX, highlighted, label, description, rowsHeight, height)
+    val height =
+      if (tight)
+        maxOf(rowHeight, (label?.height ?: 0.0) + (description?.height ?: 0.0) + 2 * paddingY)
+      else rowHeight
+    val cy =
+      rowsHeight + (if (tight) paddingY + maxOf(iconSize, label?.height ?: 0.0) / 2 else height / 2)
+    val row =
+      Row(
+        node,
+        x,
+        cy,
+        getNodeIcon(node, icons),
+        text,
+        labelX,
+        highlighted,
+        label,
+        description,
+        rowsHeight,
+        height,
+      )
     rowsHeight += height
     rows.add(row)
     rowOf[node] = row
@@ -142,7 +194,9 @@ private fun draw(model: TreeViewModel, config: Config, options: RenderOptions, t
   for (row in rows) {
     val description = row.node.description
     if (description.isNullOrEmpty()) continue
-    val w = if (row.description != null) row.description.width else measurer.width(decodeEntities(description), size, Style.Italic)
+    val w =
+      if (row.description != null) row.description.width
+      else measurer.width(decodeEntities(description), size, Style.Italic)
     width = maxOf(width, (if (tight) row.labelX else descX) + w)
   }
   width = maxOf(width, title.width)
@@ -178,42 +232,71 @@ private fun draw(model: TreeViewModel, config: Config, options: RenderOptions, t
     var inner = ""
     if (row.highlighted) {
       val x = inset + row.x - HIGHLIGHT_OVERHANG
-      inner += "<rect class=\"pele-tree-highlight\" x=\"${num(x)}\" y=\"${num(top + row.top + 1)}\" width=\"${num(
-        totalWidth - inset + HIGHLIGHT_OVERHANG - x,
+      inner +=
+        "<rect class=\"pele-tree-highlight\" x=\"${num(x)}\" y=\"${num(top + row.top + 1)}\" width=\"${num(
+        totalWidth - inset + HIGHLIGHT_OVERHANG - x
       )}\" height=\"${num(row.height - 2)}\" fill=\"var(--_c)\" fill-opacity=\"0.14\"$ROUNDED/>"
     }
     if (row.icon != null) {
-      val name = if (row.icon.startsWith("$BUILTIN_PACK:")) row.icon.substring(BUILTIN_PACK.length + 1) else ""
+      val name =
+        if (row.icon.startsWith("$BUILTIN_PACK:")) row.icon.substring(BUILTIN_PACK.length + 1)
+        else ""
       val glyph = GLYPHS[name] ?: GLYPHS[if (directory) "folder" else "file"]!!
-      val drawn = options.icons?.invoke(row.icon) ?: "<path d=\"$glyph\" stroke=\"var(--_m)\" stroke-width=\"1.5\"/>"
-      inner += "<svg class=\"pele-icon\" data-icon=\"${escText(row.icon)}\" x=\"${num(inset + row.x)}\" y=\"${num(
-        cy - iconSize / 2,
+      val drawn =
+        options.icons?.invoke(row.icon)
+          ?: "<path d=\"$glyph\" stroke=\"var(--_m)\" stroke-width=\"1.5\"/>"
+      inner +=
+        "<svg class=\"pele-icon\" data-icon=\"${escText(row.icon)}\" x=\"${num(inset + row.x)}\" y=\"${num(
+        cy - iconSize / 2
       )}\" width=\"${num(iconSize)}\" height=\"${num(
-        iconSize,
+        iconSize
       )}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">$drawn</svg>"
     }
     if (row.label != null) {
-      inner += leftLabelSvg(row.label, inset + row.labelX, top + row.top + paddingY, " class=\"pele-label\"${if (directory) " font-weight=\"var(--_hw)\"" else ""}$family")
+      inner +=
+        leftLabelSvg(
+          row.label,
+          inset + row.labelX,
+          top + row.top + paddingY,
+          " class=\"pele-label\"${if (directory) " font-weight=\"var(--_hw)\"" else ""}$family",
+        )
     } else if (row.text != "") {
-      inner += "<text class=\"pele-label\" x=\"${num(inset + row.labelX)}\" y=\"${num(cy + baseline)}\"${
+      inner +=
+        "<text class=\"pele-label\" x=\"${num(inset + row.labelX)}\" y=\"${num(cy + baseline)}\"${
         if (directory) " font-weight=\"var(--_hw)\"" else ""
       }$family xml:space=\"preserve\">${esc(row.text)}</text>"
     }
     if (row.description != null) {
-      inner += leftLabelSvg(row.description, inset + row.labelX, top + row.top + paddingY + (row.label?.height ?: 0.0), " class=\"pele-tree-description\" font-style=\"italic\" fill=\"var(--_m)\"")
+      inner +=
+        leftLabelSvg(
+          row.description,
+          inset + row.labelX,
+          top + row.top + paddingY + (row.label?.height ?: 0.0),
+          " class=\"pele-tree-description\" font-style=\"italic\" fill=\"var(--_m)\"",
+        )
     } else if (!node.description.isNullOrEmpty()) {
-      inner += "<text class=\"pele-tree-description\" x=\"${num(inset + descX)}\" y=\"${num(
-        cy + baseline,
+      inner +=
+        "<text class=\"pele-tree-description\" x=\"${num(inset + descX)}\" y=\"${num(
+        cy + baseline
       )}\" font-style=\"italic\" fill=\"var(--_m)\" xml:space=\"preserve\">${esc(decodeEntities(node.description))}</text>"
     }
-    body.append("<g class=\"pele-node pele-tree-${if (directory) "dir" else "file"}${classNames(node.cssClass ?: "")}\" data-id=\"${escText(
-      node.name,
-    )}\">$inner</g>")
+    body.append(
+      "<g class=\"pele-node pele-tree-${if (directory) "dir" else "file"}${classNames(node.cssClass ?: "")}\" data-id=\"${escText(
+      node.name
+    )}\">$inner</g>"
+    )
   }
 
   val content =
-    labelSvg(title, totalWidth / 2, pad + title.height / 2, " class=\"pele-title\" font-weight=\"var(--_tw)\"") +
-      (if (guides.isNotEmpty()) "<g class=\"pele-tree-guides\" fill=\"none\" stroke=\"var(--_b)\" stroke-width=\"${num(lineThickness)}\">$guides</g>" else "") +
+    labelSvg(
+      title,
+      totalWidth / 2,
+      pad + title.height / 2,
+      " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) +
+      (if (guides.isNotEmpty())
+        "<g class=\"pele-tree-guides\" fill=\"none\" stroke=\"var(--_b)\" stroke-width=\"${num(lineThickness)}\">$guides</g>"
+      else "") +
       body
 
   return Rendered(

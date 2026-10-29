@@ -2,7 +2,6 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.text
 
-
 object Style {
   const val Bold = 1
   const val Italic = 2
@@ -68,9 +67,11 @@ val metricsMeasurer: TextMeasurer = TextMeasurer { text, size, style ->
   (units * eff) / 1000
 }
 
-// PORT: the canvas measurer is browser-only and not ported, so every font measures with the stateless
+// PORT: the canvas measurer is browser-only and not ported, so every font measures with the
+// stateless
 // metricsMeasurer and there is nothing to cache per font.
-fun defaultMeasurer(fontFamily: String? = null, monoFamily: String? = null): TextMeasurer = metricsMeasurer
+fun defaultMeasurer(fontFamily: String? = null, monoFamily: String? = null): TextMeasurer =
+  metricsMeasurer
 
 // Widths measured before a font finished loading are those of its fallback.
 // PORT: a no-op, as metricsMeasurer keeps no widths.

@@ -8,11 +8,18 @@ import pele.ParseLimits
 import pele.RenderOptions
 import pele.Rendered
 
-val pie: Diagram<PieModel> = object : Diagram<PieModel> {
-  override val type = "pie"
+val pie: Diagram<PieModel> =
+  object : Diagram<PieModel> {
+    override val type = "pie"
 
-  override fun parse(source: String, config: Config, title: String?, lineOffset: Int, limits: ParseLimits): PieModel =
-    buildPie(parsePie(source), title)
+    override fun parse(
+      source: String,
+      config: Config,
+      title: String?,
+      lineOffset: Int,
+      limits: ParseLimits,
+    ): PieModel = buildPie(parsePie(source), title)
 
-  override fun render(model: PieModel, config: Config, options: RenderOptions): Rendered = renderPie(model, config, options)
-}
+    override fun render(model: PieModel, config: Config, options: RenderOptions): Rendered =
+      renderPie(model, config, options)
+  }

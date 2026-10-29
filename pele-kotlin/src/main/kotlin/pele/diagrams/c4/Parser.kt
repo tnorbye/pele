@@ -8,39 +8,42 @@ import pele.js.jsTrim
 import pele.syntaxError
 
 // Mermaid's typeC4Shape for each shape keyword, indexed from T.PERSON.
-private val KINDS = listOf(
-  "person",
-  "external_person",
-  "system",
-  "system_db",
-  "system_queue",
-  "external_system",
-  "external_system_db",
-  "external_system_queue",
-  "container",
-  "container_db",
-  "container_queue",
-  "external_container",
-  "external_container_db",
-  "external_container_queue",
-  "component",
-  "component_db",
-  "component_queue",
-  "external_component",
-  "external_component_db",
-  "external_component_queue",
-)
+private val KINDS =
+  listOf(
+    "person",
+    "external_person",
+    "system",
+    "system_db",
+    "system_queue",
+    "external_system",
+    "external_system_db",
+    "external_system_queue",
+    "container",
+    "container_db",
+    "container_queue",
+    "external_container",
+    "external_container_db",
+    "external_container_queue",
+    "component",
+    "component_db",
+    "component_queue",
+    "external_component",
+    "external_component_db",
+    "external_component_queue",
+  )
 private val REL_TYPES = listOf("rel", "birel", "rel_u", "rel_d", "rel_l", "rel_r", "rel_b", "rel")
 private val NODE_TYPES = listOf("node", "nodeL", "nodeR")
 
-private const val HEADERS = "'direction_tb', 'direction_bt', 'direction_rl', 'direction_lr', 'C4_CONTEXT', 'C4_CONTAINER', 'C4_COMPONENT', 'C4_DYNAMIC', 'C4_DEPLOYMENT'"
+private const val HEADERS =
+  "'direction_tb', 'direction_bt', 'direction_rl', 'direction_lr', 'C4_CONTEXT', 'C4_CONTAINER', 'C4_COMPONENT', 'C4_DYNAMIC', 'C4_DEPLOYMENT'"
 private const val ATTRIBUTES = "'STR', 'STR_KEY', 'ATTRIBUTE', 'ATTRIBUTE_EMPTY'"
 
 private object P {
   // A statement is required.
   const val Item = 0
 
-  // Only a diagram statement may come next: the first one in a boundary, or one written straight after a title.
+  // Only a diagram statement may come next: the first one in a boundary, or one written straight
+  // after a title.
   const val Diagram = 1
   const val ItemOrEnd = 2
   const val AfterOther = 3
@@ -48,7 +51,11 @@ private object P {
 }
 
 private fun isOther(t: Int): Boolean =
-  t == T.title || t == T.accDescription || t == T.acc_title || t == T.acc_descr || t == T.acc_descr_multiline_value
+  t == T.title ||
+    t == T.accDescription ||
+    t == T.acc_title ||
+    t == T.acc_descr ||
+    t == T.acc_descr_multiline_value
 
 private fun isDiagram(t: Int): Boolean = t >= T.PERSON && t <= T.UPDATE_LAYOUT_CONFIG
 
@@ -188,7 +195,9 @@ fun parseC4(src: String, db: C4Db) {
       state = P.AfterOther
       continue
     } else if (state != P.ItemOrEnd) {
-      fail("'title', 'accDescription', 'acc_title', 'acc_descr', 'acc_descr_multiline_value', 'PERSON', 'REL'")
+      fail(
+        "'title', 'accDescription', 'acc_title', 'acc_descr', 'acc_descr_multiline_value', 'PERSON', 'REL'"
+      )
     }
 
     if (depth > 0) {

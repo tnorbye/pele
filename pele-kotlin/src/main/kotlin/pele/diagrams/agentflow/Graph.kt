@@ -152,27 +152,29 @@ fun buildAgentGraph(db: AgentflowDb, paletteLength: Int, defaultCurve: String? =
     val sg = subgraphs[i]
     if (hidden.contains(sg.id)) continue
     val collapsed = sg.metadata?.get("view") == "collapsed"
-    val metadata: Metadata? = if (collapsed) {
-      val spread = LinkedHashMap<String, YamlValue>()
-      sg.metadata?.let { spread.putAll(it) }
-      spread["containerType"] = sg.type
-      jsOrdered(spread)
-    } else {
-      sg.metadata
-    }
-    val node = GraphNode(
-      id = sg.id,
-      label = sg.title,
-      labelType = sg.labelType,
-      parentId = parentOf[sg.id],
-      cssStyles = ArrayList(),
-      cssCompiledStyles = compiled(sg.classes),
-      cssClasses = sg.classes.joinToString(" "),
-      shape = if (collapsed) "collapsedGroup" else "flowGroup",
-      dir = sg.dir,
-      isGroup = !collapsed,
-      metadata = metadata,
-    )
+    val metadata: Metadata? =
+      if (collapsed) {
+        val spread = LinkedHashMap<String, YamlValue>()
+        sg.metadata?.let { spread.putAll(it) }
+        spread["containerType"] = sg.type
+        jsOrdered(spread)
+      } else {
+        sg.metadata
+      }
+    val node =
+      GraphNode(
+        id = sg.id,
+        label = sg.title,
+        labelType = sg.labelType,
+        parentId = parentOf[sg.id],
+        cssStyles = ArrayList(),
+        cssCompiledStyles = compiled(sg.classes),
+        cssClasses = sg.classes.joinToString(" "),
+        shape = if (collapsed) "collapsedGroup" else "flowGroup",
+        dir = sg.dir,
+        isGroup = !collapsed,
+        metadata = metadata,
+      )
     nodes.add(node)
     byId[sg.id] = node
   }
@@ -187,22 +189,23 @@ fun buildAgentGraph(db: AgentflowDb, paletteLength: Int, defaultCurve: String? =
       continue
     }
     val type = resolveShapeAlias(vertex.type)
-    val node = GraphNode(
-      id = vertex.id,
-      label = vertex.text,
-      labelType = vertex.labelType,
-      parentId = parentOf[vertex.id],
-      cssStyles = vertex.styles,
-      cssCompiledStyles = compiled(listOf("default", "node") + vertex.classes),
-      cssClasses = "default " + vertex.classes.joinToString(" "),
-      dir = vertex.dir,
-      link = vertex.link,
-      linkTarget = vertex.linkTarget,
-      tooltip = db.tooltips[vertex.id],
-      metadata = vertex.metadata,
-      isGroup = false,
-      shape = if (type == "square" || type == null) "squareRect" else type,
-    )
+    val node =
+      GraphNode(
+        id = vertex.id,
+        label = vertex.text,
+        labelType = vertex.labelType,
+        parentId = parentOf[vertex.id],
+        cssStyles = vertex.styles,
+        cssCompiledStyles = compiled(listOf("default", "node") + vertex.classes),
+        cssClasses = "default " + vertex.classes.joinToString(" "),
+        dir = vertex.dir,
+        link = vertex.link,
+        linkTarget = vertex.linkTarget,
+        tooltip = db.tooltips[vertex.id],
+        metadata = vertex.metadata,
+        isGroup = false,
+        shape = if (type == "square" || type == null) "squareRect" else type,
+      )
     nodes.add(node)
     byId[vertex.id] = node
   }
@@ -216,7 +219,8 @@ fun buildAgentGraph(db: AgentflowDb, paletteLength: Int, defaultCurve: String? =
     val rawStyle = raw.style
     if (rawStyle != null) styles.addAll(rawStyle)
     val arrow =
-      if (raw.type == "arrow_open") "none" else if (raw.type == "arrow_cross" || raw.type == "arrow_point") raw.type!! else "arrow_point"
+      if (raw.type == "arrow_open") "none"
+      else if (raw.type == "arrow_cross" || raw.type == "arrow_point") raw.type!! else "arrow_point"
     val rawId = raw.id
     val interpolate = raw.interpolate
     val defaultInterpolate = db.defaultInterpolate
@@ -239,9 +243,11 @@ fun buildAgentGraph(db: AgentflowDb, paletteLength: Int, defaultCurve: String? =
         style = styles,
         animate = raw.animate,
         animation = raw.animation,
-        curve = if (!interpolate.isNullOrEmpty()) interpolate else if (!defaultInterpolate.isNullOrEmpty()) defaultInterpolate else defaultCurve,
+        curve =
+          if (!interpolate.isNullOrEmpty()) interpolate
+          else if (!defaultInterpolate.isNullOrEmpty()) defaultInterpolate else defaultCurve,
         metadata = raw.metadata,
-      ),
+      )
     )
   }
 
@@ -253,8 +259,7 @@ fun buildAgentGraph(db: AgentflowDb, paletteLength: Int, defaultCurve: String? =
   for (sg in subgraphs) {
     val parent = parentOf[sg.id] ?: continue
     val kids = children[parent]
-    if (kids != null) kids.add(sg.id)
-    else children[parent] = arrayListOf(sg.id)
+    if (kids != null) kids.add(sg.id) else children[parent] = arrayListOf(sg.id)
   }
   val order = LinkedHashMap<String, Int>()
   for (sg in subgraphs) {

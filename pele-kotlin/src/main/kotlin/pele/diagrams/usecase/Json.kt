@@ -21,7 +21,8 @@ class OrderedJson(
 )
 
 // Thrown with the offset of the first character that is not valid JSON.
-private class WalkError(val offset: Int) : RuntimeException("Invalid JSON token", null, false, false)
+private class WalkError(val offset: Int) :
+  RuntimeException("Invalid JSON token", null, false, false)
 
 private class Frame(
   val `object`: Boolean,
@@ -145,14 +146,14 @@ private fun propertyOrder(text: String): Map<String, List<String>> {
       else if (c == 116) literal("true")
       else if (c == 102) literal("false")
       else if (c == 110) literal("null")
-      else if (c == 45 || isDigit(c)) number()
-      else throw WalkError(at)
+      else if (c == 45 || isDigit(c)) number() else throw WalkError(at)
     } else if (state == State.Key) {
       val frame = stack[stack.size - 1]
       if (text.charCodeAt(at) != 34) throw WalkError(at)
       val key = readString(true)
       val range = frame.ranges[key]
-      // A repeated key keeps its first place in the order and takes the nested order of its last value.
+      // A repeated key keeps its first place in the order and takes the nested order of its last
+      // value.
       if (range == null) frame.keys.add(key)
       else for (k in range[0] until range[1]) order.remove(created[k])
       frame.key = key
@@ -209,7 +210,12 @@ private val RE_LOCAL = JsRegExp("""\bline (\d+) column (\d+)\b""")
 private val RE_END = JsRegExp("""unexpected end|end of json input""", "i")
 
 // Engines word JSON.parse errors differently: some give an offset, some a line and column.
-private fun locationFromMessage(message: String, text: String, line: Int, column: Int): Pair<Int, Int>? {
+private fun locationFromMessage(
+  message: String,
+  text: String,
+  line: Int,
+  column: Int,
+): Pair<Int, Int>? {
   val position = RE_POSITION.exec(message)
   if (position != null) return locationAt(text, jsParseInt(position[1]!!, 10).toInt(), line, column)
   val local = RE_LOCAL.exec(message)
@@ -223,9 +229,14 @@ private fun locationFromMessage(message: String, text: String, line: Int, column
 }
 
 private fun jsonError(message: String, line: Int, column: Int): PeleError =
-  PeleError("$message (line $line, column $column)", PeleErrorCode.SYNTAX, PeleErrorInfo(type = "usecase", line = line, column = column))
+  PeleError(
+    "$message (line $line, column $column)",
+    PeleErrorCode.SYNTAX,
+    PeleErrorInfo(type = "usecase", line = line, column = column),
+  )
 
-// Parses the body of a `json` node. `origin` gives the line and column the text starts at in the diagram.
+// Parses the body of a `json` node. `origin` gives the line and column the text starts at in the
+// diagram.
 fun parseOrderedJson(text: String, origin: () -> Pair<Int, Int>): OrderedJson {
   val parsed: Any?
   try {

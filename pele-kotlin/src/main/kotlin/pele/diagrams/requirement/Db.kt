@@ -71,7 +71,11 @@ class RequirementDb : RequirementModel {
   private fun copy(target: MutableList<String>, styles: List<String>) {
     styleCopies += styles.size
     if (styleCopies > MAX_STYLE_COPIES) {
-      throw PeleError("Requirement diagram applies too many style declarations.", PeleErrorCode.LIMIT, PeleErrorInfo(type = "requirement"))
+      throw PeleError(
+        "Requirement diagram applies too many style declarations.",
+        PeleErrorCode.LIMIT,
+        PeleErrorInfo(type = "requirement"),
+      )
     }
     for (style in styles) target.add(style)
   }
@@ -84,16 +88,17 @@ class RequirementDb : RequirementModel {
   fun addRequirement(name: String, type: String): Requirement {
     var requirement = requirements[name]
     if (requirement == null) {
-      requirement = Requirement(
-        name = name,
-        type = type,
-        requirementId = newId,
-        text = newText,
-        risk = newRisk,
-        verifyMethod = newVerifyMethod,
-        cssStyles = ArrayList(),
-        classes = arrayListOf("default"),
-      )
+      requirement =
+        Requirement(
+          name = name,
+          type = type,
+          requirementId = newId,
+          text = newText,
+          risk = newRisk,
+          verifyMethod = newVerifyMethod,
+          cssStyles = ArrayList(),
+          classes = arrayListOf("default"),
+        )
       requirements[name] = requirement
     }
     newId = ""
@@ -122,7 +127,8 @@ class RequirementDb : RequirementModel {
   fun addElement(name: String): RequirementElement {
     var element = elements[name]
     if (element == null) {
-      element = RequirementElement(name, newElementType, newDocRef, ArrayList(), arrayListOf("default"))
+      element =
+        RequirementElement(name, newElementType, newDocRef, ArrayList(), arrayListOf("default"))
       elements[name] = element
     }
     newElementType = ""

@@ -11,10 +11,13 @@ import pele.js.jsSubstring
 const val BUILTIN_PACK = "mermaid-treeview"
 
 // Outlines on a 24 by 24 grid.
-val GLYPHS: Map<String, String> = mapOf(
-  "folder" to "M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2.4 2.5h8A1.5 1.5 0 0 1 21 9v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z",
-  "file" to "M6.5 3h7L19 8.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3zM13.5 3v5.5H19",
-)
+val GLYPHS: Map<String, String> =
+  mapOf(
+    "folder" to
+      "M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2.4 2.5h8A1.5 1.5 0 0 1 21 9v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z",
+    "file" to
+      "M6.5 3h7L19 8.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3zM13.5 3v5.5H19",
+  )
 
 typealias IconMap = Map<*, *>
 

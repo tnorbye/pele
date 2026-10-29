@@ -112,7 +112,11 @@ fun tokenize(src: String): Tokens {
 
   fun initial(c: Int): Boolean {
     val lower = c or 32
-    if (lower == 116 && src.jsSlice(p + 1, p + 5).lowercase() == "itle" && isSpace(src.charCodeAt(p + 5))) {
+    if (
+      lower == 116 &&
+        src.jsSlice(p + 1, p + 5).lowercase() == "itle" &&
+        isSpace(src.charCodeAt(p + 5))
+    ) {
       var q = p + 6
       while (q < n) {
         val d = src.charCodeAt(q)
@@ -151,9 +155,7 @@ fun tokenize(src: String): Tokens {
       var q = p
       while (q < n) {
         val d = src.charCodeAt(q)
-        if (d == 10) q++
-        else if (d == 13 && src.charCodeAt(q + 1) == 10) q += 2
-        else break
+        if (d == 10) q++ else if (d == 13 && src.charCodeAt(q + 1) == 10) q += 2 else break
       }
       emit(T.NEWLINE, p, q)
       return true
@@ -201,7 +203,8 @@ fun tokenize(src: String): Tokens {
         return true
       }
       58 -> {
-        if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58) emit(T.STYLE_SEPARATOR, p, p + 3)
+        if (src.charCodeAt(p + 1) == 58 && src.charCodeAt(p + 2) == 58)
+          emit(T.STYLE_SEPARATOR, p, p + 3)
         else emit(T.COLONSEP, p, p + 1)
         return true
       }
@@ -211,8 +214,7 @@ fun tokenize(src: String): Tokens {
         return true
       }
       45 -> {
-        if (src.charCodeAt(p + 1) == 62) emit(T.END_ARROW_R, p, p + 2)
-        else emit(T.LINE, p, p + 1)
+        if (src.charCodeAt(p + 1) == 62) emit(T.END_ARROW_R, p, p + 2) else emit(T.LINE, p, p + 1)
         return true
       }
       34 -> {
@@ -323,8 +325,7 @@ fun tokenize(src: String): Tokens {
     else if (state == S.string) T.qString
     else if (state == S.acc_title) T.acc_title_value
     else if (state == S.acc_descr) T.acc_descr_value
-    else if (state == S.acc_descr_multiline) T.acc_descr_multiline_value
-    else -1
+    else if (state == S.acc_descr_multiline) T.acc_descr_multiline_value else -1
   if (last != -1) emit(last, n, n)
   emit(T.END, n, n)
   return Tokens(types, texts, starts)
