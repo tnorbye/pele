@@ -365,6 +365,43 @@ class JsRegExp(val source: String, val flags: String = "") {
     return out
   }
 
+  /** `replace` with a replacement that has no `$`: the matches are replaced without collecting them. */
+  internal fun replaceLiteral(input: String, replacement: String): String {
+    if (!global) {
+      val start = if (sticky) lastIndex else 0
+      if (start < 0 || start > input.length) {
+        if (sticky) lastIndex = 0
+        return input
+      }
+      val m = matcher(input, start)
+      if (!(if (sticky) m.lookingAt() else m.find())) {
+        if (sticky) lastIndex = 0
+        return input
+      }
+      if (sticky) lastIndex = m.end()
+      return StringBuilder(input.length - (m.end() - m.start()) + replacement.length)
+        .append(input, 0, m.start())
+        .append(replacement)
+        .append(input, m.end(), input.length)
+        .toString()
+    }
+    lastIndex = 0
+    val m = matcher(input, 0)
+    var at = 0
+    var last = 0
+    var sb: StringBuilder? = null
+    while (at <= input.length) {
+      m.region(at, input.length)
+      if (!(if (sticky) m.lookingAt() else m.find())) break
+      if (sb == null) sb = StringBuilder(input.length)
+      sb.append(input, last, m.start()).append(replacement)
+      last = m.end()
+      at = if (m.end() == m.start()) advance(input, m.end()) else m.end()
+    }
+    if (sb == null) return input
+    return sb.append(input, last, input.length).toString()
+  }
+
   private fun advance(input: String, at: Int): Int {
     if (unicode && at + 1 < input.length && input[at].isHighSurrogate() && input[at + 1].isLowSurrogate()) return at + 2
     return at + 1
@@ -411,6 +448,7 @@ private fun matchesForReplace(input: String, re: JsRegExp): List<JsMatch> {
 
 /** `String.prototype.replace(regex, replacement)`, with `$` patterns expanded. */
 fun String.jsReplace(re: JsRegExp, replacement: String): String {
+  if ('$' !in replacement) return re.replaceLiteral(this, replacement)
   val matches = matchesForReplace(this, re)
   if (matches.isEmpty()) return this
   val sb = StringBuilder(length)

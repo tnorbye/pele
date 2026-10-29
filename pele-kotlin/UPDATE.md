@@ -190,6 +190,7 @@ Commit with the new commit hash in the message, for example
 | sort comparator | `sortedWith { a, b -> cmp(...) }`, which counts NaN as 0 |
 | `Math.sin`, `cos`, `atan2`, `exp`, `log`, `pow` | `StrictMath.*`, which is fdlibm, as in V8. `Math.hypot` → `jsHypot`. |
 | `new URL(x).href`, `decodeURIComponent` | `whatwgHref`, `jsDecodeURIComponent` |
+| reading past the end of a `number[]` (gives NaN in arithmetic) | `JsNumberArray`, whose out-of-range reads return NaN |
 | `WeakMap<object, V>` | `WeakIdentityMap`. The value must not reference its key. |
 
 ### Numbers, collections, errors and state

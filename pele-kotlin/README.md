@@ -20,7 +20,7 @@ All 33 diagram types are ported. `mount`, `enableZoom`, `renderAsync` and the ca
 browser-only and not ported; text is measured with the bundled Arial metrics unless you pass your own
 `TextMeasurer`. The port is checked by:
 
-- 4,611 golden records (extracted upstream test inputs, generated stress cases, narrow-width and links-off variants, and inputs
+- 4,621 golden records (extracted upstream test inputs, generated stress cases, narrow-width and links-off variants, and inputs
   found by fuzzing), compared by SHA-256 on JDK 21 and 17;
 - differential fuzzing against the upstream bundle (over 100,000 mutated inputs with no differences);
 - oracles from Node for `JSON.parse`, `Date.parse`/`new Date` (three time zones) and `new URL`;

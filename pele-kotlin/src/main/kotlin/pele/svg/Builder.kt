@@ -6,22 +6,62 @@ import pele.IconResolver
 import pele.MathMarkup
 import pele.js.JsRegExp
 import pele.js.jsRound
-import pele.js.jsReplace
 import pele.js.jsStr
 import pele.js.jsTrim
 import pele.text.Label
 import pele.text.Style
 import pele.text.decodeEntities
 
-private val RE_NEEDS_ESC = JsRegExp("[&<>\"\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f\\ud800-\\udfff\\ufffe\\uffff]", "u")
-private val RE_ESC = JsRegExp("[&<>\"]|[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f\\ud800-\\udfff\\ufffe\\uffff]+", "gu")
-private val ESC = mapOf("&" to "&amp;", "<" to "&lt;", ">" to "&gt;", "\"" to "&quot;")
+// PORT: loops in place of upstream's RE_NEEDS_ESC, RE_ESC and RE_INVALID_XML, which run on every
+// text and attribute. Like those /u patterns they match only unpaired surrogates.
+private fun isInvalidXmlUnit(text: String, i: Int): Boolean {
+  val c = text[i]
+  val code = c.code
+  if (code <= 0x1f) return code != 0x09 && code != 0x0a && code != 0x0d
+  if (code == 0x7f || code == 0xfffe || code == 0xffff) return true
+  if (c.isHighSurrogate()) return i + 1 >= text.length || !text[i + 1].isLowSurrogate()
+  if (c.isLowSurrogate()) return i == 0 || !text[i - 1].isHighSurrogate()
+  return false
+}
 
 // Removing these characters in esc() can make validated values unsafe.
-val RE_INVALID_XML = JsRegExp("[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f\\ud800-\\udfff\\ufffe\\uffff]", "u")
+fun hasInvalidXml(text: String): Boolean {
+  for (i in text.indices) if (isInvalidXmlUnit(text, i)) return true
+  return false
+}
+
+fun stripInvalidXml(text: String): String {
+  var sb: StringBuilder? = null
+  var last = 0
+  for (i in text.indices) {
+    if (!isInvalidXmlUnit(text, i)) continue
+    if (sb == null) sb = StringBuilder(text.length)
+    sb.append(text, last, i)
+    last = i + 1
+  }
+  if (sb == null) return text
+  return sb.append(text, last, text.length).toString()
+}
 
 // Escapes text for XML and drops invalid XML characters and DEL.
-fun esc(text: String): String = if (RE_NEEDS_ESC.test(text)) text.jsReplace(RE_ESC) { m -> ESC[m.value] ?: "" } else text
+fun esc(text: String): String {
+  var sb: StringBuilder? = null
+  var last = 0
+  for (i in text.indices) {
+    val replacement = when (text[i]) {
+      '&' -> "&amp;"
+      '<' -> "&lt;"
+      '>' -> "&gt;"
+      '"' -> "&quot;"
+      else -> if (isInvalidXmlUnit(text, i)) "" else continue
+    }
+    if (sb == null) sb = StringBuilder(text.length + 16)
+    sb.append(text, last, i).append(replacement)
+    last = i + 1
+  }
+  if (sb == null) return text
+  return sb.append(text, last, text.length).toString()
+}
 
 // Escapes text that is only ever read as text: a tooltip, an accessible name, a `data-id`. Entity
 // codes are turned into their characters first. A value that was checked before it is written,
@@ -58,7 +98,8 @@ fun num(value: Double): String {
   return jsStr(n / 100)
 }
 
-fun num(value: Int): String = num(value.toDouble())
+// PORT: every Int is a whole number well inside the range num() prints without rounding.
+fun num(value: Int): String = value.toString()
 
 // Writes a measured label as SVG text centered on (cx, cy).
 fun labelSvg(label: Label, cx: Double, cy: Double, attrsIn: String, icons: IconResolver? = null): String {

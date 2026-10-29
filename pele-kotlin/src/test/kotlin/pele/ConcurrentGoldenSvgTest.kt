@@ -1,6 +1,9 @@
 // PORT: JVM-only helper with no upstream counterpart (see UPDATE.md).
 package pele
 
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import java.util.TimeZone
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import kotlin.random.Random
@@ -10,6 +13,25 @@ import kotlin.test.fail
 // Renders every golden record of every registered type on several threads at once. Catches state
 // that the port shares between concurrent renders (UPDATE.md).
 class ConcurrentGoldenSvgTest {
+  // The goldens were rendered in UTC, and gantt reads local time. Gradle sets UTC as well; this
+  // keeps the test right when an IDE runs it directly.
+  companion object {
+    private var savedTimeZone: TimeZone? = null
+
+    @JvmStatic
+    @BeforeAll
+    fun pinUtcTimeZone() {
+      savedTimeZone = TimeZone.getDefault()
+      TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+    }
+
+    @JvmStatic
+    @AfterAll
+    fun restoreTimeZone() {
+      savedTimeZone?.let(TimeZone::setDefault)
+    }
+  }
+
   @Test
   fun concurrentRenders() {
     val records = Goldens.types().filter(::registered).flatMap(Goldens::load)

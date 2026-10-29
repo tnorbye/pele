@@ -1,0 +1,11 @@
+usecase-beta
+actor User
+systemBoundary S
+  Pay
+  Ship
+end
+Pay --> Ship
+User e1@--> Pay
+User --> Other
+style S fill:#BBDEFB
+style e1 stroke-width:.

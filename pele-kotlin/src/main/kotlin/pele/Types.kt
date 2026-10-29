@@ -7,13 +7,13 @@ import pele.text.TextMeasurer
 typealias IconResolver = (name: String) -> String?
 
 // Dimensions are in pixels. HTML requires the typesetter's CSS.
-sealed class MathMarkup {
-  abstract val width: Double
-  abstract val height: Double
+sealed interface MathMarkup {
+  val width: Double
+  val height: Double
 
-  class Svg(val svg: String, override val width: Double, override val height: Double) : MathMarkup()
+  data class Svg(val svg: String, override val width: Double, override val height: Double) : MathMarkup
 
-  class Html(val html: String, override val width: Double, override val height: Double) : MathMarkup()
+  data class Html(val html: String, override val width: Double, override val height: Double) : MathMarkup
 }
 
 // TeX excludes the $$ delimiters; font size is in pixels.
@@ -58,9 +58,9 @@ data class RenderOptions(
   val now: Double? = null,
 )
 
-class LinkInfo(var id: String, val href: String, val internal: Boolean)
+data class LinkInfo(val id: String, val href: String, val internal: Boolean)
 
-open class Rendered(val svg: String, val width: Double, val height: Double, val links: MutableList<LinkInfo>)
+open class Rendered(val svg: String, val width: Double, val height: Double, val links: List<LinkInfo>)
 
 class RenderResult(
   val type: DiagramType,
@@ -68,13 +68,13 @@ class RenderResult(
   svg: String,
   width: Double,
   height: Double,
-  links: MutableList<LinkInfo>,
+  links: List<LinkInfo>,
 ) : Rendered(svg, width, height, links)
 
 // What a diagram type provides. `source` has been through preprocessing and entity encoding
 // and ends with a newline, as Mermaid's parsers expect.
 // Limits set by the host. A diagram's own configuration cannot change them.
-class ParseLimits(val maxEdges: Int)
+data class ParseLimits(val maxEdges: Int)
 
 interface Diagram<Model> {
   val type: DiagramType

@@ -12,6 +12,9 @@ enum class PeleErrorCode(val wireName: String) {
   SYNTAX("syntax"),
   SEMANTIC("semantic"),
   LIMIT("limit"),
+  ;
+
+  override fun toString(): String = wireName
 }
 
 class PeleErrorInfo(
@@ -84,7 +87,7 @@ fun written(src: String, offset: Int): Pair<String, Int> {
   return if (o != null && src == o.parsed) o.find(offset) else src to offset
 }
 
-class Location(val line: Int, val column: Int, val snippet: String)
+data class Location(val line: Int, val column: Int, val snippet: String)
 
 fun locate(srcIn: String, offsetIn: Int): Location {
   var src = srcIn

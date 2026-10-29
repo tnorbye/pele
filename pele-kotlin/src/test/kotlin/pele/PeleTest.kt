@@ -64,4 +64,65 @@ class PeleTest {
     }
     assertEquals(expected, render(model, options).svg)
   }
+
+  @Test
+  fun agentflowSemanticModelAndDiagnostics() {
+    val parsed = parse(
+      """
+      agentflow-beta TB
+        In@{ shape: input, label: "Prompt" }
+        Gate@{ shape: decision, label: "Valid?" }
+        Old@{ shape: stadium, label: "Legacy" }
+        In --> Gate --> Old
+      """.trimIndent(),
+    )
+    val semantic = (parsed.model as pele.diagrams.agentflow.AgentflowModel).semanticModel()
+    assertEquals("TB", semantic.direction)
+    assertEquals(
+      listOf("In" to "input", "Gate" to "decision", "Old" to "task"),
+      semantic.vertices.map { it.id to it.vertexKind },
+    )
+    assertEquals(2, semantic.edges.size)
+    assertEquals(listOf("SHAPE_REMOVED"), semantic.diagnostics.map { it.id })
+  }
+
+  @Test
+  fun svgNumbersAndEscaping() {
+    assertEquals("0", pele.svg.num(0))
+    assertEquals("-42", pele.svg.num(-42))
+    assertEquals("0", pele.svg.num(-0.004))
+    assertEquals("12.3", pele.svg.num(12.3))
+    assertEquals("12.35", pele.svg.num(12.345))
+    assertEquals("100000000000000000000", pele.svg.num(1e20))
+    assertEquals("-100000000000000000000", pele.svg.num(-1e20))
+    assertEquals("NaN", pele.svg.num(Double.NaN))
+    assertEquals("Infinity", pele.svg.num(Double.POSITIVE_INFINITY))
+    assertEquals("-Infinity", pele.svg.num(Double.NEGATIVE_INFINITY))
+    // A lone surrogate and C0 controls are dropped; a surrogate pair and tab, line feed and return stay.
+    assertEquals("Hi &amp; &lt;ok&gt;", pele.svg.esc("Hi \u0000\uD83D& <ok>"))
+    assertEquals("\uD83D\uDE00\t\n\r", pele.svg.esc("\uD83D\uDE00\t\n\r\u007f\uDE00\uFFFE"))
+    assertEquals("a\uD83D\uDE00b", pele.svg.stripInvalidXml("a\u0001\uD83D\uDE00\uD83Db"))
+  }
+
+  @Test
+  fun inputEdgeAndOutputLimitsRaiseLimitErrors() {
+    // Messages from upstream in Node.
+    val tooLong = assertFailsWith<PeleError> { parse("flowchart LR\nA --> B", ParseOptions(limit = 5)) }
+    assertEquals(PeleErrorCode.LIMIT, tooLong.code)
+    assertEquals("Diagram source is longer than the limit of 5 characters.", tooLong.message)
+    val tooManyEdges = assertFailsWith<PeleError> { render("flowchart LR\nA & B & C --> D & E & F", RenderOptions(maxEdges = 4)) }
+    assertEquals(PeleErrorCode.LIMIT, tooManyEdges.code)
+    assertEquals("Edge limit exceeded. The limit is 4.", tooManyEdges.message)
+    val tooLarge = assertFailsWith<PeleError> { render("flowchart LR\nA --> B", RenderOptions(outputLimit = 20)) }
+    assertEquals(PeleErrorCode.LIMIT, tooLarge.code)
+    assertEquals("Diagram output is longer than the limit of 20 characters.", tooLarge.message)
+  }
+
+  @Test
+  fun publicValueTypes() {
+    assertEquals(LinkInfo("a", "https://x", false), LinkInfo("a", "https://x", false))
+    assertEquals("unsupported-diagram", PeleErrorCode.UNSUPPORTED_DIAGRAM.toString())
+    val result = render("flowchart LR\nA\nclick A \"https://example.com\"")
+    assertEquals(listOf(LinkInfo("A", "https://example.com/", false)), result.links)
+  }
 }

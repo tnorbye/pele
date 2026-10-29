@@ -48,6 +48,24 @@ fun Double.toPrecision(precision: Int): String {
   return sign + "0." + "0".repeat(-(e + 1)) + digits
 }
 
+// Double.toString gives the shortest digits that round-trip from JDK 19 on (JDK-4511638).
+private val HAS_SHORTEST_TO_STRING: Boolean = Runtime.version().feature() >= 19
+
+// Lays out the significant digits of a positive value 0.d1d2... * 10^n as Number::toString does.
+private fun formatJsDigits(sign: String, digits: String, n: Int): String {
+  val k = digits.length
+  return sign + when {
+    n in k..21 -> digits + "0".repeat(n - k)
+    n in 1..21 -> digits.substring(0, n) + "." + digits.substring(n)
+    n in -5..0 -> "0." + "0".repeat(-n) + digits
+    else -> {
+      val e = n - 1
+      val mantissa = if (k == 1) digits else digits[0] + "." + digits.substring(1)
+      mantissa + "e" + (if (e >= 0) "+" else "-") + abs(e)
+    }
+  }
+}
+
 /** ECMAScript `Number::toString`, with the shortest digits that round-trip on any JDK. */
 fun jsStr(x: Double): String {
   if (x.isNaN()) return "NaN"
@@ -55,8 +73,28 @@ fun jsStr(x: Double): String {
   if (x == Double.POSITIVE_INFINITY) return "Infinity"
   if (x == Double.NEGATIVE_INFINITY) return "-Infinity"
   val ax = abs(x)
-  if (x == truncate(x) && ax < 9.007199254740992E15) return x.toLong().toString()
-  val sign = if (x < 0) "-" else ""
+  if (ax < 9.007199254740992E15 && x == truncate(x)) return x.toLong().toString()
+  // Java may give two digits where one would do, but only for subnormals, where a two-digit value
+  // can be closer (4.9E-324 for JS's 5e-324). Those take the fallback.
+  if (HAS_SHORTEST_TO_STRING && ax >= java.lang.Double.MIN_NORMAL) {
+    val s = ax.toString()
+    val e = s.indexOf('E')
+    if (e < 0) return if (x < 0) "-$s" else s
+    val fraction = s.substring(2, e)
+    val digits = if (fraction == "0") s.substring(0, 1) else s[0] + fraction
+    return formatJsDigits(if (x < 0) "-" else "", digits, s.substring(e + 1).toInt() + 1)
+  }
+  return jsStrFallback(x)
+}
+
+/** [jsStr] by search: the fewest digits whose nearest double is [x]. For JDK 17 and 18 and subnormals. */
+internal fun jsStrFallback(x: Double): String {
+  if (x.isNaN()) return "NaN"
+  if (x == 0.0) return "0"
+  if (x == Double.POSITIVE_INFINITY) return "Infinity"
+  if (x == Double.NEGATIVE_INFINITY) return "-Infinity"
+  val ax = abs(x)
+  if (ax < 9.007199254740992E15 && x == truncate(x)) return x.toLong().toString()
   val exact = BigDecimal(ax)
   var digits = ""
   var n = 0
@@ -69,17 +107,7 @@ fun jsStr(x: Double): String {
       break
     }
   }
-  val k = digits.length
-  return sign + when {
-    n in k..21 -> digits + "0".repeat(n - k)
-    n in 1..21 -> digits.substring(0, n) + "." + digits.substring(n)
-    n in -5..0 -> "0." + "0".repeat(-n) + digits
-    else -> {
-      val e = n - 1
-      val mantissa = if (k == 1) digits else digits[0] + "." + digits.substring(1)
-      mantissa + "e" + (if (e >= 0) "+" else "-") + abs(e)
-    }
-  }
+  return formatJsDigits(if (x < 0) "-" else "", digits, n)
 }
 
 fun jsStr(x: Int): String = x.toString()
@@ -256,4 +284,12 @@ fun jsString(value: Any?): String = when (value) {
   is List<*> -> value.joinToString(",") { if (it == null) "" else jsString(it) }
   is Map<*, *> -> "[object Object]"
   else -> value.toString()
+}
+
+/**
+ * A JS array of numbers where reading outside it gives NaN, which is what `undefined` becomes in
+ * arithmetic and comparisons. For code whose upstream reads past the end of its arrays.
+ */
+class JsNumberArray : ArrayList<Double>() {
+  override fun get(index: Int): Double = if (index >= 0 && index < size) super.get(index) else Double.NaN
 }

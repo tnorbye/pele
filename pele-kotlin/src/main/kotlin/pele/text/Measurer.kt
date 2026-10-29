@@ -2,7 +2,6 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.text
 
-import java.util.concurrent.ConcurrentHashMap
 
 object Style {
   const val Bold = 1
@@ -69,15 +68,10 @@ val metricsMeasurer: TextMeasurer = TextMeasurer { text, size, style ->
   (units * eff) / 1000
 }
 
-// PORT: the canvas measurer is browser-only and not ported; the JVM always measures with metrics.
-private val shared = ConcurrentHashMap<String, TextMeasurer>()
-
-fun defaultMeasurer(fontFamily: String? = null, monoFamily: String? = null): TextMeasurer {
-  val key = (fontFamily ?: "sans-serif") + "\n" + (monoFamily ?: "monospace")
-  return shared.getOrPut(key) { metricsMeasurer }
-}
+// PORT: the canvas measurer is browser-only and not ported, so every font measures with the stateless
+// metricsMeasurer and there is nothing to cache per font.
+fun defaultMeasurer(fontFamily: String? = null, monoFamily: String? = null): TextMeasurer = metricsMeasurer
 
 // Widths measured before a font finished loading are those of its fallback.
-fun forgetTextWidths() {
-  shared.clear()
-}
+// PORT: a no-op, as metricsMeasurer keeps no widths.
+fun forgetTextWidths() {}

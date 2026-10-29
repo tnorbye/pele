@@ -148,7 +148,7 @@ fun supports(text: String): Boolean =
 
 // The options that are read when the text is parsed. A render() that is given a model has
 // nothing left to do with them.
-class ParseOptions(val limit: Int? = null, val maxEdges: Int? = null, val config: Map<String, Any?>? = null)
+data class ParseOptions(val limit: Int? = null, val maxEdges: Int? = null, val config: Map<String, Any?>? = null)
 
 fun parse(text: String, options: ParseOptions = ParseOptions()): ParsedDiagramModel = guarded {
   val parsed = parseSource(text, options.limit, options.maxEdges, options.config)
@@ -188,6 +188,10 @@ private fun renderParsed(parsed: Parsed, options: RenderOptions): RenderResult {
       PeleErrorInfo(type = type, mermaidType = mermaidType),
     )
   }
-  for (link in rendered.links) link.id = decodeEntities(link.id)
-  return RenderResult(type, mermaidType, rendered.svg, rendered.width, rendered.height, rendered.links)
+  // PORT: LinkInfo is immutable, so the decoded ids go into new values instead of the old ones.
+  val links = rendered.links.map { link ->
+    val id = decodeEntities(link.id)
+    if (id === link.id) link else link.copy(id = id)
+  }
+  return RenderResult(type, mermaidType, rendered.svg, rendered.width, rendered.height, links)
 }

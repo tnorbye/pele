@@ -2,6 +2,7 @@
 // Copyright (c) 2026 kepano, MIT License.
 package pele.svg
 
+import pele.js.JsNumberArray
 import pele.IconResolver
 import pele.js.JsRegExp
 import pele.js.charCodeAt
@@ -82,9 +83,10 @@ fun routePath(
 ): EdgePath {
   val linear = curve == "linear"
   val stepped = curve == "step" || curve == "stepBefore" || curve == "stepAfter"
-  val xs = ArrayList<Double>()
-  val ys = ArrayList<Double>()
-  val axes = ArrayList<Double>()
+  // PORT: a route of one point reads past the end of these, which upstream takes as NaN.
+  val xs = JsNumberArray()
+  val ys = JsNumberArray()
+  val axes = JsNumberArray()
   val near = { ax: Double, ay: Double, bx: Double, by: Double -> abs(ax - bx) < 0.01 && abs(ay - by) < 0.01 }
   var i0 = 0
   while (i0 < route.size) {

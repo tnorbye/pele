@@ -16,13 +16,15 @@ class JsCompatTest {
   fun numberToString() {
     val nums = listOf(
       12345678.5, 1e21, 1e-7, 123e-20, -0.0, 0.1 + 0.2, 1.0 / 3, -1e-7, 5e-324, 1.7976931348623157e308, 100.0,
-      0.000001, 1234.5678e10, 9007199254740994.0, 4503599627370497.0,
+      0.000001, 1234.5678e10, 9007199254740994.0, 4503599627370497.0, 12345678901234567890.0,
     )
     val expected = listOf(
       "12345678.5", "1e+21", "1e-7", "1.23e-18", "0", "0.30000000000000004", "0.3333333333333333", "-1e-7", "5e-324",
       "1.7976931348623157e+308", "100", "0.000001", "12345678000000", "9007199254740994", "4503599627370497",
+      "12345678901234567000",
     )
     assertEquals(expected, nums.map(::jsStr))
+    assertEquals(expected, nums.map(::jsStrFallback))
   }
 
   @Test
@@ -293,5 +295,17 @@ class JsCompatTest {
     }
     // Matches report the original text.
     assertEquals("É", JsRegExp("(é)", "i").exec("xÉ")?.get(1))
+  }
+
+  @Test
+  fun numberToStringFastPathMatchesSearch() {
+    // Random bit patterns cover every exponent, subnormals included; the integers cover 2^53 and up.
+    val random = java.util.Random(53)
+    repeat(100_000) {
+      val x = java.lang.Double.longBitsToDouble(random.nextLong())
+      assertEquals(jsStrFallback(x), jsStr(x), "bits ${java.lang.Double.doubleToRawLongBits(x)}")
+      val y = (random.nextLong() shr random.nextInt(40)).toDouble()
+      assertEquals(jsStrFallback(y), jsStr(y), "$y")
+    }
   }
 }

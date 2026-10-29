@@ -117,7 +117,7 @@ fun resolveStyle(declarations: List<String>): ResolvedStyle {
       .jsSlice(at + 1)
       .jsReplace(RE_IMPORTANT, "")
       .jsTrim()
-    if (value == "" || RE_UNSAFE.test(value) || RE_INVALID_XML.test(value)) continue
+    if (value == "" || RE_UNSAFE.test(value) || hasInvalidXml(value)) continue
     if (prop in SHAPE_PROPS) shape[prop] = value
     if (prop in TEXT_PROPS) text[if (prop == "color") "fill" else prop] = value
   }

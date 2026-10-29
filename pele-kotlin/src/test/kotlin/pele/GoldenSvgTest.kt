@@ -1,6 +1,9 @@
 // PORT: JVM-only helper with no upstream counterpart (see UPDATE.md).
 package pele
 
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import java.util.TimeZone
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -120,6 +123,25 @@ object Goldens {
 }
 
 class GoldenSvgTest {
+  // The goldens were rendered in UTC, and gantt reads local time. Gradle sets UTC as well; this
+  // keeps the test right when an IDE runs it directly.
+  companion object {
+    private var savedTimeZone: TimeZone? = null
+
+    @JvmStatic
+    @BeforeAll
+    fun pinUtcTimeZone() {
+      savedTimeZone = TimeZone.getDefault()
+      TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+    }
+
+    @JvmStatic
+    @AfterAll
+    fun restoreTimeZone() {
+      savedTimeZone?.let(TimeZone::setDefault)
+    }
+  }
+
   @TestFactory
   fun goldens(): List<DynamicTest> =
     Goldens.types().map { type ->

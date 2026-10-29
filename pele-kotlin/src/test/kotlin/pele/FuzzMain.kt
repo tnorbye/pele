@@ -18,6 +18,8 @@ fun main(args: Array<String>) {
     } catch (e: PeleError) {
       "ERR ${e.code.wireName} ${jsonQuote(e.message)}"
     } catch (e: Throwable) {
+      // The stack goes to stderr, so the comparison sees only the one line.
+      System.err.println("CRASH in input #${out.lines().size - 1}: ${e.stackTraceToString().lines().take(12).joinToString("\n  ")}")
       "CRASH ${jsonQuote(e.toString())}"
     }
     out.append(line).append('\n')

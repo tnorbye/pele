@@ -49,7 +49,10 @@ fun Test.configurePeleTests(stackSize: String = "4m") {
   useJUnitPlatform()
   maxHeapSize = "2g"
   jvmArgs("-Duser.timezone=UTC", "-Xss$stackSize")
-  systemProperty("pele.testData", layout.projectDirectory.dir("testData").asFile.absolutePath)
+  systemProperty(
+    "pele.testData",
+    System.getProperty("pele.testData") ?: layout.projectDirectory.dir("testData").asFile.absolutePath,
+  )
   System.getProperty("pele.type")?.let { systemProperty("pele.type", it) }
   System.getProperty("pele.svgOut")?.let { systemProperty("pele.svgOut", it) }
   testLogging {

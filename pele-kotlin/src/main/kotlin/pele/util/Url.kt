@@ -14,7 +14,7 @@ import pele.js.jsTrim
 import pele.js.jsTrimStart
 import pele.js.toInt32
 import pele.js.whatwgHref
-import pele.svg.RE_INVALID_XML
+import pele.svg.stripInvalidXml
 import pele.svg.esc
 import pele.text.decodeEntities
 
@@ -117,7 +117,6 @@ fun linkUrl(url: String, options: RenderOptions): String? =
 fun imageUrl(url: String, options: RenderOptions): String? =
   if (options.images == false) null else allow(url, options.imageSchemes ?: IMAGE_SCHEMES)
 
-private val RE_DROPPED = JsRegExp(RE_INVALID_XML.source, "gu")
 private val RE_TAB_BREAK = JsRegExp("""[\t\n\r]""", "g")
 private val RE_LEADING_CTRL = JsRegExp("""^[\x00-\x20]+""")
 
@@ -126,7 +125,7 @@ fun internalLink(name: String, options: RenderOptions): Boolean {
   val url = sanitizeUrl(name)
   if (url == BLANK || linkUrl(url, options) == null) return false
   // Match character removal by esc() and the browser.
-  val seen = name.jsReplace(RE_DROPPED, "").jsReplace(RE_TAB_BREAK, "").jsReplace(RE_LEADING_CTRL, "")
+  val seen = stripInvalidXml(name).jsReplace(RE_TAB_BREAK, "").jsReplace(RE_LEADING_CTRL, "")
   return linkUrl(seen, options) != null
 }
 
