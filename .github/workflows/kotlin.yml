@@ -1,0 +1,104 @@
+# Builds and tests pele-kotlin, and publishes its jar. This workflow is specific to this fork;
+# the upstream workflows (ci.yml, release.yml) are disabled in the fork's Actions settings.
+#
+# - Changes to the port or its upstream oracle run the tests on JDK 21 and 17 and upload the
+#   jars as a build artifact.
+# - Pushing a tag named kotlin-v<version> (for example kotlin-v1.12.0) also creates a GitHub
+#   release with the jars, their SHA-256 sums, and a signed build provenance attestation, so
+#   anyone can check that a jar was built by this workflow from the tagged commit:
+#     gh attestation verify pele-kotlin-1.12.0.jar --repo <owner>/<repo>
+name: Kotlin
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["kotlin-v*"]
+    paths: ["pele-kotlin/**", "src/**", "tests/**", "scripts/**", "package.json", "package-lock.json", ".github/workflows/kotlin.yml"]
+  pull_request:
+    paths: ["pele-kotlin/**", "src/**", "tests/**", "scripts/**", "package.json", "package-lock.json", ".github/workflows/kotlin.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kotlin-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+defaults:
+  run:
+    working-directory: pele-kotlin
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          # The build uses a JDK 21 toolchain and tests on 17 as well; the last one listed runs Gradle.
+          java-version: |
+            17
+            21
+      # Also checks that gradle-wrapper.jar is an official Gradle release.
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Check port rules
+        run: scripts/check_port_rules.sh
+      - name: Test
+        run: ./gradlew test testJdk17 testSmallStack
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Build upstream oracle
+        working-directory: .
+        run: npm ci && npm run build
+      - name: Differential smoke test
+        run: |
+          node --test scripts/compare_fuzz.test.mjs
+          scripts/run.sh 62489 20
+      - name: Build jars
+        run: ./gradlew jar sourcesJar
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pele-kotlin-jars
+          path: pele-kotlin/build/libs/*.jar
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/kotlin-v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify tag matches the project version
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' build.gradle.kts)"
+          test "${GITHUB_REF_NAME#kotlin-v}" = "$version" || { echo "Tag $GITHUB_REF_NAME does not match version $version"; exit 1; }
+      - uses: actions/download-artifact@v8
+        with:
+          name: pele-kotlin-jars
+          path: pele-kotlin/release
+      - name: Checksums
+        working-directory: pele-kotlin/release
+        run: sha256sum *.jar > SHA256SUMS
+      # Attestations need a public repository.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest@v4
+        with:
+          subject-path: pele-kotlin/release/*.jar
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --title "pele-kotlin ${GITHUB_REF_NAME#kotlin-v}" \
+            --notes "Built by the Kotlin workflow from $GITHUB_SHA. Verify a jar with: gh attestation verify <jar> --repo $GITHUB_REPOSITORY"

@@ -1,5 +1,13 @@
 # Pele
 
+> [!NOTE]
+> **This is a fork of [obsidianmd/pele](https://github.com/obsidianmd/pele).** It tracks upstream at
+> commit [`bdbad5d`](https://github.com/obsidianmd/pele/commit/bdbad5df4dea13b9a14a83a92aed62c4769e49f5)
+> (version 1.12.0) and adds [`pele-kotlin/`](pele-kotlin/), a pure Kotlin/JVM port that renders the same
+> SVG, byte for byte. Apart from this note, `pele-kotlin/` and `.github/workflows/kotlin.yml`, everything
+> is upstream as-is. Jars are built and tested by [the Kotlin workflow](.github/workflows/kotlin.yml) and published on
+> the [releases page](../../releases).
+
 Pele renders [Mermaid](https://mermaid.js.org) diagrams to SVG. It is small, synchronous, has no runtime dependencies, and uses CSS variables for colors and fonts.
 
 Pele supports every diagram type built into Mermaid 12.1.0.

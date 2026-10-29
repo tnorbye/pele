@@ -1,0 +1,21 @@
+---
+title: Delivery
+---
+swimlane-beta LR
+accTitle: Accessible delivery
+accDescr: Delivery process
+start --> a
+subgraph Team
+ subgraph Inner
+ a{Ready?} --> b[(Store)]
+ b --> b
+ end
+ c --> d --> e
+end
+subgraph Empty
+end
+b --> c
+click a "https:İ//example.com"
+style a fill:#f-0
+classDef hot stroke:#0f0
+class b hot
