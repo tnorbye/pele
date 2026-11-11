@@ -27,8 +27,8 @@ ktfmt { googleStyle() }
 kotlin {
   jvmToolchain(21)
   compilerOptions {
-    jvmTarget.set(JvmTarget.JVM_17)
-    freeCompilerArgs.add("-Xjdk-release=17")
+    jvmTarget.set(JvmTarget.JVM_11)
+    freeCompilerArgs.add("-Xjdk-release=11")
   }
 }
 
@@ -45,7 +45,17 @@ tasks.withType<Jar>().configureEach {
   }
 }
 
-tasks.withType<JavaCompile>().configureEach { options.release.set(17) }
+tasks.withType<JavaCompile>().configureEach { options.release.set(11) }
+
+// JUnit 6 requires Java 17; keep the test bytecode and dependencies on that baseline.
+tasks.compileTestKotlin {
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_17)
+    freeCompilerArgs.set(listOf("-Xjdk-release=17"))
+  }
+}
+
+tasks.compileTestJava { options.release.set(17) }
 
 fun Test.configurePeleTests(stackSize: String = "4m") {
   useJUnitPlatform()

@@ -37,7 +37,7 @@ tagged commit:
 gh attestation verify pele-kotlin-1.12.0.jar --repo <owner>/<repo>
 ```
 
-The jar needs only `kotlin-stdlib` (2.x) on the classpath, and Java 17 or later.
+The jar needs only `kotlin-stdlib` (2.x) on the classpath, and Java 11 or later.
 
 ## Develop
 
